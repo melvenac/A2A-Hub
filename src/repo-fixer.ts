@@ -4,8 +4,8 @@ import { writeFileSync, readFileSync } from "fs";
 import { join } from "path";
 
 const REPO_FIXER_MODEL = process.env.REPO_FIXER_MODEL || "claude-sonnet-4-20250514";
-const REPO_PATH = process.env.REPO_PATH || "/tmp/Self-Improving-Agent";
-const REPO_URL = "https://github.com/melvenac/Self-Improving-Agent.git";
+const REPO_PATH = process.env.REPO_PATH || "/tmp/A2A-Hub";
+const REPO_URL = process.env.REPO_URL || "https://github.com/melvenac/A2A-Hub.git";
 
 export class RepoFixer {
   private anthropic: Anthropic;
@@ -32,7 +32,7 @@ export class RepoFixer {
     const response = await this.anthropic.messages.create({
       model: REPO_FIXER_MODEL,
       max_tokens: 2000,
-      system: `You are a documentation fixer. Given an installation error and its fix, propose a specific change to the Self-Improving-Agent repo documentation or scripts that would prevent this error from happening to future users.
+      system: `You are a documentation fixer. Given an installation error and its fix, propose a specific change to the A2A Hub repo documentation or scripts that would prevent this error from happening to future users.
 
 Respond with JSON only:
 {

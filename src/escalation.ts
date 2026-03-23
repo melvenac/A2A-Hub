@@ -17,7 +17,7 @@ export class Escalation {
       : agents[0];
 
     if (!target) {
-      return "No agents are currently online. Please try again later or check the documentation at https://github.com/melvenac/Self-Improving-Agent";
+      return "No agents are currently online. Please try again later or check the documentation at https://github.com/melvenac/A2A-Hub";
     }
 
     const taskId = randomUUID();

@@ -3,7 +3,7 @@ import type { AgentCard } from "@a2a-js/sdk";
 export const hubAgentCard: AgentCard = {
   name: "Intelligent-Hub",
   description:
-    "Persistent AI mediator for Self-Improving-Agent installation support. Accumulates knowledge from every interaction and self-corrects the repo.",
+    "Persistent AI mediator for A2A agent coordination. Accumulates knowledge from every interaction and self-corrects the repo.",
   url: process.env.HUB_URL
     ? `${process.env.HUB_URL}/a2a`
     : "https://sandbox.tarrantcountymakerspace.com/a2a",
@@ -32,7 +32,7 @@ export const hubAgentCard: AgentCard = {
       id: "troubleshoot-installation",
       name: "Installation Troubleshooting",
       description:
-        "Diagnoses and resolves Self-Improving-Agent setup errors from accumulated knowledge or by escalating to an expert agent.",
+        "Diagnoses and resolves A2A Hub setup errors from accumulated knowledge or by escalating to an expert agent.",
       tags: ["debugging", "installation", "setup", "configuration"],
       examples: [
         "npm ERR! code ERESOLVE during install",
