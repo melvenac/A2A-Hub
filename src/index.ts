@@ -100,52 +100,73 @@ app.post("/a2a/message/send", async (req, res) => {
 
 // Wrapper response endpoint
 app.post("/a2a/task/:taskId/respond", async (req, res) => {
-  const { taskId } = req.params;
-  const apiKey = req.headers["x-agent-key"] as string;
-  if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
+  try {
+    const { taskId } = req.params;
+    const apiKey = req.headers["x-agent-key"] as string;
+    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
 
-  const responseText = req.body?.response;
-  if (!responseText) return res.status(400).json({ error: "Missing response field" });
+    const responseText = req.body?.response;
+    if (!responseText) return res.status(400).json({ error: "Missing response field" });
 
-  await convex.mutation(api.tasks.addMessage, {
-    taskId,
-    role: "agent",
-    content: responseText,
-  });
+    await convex.mutation(api.tasks.addMessage, {
+      taskId,
+      role: "agent",
+      content: responseText,
+    });
 
-  await convex.mutation(api.tasks.updateStatus, {
-    taskId,
-    status: "completed",
-  });
+    await convex.mutation(api.tasks.updateStatus, {
+      taskId,
+      status: "completed",
+    });
 
-  res.json({ ok: true });
+    res.json({ ok: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Agent polling queue
 app.get("/a2a/queue/:agentId", async (req, res) => {
-  const { agentId } = req.params;
-  const apiKey = req.headers["x-agent-key"] as string;
-  if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
+  try {
+    const { agentId } = req.params;
+    const apiKey = req.headers["x-agent-key"] as string;
+    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
 
-  const tasks = await queue.getTasksFor(agentId);
-  res.json({ tasks });
+    const tasks = await queue.getTasksFor(agentId);
+    res.json({ tasks });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Agent heartbeat
 app.post("/a2a/heartbeat/:agentId", async (req, res) => {
-  const { agentId } = req.params;
-  await convex.mutation(api.agents.heartbeat, { name: agentId });
-  res.json({ ok: true });
+  try {
+    const { agentId } = req.params;
+    await convex.mutation(api.agents.heartbeat, { name: agentId });
+    res.json({ ok: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Agent registration
 app.post("/a2a/register", async (req, res) => {
-  const { name, apiKey, agentCard } = req.body;
-  const apiKeyHash = createHash("sha256").update(apiKey).digest("hex");
+  try {
+    const { name, apiKey, agentCard } = req.body;
+    if (!name || !apiKey) {
+      return res.status(400).json({ error: "Missing required fields: name, apiKey" });
+    }
 
-  await convex.mutation(api.agents.register, { name, apiKeyHash, agentCard });
-  await telegram?.agentOnline(name);
-  res.json({ ok: true, message: `Agent ${name} registered` });
+    const apiKeyHash = createHash("sha256").update(apiKey).digest("hex");
+    const card = agentCard ?? { name, description: `Agent ${name}` };
+
+    await convex.mutation(api.agents.register, { name, apiKeyHash, agentCard: card });
+    await telegram?.agentOnline(name);
+    res.json({ ok: true, message: `Agent ${name} registered` });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 const port = parseInt(process.env.PORT || "4000");

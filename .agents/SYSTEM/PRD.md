@@ -82,7 +82,7 @@ See `ENTITIES.md` for full schema documentation. Key tables:
 | Service | Purpose | Token Budget |
 |---|---|---|
 | Anthropic API | Classification (50 tokens/call) + repo fix drafting (2000 tokens/call) | Minimal — ~$0.01/day |
-| Telegram Bot API | Async notifications, fix approval workflow | Free |
+| ~~Telegram Bot API~~ | ~~Dropped per ADR-005~~ | — |
 | GitHub | Push approved repo fixes via PAT | Free |
 | Convex | Persistent state, semantic search | Self-hosted (free) or cloud |
 
@@ -102,7 +102,7 @@ See `ENTITIES.md` for full schema documentation. Key tables:
 
 ### v1 — Testable MVP (Aaron + Brian)
 
-> **Goal:** Brian runs an `alice` wrapper, sends real questions, full loop works with Telegram visibility.
+> **Goal:** Brian runs an `alice` wrapper, sends real questions, full loop works with reliable mobile messaging.
 > **Effort:** Days — code is built, mostly configuration + docs.
 
 | Feature | Status |
@@ -112,17 +112,55 @@ See `ENTITIES.md` for full schema documentation. Key tables:
 | Docker deployment on VPS | Done |
 | Wrapper agent (poll → claude --print → report) | Done |
 | Per-task configurable LLM models (ADR-004) | Done |
-| Configure Telegram (bot token + group — code exists) | Not started |
+| ~~Configure Telegram~~ — dropped per ADR-005 | Dropped |
+| Custom Convex channel (see below) | Not started |
 | Harden bootstrap key | Not started |
 | README for Brian's wrapper setup | Not started |
 | End-to-end test with Brian (alice wrapper) | Not started |
 
-### v2 — Visibility & Developer Experience
+#### Custom Convex Channel — Reliable Mobile Messaging for v1
 
-> **Goal:** See what the hub is doing without Docker logs. Make it easy for others to connect.
+> **Why:** The Telegram plugin drops ~70% of messages due to fire-and-forget MCP notifications (ADR-005). Building a full messaging app is v2 scope. A custom Convex-backed channel bridges the gap — fixes drops now, stays in the Claude Code channels ecosystem, and gets permission relay for free.
+
+**What it is:** A custom MCP server (Claude Code channel) that uses Convex as a message queue instead of delivering notifications directly.
+
+**Flow:**
+```
+Phone (PWA or simple web UI)
+  → POST to Convex httpAction
+    → message written to Convex "channelMessages" table (persisted)
+      → Channel server polls/subscribes to Convex for new messages
+        → mcp.notification() to Claude Code (only when ready)
+          → Claude processes, replies via reply tool
+            → reply written to Convex table
+              → PWA sees reply in real-time via Convex subscription
+```
+
+**What to build:**
+1. **Convex table** — `channelMessages` (content, sender, status: pending/delivered/read, timestamps)
+2. **Convex httpAction** — receives messages from the web UI, writes to table
+3. **Custom channel server** — MCP server with `claude/channel` + `claude/channel/permission` capabilities. Subscribes to Convex for new messages, delivers to Claude Code only when the session is ready. Marks messages as delivered.
+4. **Minimal web UI** — single-page Next.js app (or even plain HTML) with Convex client. Send messages, see replies in real-time. Deploy as PWA for phone home screen.
+5. **Permission relay** — channel forwards tool-approval prompts to the web UI so Aaron can approve Bash/Write/Edit from his phone.
+
+**Why this works for v1:**
+- Messages persist in Convex — zero drops regardless of Claude Code state
+- Permission relay lets Aaron approve tools remotely (free from channels architecture)
+- Minimal frontend needed — just a chat input + message list
+- Shares the same Convex backend the Hub already uses
+- Natural stepping stone to the full v2 messaging app (same tables, same patterns)
+
+### v2 — Messaging App & Developer Experience
+
+> **Goal:** Purpose-built messaging app replaces Telegram. See what the hub is doing. Make it easy for others to connect.
 > **Effort:** Weeks — new features, new frontend.
+> **Architecture:** See `reference/MESSAGING-APP-ARCHITECTURE.md`
 
-- Frontend dashboard (Next.js + Convex) — conversation viewer, experience browser, agent status
+- **Messaging app (Next.js + Convex PWA)** — real-time chat, conversation history, multi-participant sessions. Replaces Telegram entirely (ADR-005). Install as PWA on phone.
+- **Peer model (Honcho-inspired)** — humans and agents as first-class entities with evolving profiles, per-session observation settings
+- **Background reasoning** — Convex background functions extract insights from conversations continuously. Messaging = Memory.
+- **Multi-participant sessions** — mixed human+AI conversations with per-participant visibility config
+- Frontend dashboard — conversation viewer, experience browser, agent status (integrated into messaging app)
 - npm wrapper package (`a2a-wrapper` CLI) — easy onboarding for new agents
 - Proper agent auth — per-agent key generation, rotation, deprecate bootstrap key
 - Test suite (Vitest), request validation, structured logging

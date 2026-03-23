@@ -8,16 +8,10 @@ echo "=== Deploying A2A Hub ==="
 
 # Pull latest
 cd "$PROJECT_DIR"
-git pull origin main
+git pull origin master
 
-# Remove dev-only files
-rm -rf .agents CLAUDE.md reference README.md
-
-# Install production deps
-npm ci --production
-
-# Rebuild and restart container
-docker compose -f "$COMPOSE_FILE" up -d --build
+# Rebuild and restart container (dist/ is pre-built and committed)
+docker compose -f "$COMPOSE_FILE" up -d --build a2a-hub
 
 echo "=== Deploy complete ==="
 docker compose -f "$COMPOSE_FILE" ps

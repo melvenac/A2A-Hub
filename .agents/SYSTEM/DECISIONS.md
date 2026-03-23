@@ -58,3 +58,12 @@ When a significant decision is made (technology choice, pattern adoption, trade-
 - **Decision:** Each internal LLM task gets its own env var (`CLASSIFIER_MODEL`, `REPO_FIXER_MODEL`) with sensible defaults. Currently Anthropic SDK only, but structured so multi-provider support can be added later.
 - **Alternatives Considered:** Single `ANTHROPIC_MODEL` env var (too coarse — can't optimize per task), multi-provider abstraction now (premature — only 2 LLM tasks exist today).
 - **Consequences:** Easy to swap models per task without code changes. Future milestone: abstract the LLM layer to support multiple providers (OpenAI, Gemini, Grok, local) per task.
+
+### ADR-005: Drop Telegram — Build Purpose-Built Messaging App
+- **Date:** 2026-03-23
+- **Session:** 3
+- **Status:** Accepted
+- **Context:** Testing the Claude Code Telegram plugin revealed fundamental reliability issues. The plugin delivers inbound messages to Claude Code via fire-and-forget MCP notifications (no `await`, no retry, `.catch()` only logs to stderr). When Claude Code is busy processing a tool call, incoming Telegram messages are silently dropped — no queue, no buffer, no retry. Multiple messages confirmed lost during testing. This is a design limitation of the plugin architecture, not a configuration issue.
+- **Decision:** Abandon Telegram as the messaging interface entirely. Instead, build a purpose-built AI messaging app using Convex + Next.js. Convex's reactive subscriptions guarantee message persistence and real-time delivery — messages write to a Convex table and persist until consumed. No fire-and-forget, no silent drops.
+- **Alternatives Considered:** (1) Patch the Telegram plugin locally to add retry/queue logic (fragile, fighting upstream design). (2) Run a Telegram bot on VPS writing to Convex as intermediary (adds unnecessary dependency on Telegram). (3) Keep Telegram for v1 and build custom app later (unreliable v1 is worse than no messaging in v1).
+- **Consequences:** Telegram integration removed from v1/v2 roadmap. New v2 deliverable: custom messaging frontend (Next.js + Convex). Gains full control over UX, message persistence, delivery guarantees, and multi-device support. Eliminates dependency on third-party bot APIs.
