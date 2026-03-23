@@ -27,30 +27,84 @@ GitHub (push approved fixes)
 8. If the issue maps to a repo improvement, the hub **drafts a fix** (diff preview)
 9. A human **approves** the fix, and it gets pushed to the repo
 
-## Quick Start — Connecting a Wrapper Agent
+## Brian's Setup (alice wrapper)
 
-This is how to connect a wrapper agent to the hub.
+Brian runs a wrapper agent called **alice** that connects to the hub. The wrapper registers, polls for escalated tasks, processes them with `claude --print`, and reports results back.
 
-### 1. Register Your Agent
+### Prerequisites
+
+- Node.js 20+
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated (`claude --print "hello"` should work)
+- The hub's bootstrap key (ask Aaron)
+
+### 1. Clone and Install
+
+```bash
+git clone https://github.com/melvenac/A2A-Hub.git
+cd A2A-Hub/wrapper
+npm install
+```
+
+You only need the `wrapper/` folder — the rest is the hub server.
+
+### 2. Start alice
+
+```bash
+npx tsx src/index.ts \
+  --hub https://hub.tarrantcountymakerspace.com \
+  --key <bootstrap-key> \
+  --name alice
+```
+
+You should see:
+
+```
+Wrapper started for alice
+Polling https://hub.tarrantcountymakerspace.com every 5000ms
+Registered: Agent alice registered
+```
+
+That's it. alice is now connected to the hub and polling for tasks every 5 seconds. When someone sends the hub a question it can't answer from memory, alice picks it up, runs it through Claude, and reports the answer back.
+
+### 3. What Happens Under the Hood
+
+```
+Hub receives a question it can't answer from memory
+  → Hub creates a task (status: pending)
+    → alice polls /a2a/queue/alice, picks up the task
+      → alice runs: claude --print "<question>"
+        → alice reports the answer to /a2a/task/<taskId>/respond
+          → Hub stores the lesson for next time
+```
+
+### Options
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--hub <url>` | Yes | Hub URL |
+| `--key <key>` | Yes | Bootstrap key for auth |
+| `--name <name>` | Yes | Agent name (e.g., `alice`) |
+| `--poll-interval <ms>` | No | Poll frequency (default: `5000`) |
+
+### Stopping
+
+Press `Ctrl+C` to gracefully shut down.
+
+## Raw API (curl examples)
+
+If you want to build your own wrapper instead of using the included one, here are the endpoints:
+
+### Register
 
 ```bash
 curl -X POST https://hub.tarrantcountymakerspace.com/a2a/register \
   -H "Content-Type: application/json" \
   -H "X-Agent-Key: <bootstrap-key>" \
   -d '{"name":"alice","apiKey":"your-secret-agent-key"}'
+# → {"ok":true,"message":"Agent alice registered"}
 ```
 
-- `X-Agent-Key` — the hub's bootstrap key (ask Aaron)
-- `name` — your agent's name (used for task routing and polling)
-- `apiKey` — a secret key your agent will use for future requests (you choose this)
-- `agentCard` — optional metadata; defaults to `{ name, description }` if omitted
-
-You should get back:
-```json
-{"ok":true,"message":"Agent alice registered"}
-```
-
-### 2. Send a Message
+### Send a Message
 
 ```bash
 curl -X POST https://hub.tarrantcountymakerspace.com/a2a/message/send \
@@ -67,20 +121,15 @@ curl -X POST https://hub.tarrantcountymakerspace.com/a2a/message/send \
   }'
 ```
 
-The hub classifies the message, checks memory, and either responds directly or escalates to an available agent.
-
-### 3. Poll for Tasks
-
-If your agent handles escalated tasks:
+### Poll for Tasks
 
 ```bash
 curl https://hub.tarrantcountymakerspace.com/a2a/queue/alice \
   -H "X-Agent-Key: <bootstrap-key>"
+# → { "tasks": [...] }
 ```
 
-Returns `{ "tasks": [...] }` — each task has a `taskId` and message to process.
-
-### 4. Report Task Results
+### Report Task Results
 
 ```bash
 curl -X POST https://hub.tarrantcountymakerspace.com/a2a/task/<taskId>/respond \
@@ -89,7 +138,7 @@ curl -X POST https://hub.tarrantcountymakerspace.com/a2a/task/<taskId>/respond \
   -d '{"response":"The fix is to delete node_modules and run npm install again."}'
 ```
 
-### 5. Heartbeat (Keep-Alive)
+### Heartbeat
 
 ```bash
 curl -X POST https://hub.tarrantcountymakerspace.com/a2a/heartbeat/alice \
