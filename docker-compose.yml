@@ -1,15 +1,41 @@
 services:
+  traefik:
+    image: traefik:v3.3
+    container_name: traefik
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=aaron@tarrantcountymakerspace.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    networks:
+      - a2a
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /home/melvenac/data/letsencrypt:/letsencrypt
+    restart: unless-stopped
+
   a2a-hub:
     image: a2a-hub:latest
     container_name: a2a-hub
     networks:
       - a2a
-    ports:
-      - "4000:4000"
     env_file:
       - /home/melvenac/projects/a2a-hub/.env
     depends_on:
       - convex
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.a2a-hub.rule=Host(`hub.tarrantcountymakerspace.com`)"
+      - "traefik.http.routers.a2a-hub.entrypoints=websecure"
+      - "traefik.http.routers.a2a-hub.tls.certresolver=letsencrypt"
+      - "traefik.http.services.a2a-hub.loadbalancer.server.port=4000"
     restart: unless-stopped
 
   convex:
