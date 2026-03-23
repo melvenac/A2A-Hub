@@ -1,5 +1,7 @@
 node_modules
-src
+dist
 tests
-*.ts
-!dist/**/*.js
+.agents
+.git
+.env
+.env.local
