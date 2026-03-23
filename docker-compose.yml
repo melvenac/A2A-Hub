@@ -1,0 +1,29 @@
+services:
+  a2a-hub:
+    image: a2a-hub:latest
+    container_name: a2a-hub
+    networks:
+      - a2a
+    ports:
+      - "4000:4000"
+    env_file:
+      - /home/melvenac/projects/a2a-hub/.env
+    depends_on:
+      - convex
+    restart: unless-stopped
+
+  convex:
+    image: ghcr.io/get-convex/convex-backend:latest
+    container_name: convex
+    networks:
+      - a2a
+    ports:
+      - "3210:3210"
+    volumes:
+      - /home/melvenac/data/convex-data:/convex_data
+    restart: unless-stopped
+
+networks:
+  a2a:
+    name: a2a
+    driver: bridge
