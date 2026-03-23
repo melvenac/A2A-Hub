@@ -1,22 +1,21 @@
 # Current Sprint
 
-> **Focus:** v1 — Get testable with Brian
+> **Focus:** v1 — Test the message loop, get Brian connected
 
 ---
 
 ## Active Tasks
 
-1. **Configure Telegram** — Set bot token + group ID env vars. Code in `telegram.ts` is ready, just needs configuration in Docker compose / .env
-2. **Harden bootstrap key** — Replace `changeme123` with a properly generated key
-3. **Write README.md** — Project overview, architecture diagram, wrapper quickstart so Brian can set up `alice`
-4. **Test with Brian** — End-to-end: alice wrapper → real question → hub classifies → memory → repo fix → Telegram approval
+1. **Test `/a2a/message/send`** — Send a real message, verify classify → memory search → escalate/respond pipeline works
+2. **Test with Brian** — Brian runs alice wrapper, sends real questions, full loop completes
+3. **Verify experience dedup** — Same trigger shouldn't create duplicate experiences
 
 ## Context
 
-Core hub is deployed and working. This sprint is configuration + docs, not new development. Goal is to get Brian running an alice wrapper and validating the full loop with real-world usage.
+Hub is deployed, Convex connected, all routes have error handling, README is written. The remaining work is testing — proving the core loop actually works end-to-end.
 
 ## Success Criteria
 
-- Telegram bot posts hub activity to Aaron's group
-- Brian can follow README to run his wrapper
-- Full loop completes: question → classify → store → fix draft → Telegram approval
+- `/a2a/message/send` returns a classified response (from memory or escalation)
+- Brian can follow README to run alice wrapper
+- Full loop completes: question → classify → store → respond

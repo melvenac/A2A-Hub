@@ -23,10 +23,9 @@ Tasks are organized by MVP version, then by priority within each version.
 
 - [x] Configure Telegram integration (bot token + group ID env vars — code already exists in `telegram.ts`)
 - [x] Fix Convex connectivity — CONVEX_URL set to http://convex:3210, functions deployed via `npx convex deploy` (Session 3)
-- [ ] Write README.md — project overview, setup instructions, wrapper quickstart for Brian
-- [ ] Test with Brian: alice wrapper → real installation question → hub classifies → memory stores → repo fix drafted → Aaron approves via Telegram
+- [x] Write README.md — project overview, setup instructions, wrapper quickstart for Brian (Session 3)
+- [ ] Test with Brian: alice wrapper → real installation question → hub classifies → memory stores → repo fix drafted
 - [ ] Verify experience dedup — same trigger shouldn't create duplicate experiences
-- [ ] Harden bootstrap key (replace `changeme123` with proper generated key) — after Brian testing
 
 ## v2 — Visibility & Developer Experience
 
@@ -35,6 +34,7 @@ Tasks are organized by MVP version, then by priority within each version.
 
 - [ ] Frontend dashboard (Next.js + Convex) — conversation viewer, experience browser, agent status, real-time updates
 - [ ] npm wrapper package (`a2a-wrapper` CLI) — `npx a2a-wrapper --hub URL --name alice`
+- [ ] Harden bootstrap key (replace `changeme123` with proper generated key) — moved from v1
 - [ ] Proper agent auth — per-agent key generation, key rotation, deprecate bootstrap key for production
 - [ ] Write Vitest test suite for classifier, memory, and executor modules
 - [ ] Add request validation middleware (validate A2A message format)
