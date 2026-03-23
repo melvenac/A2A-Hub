@@ -3,6 +3,7 @@ import simpleGit from "simple-git";
 import { writeFileSync, readFileSync } from "fs";
 import { join } from "path";
 
+const REPO_FIXER_MODEL = process.env.REPO_FIXER_MODEL || "claude-sonnet-4-20250514";
 const REPO_PATH = process.env.REPO_PATH || "/tmp/Self-Improving-Agent";
 const REPO_URL = "https://github.com/melvenac/Self-Improving-Agent.git";
 
@@ -29,7 +30,7 @@ export class RepoFixer {
     filePaths: string[];
   } | null> {
     const response = await this.anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: REPO_FIXER_MODEL,
       max_tokens: 2000,
       system: `You are a documentation fixer. Given an installation error and its fix, propose a specific change to the Self-Improving-Agent repo documentation or scripts that would prevent this error from happening to future users.
 

@@ -1,123 +1,128 @@
-# A2A Intelligent Hub — Standalone Docker Deployment Guide
+# A2A Intelligent Hub — Docker CLI Deployment Guide
+
+> **VPS:** ubuntu-DTX-2gb (172.86.123.176)
+> **User:** melvenac
+> **Approach:** Docker CLI — no Coolify, no orchestrators
 
 ## Prerequisites
 
-- Docker + Docker Compose on your VPS
-- A2A Hub repo cloned locally
+- Docker + Docker Compose on VPS
+- Node.js 20+ on VPS
 - Anthropic API key
 - Telegram bot token + group ID
-- GitHub PAT (for repo-fixer git push)
+- GitHub PAT (for repo-fixer)
+
+## VPS Directory Structure
+
+```
+/home/melvenac/
+├── projects/
+│   └── a2a-hub/              # Source code (rsync from local)
+├── docker-compose/
+│   ├── a2a-hub/
+│   │   ├── docker-compose.yml
+│   │   └── .env              # Secrets (not in git)
+│   └── convex/
+│       └── docker-compose.yml
+├── data/
+│   ├── convex-data/          # Convex persistent storage
+│   ├── backups/
+│   └── logs/
+└── scripts/                  # Utility scripts
+```
 
 ---
 
-## Step 1: Local Setup
+## Step 1: Push Source to VPS
 
-Clone and build locally to test before deploying:
+From your local machine:
 
 ```bash
 cd ~/Projects/A2A-Hub
 npm install
+npx convex codegen
 npm run build
-```
 
-Verify the build succeeded and `dist/` exists:
-```bash
-ls dist/index.js
+# Sync to VPS
+rsync -azv --exclude node_modules --exclude .env \
+  ~/Projects/A2A-Hub/ melvenac@172.86.123.176:~/projects/a2a-hub/
 ```
 
 ---
 
-## Step 2: Deploy Self-Hosted Convex
+## Step 2: Set Up Convex
 
-The Hub needs Convex for persistent state. On your VPS:
+On the VPS:
 
 ```bash
-# Create directories
-mkdir -p ~/docker-compose/convex ~/data/convex-data
+# Create data directory
+mkdir -p ~/data/convex-data
 
-# Start Convex container
-docker run -d \
-  --name convex \
-  --network a2a-hub \
-  -p 3210:3210 \
-  -v ~/data/convex-data:/convex_data \
-  ghcr.io/get-convex/convex-backend:latest
+# Create docker-compose for Convex
+cat > ~/docker-compose/convex/docker-compose.yml << 'EOF'
+services:
+  convex:
+    image: ghcr.io/get-convex/convex-backend:latest
+    container_name: convex
+    networks:
+      - a2a
+    ports:
+      - "3210:3210"
+    volumes:
+      - ~/data/convex-data:/convex_data
+    restart: unless-stopped
+
+networks:
+  a2a:
+    name: a2a
+    driver: bridge
+EOF
+
+# Start Convex
+cd ~/docker-compose/convex
+docker compose up -d
+
+# Generate admin key (save this!)
+docker exec convex ./generate_admin_key.sh
 ```
-
-### Initialize Convex schema
 
 From your local machine, push the schema:
 
 ```bash
 cd ~/Projects/A2A-Hub
-npx convex deploy --url http://<your-vps-ip>:3210
+npx convex deploy --url http://172.86.123.176:3210
 ```
-
-This creates all 5 tables (experiences, tasks, agents, conversations, repoFixes).
 
 ---
 
-## Step 3: Deploy the Hub on VPS
+## Step 3: Deploy the Hub
 
-Copy your project to the VPS:
-
-```bash
-rsync -azv ~/Projects/A2A-Hub melvenac@<vps-ip>:~/projects/
-```
-
-On the VPS, build and run:
+On the VPS:
 
 ```bash
-cd ~/projects/A2A-Hub
+# Install dependencies and build
+cd ~/projects/a2a-hub
 npm ci
 npm run build
 
+# Build Docker image
 docker build -t a2a-hub:latest .
-docker run -d \
-  --name a2a-hub \
-  --network a2a-hub \
-  -p 4000:4000 \
-  -e CONVEX_URL=http://convex:3210 \
-  -e ANTHROPIC_API_KEY=sk-ant-... \
-  -e GITHUB_PAT=ghp_... \
-  -e TELEGRAM_BOT_TOKEN=123456:ABC... \
-  -e TELEGRAM_GROUP_ID=-100... \
-  -e HUB_BOOTSTRAP_KEY=your-bootstrap-key \
-  -e HUB_URL=https://your-domain.com \
-  -e REPO_PATH=/tmp/Self-Improving-Agent \
-  -e CONFIDENCE_THRESHOLD=0.85 \
-  -e PORT=4000 \
-  a2a-hub:latest
 ```
 
-### Or use docker-compose (recommended)
+Create the compose file:
 
-Create `~/docker-compose/a2a-hub/docker-compose.yml`:
-
-```yaml
-version: "3.8"
+```bash
+cat > ~/docker-compose/a2a-hub/docker-compose.yml << 'EOF'
 services:
   a2a-hub:
-    build:
-      context: ~/projects/a2a-hub
-      dockerfile: Dockerfile
+    image: a2a-hub:latest
     container_name: a2a-hub
     networks:
       - a2a
     ports:
       - "4000:4000"
-    environment:
-
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      GITHUB_PAT: ${GITHUB_PAT}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      TELEGRAM_GROUP_ID: ${TELEGRAM_GROUP_ID}
-      CONVEX_URL: http://convex:3210
-      HUB_BOOTSTRAP_KEY: ${HUB_BOOTSTRAP_KEY}
-      HUB_URL: ${HUB_URL}
-      REPO_PATH: /tmp/Self-Improving-Agent
-      CONFIDENCE_THRESHOLD: "0.85"
-      PORT: "4000"
+    env_file:
+      - .env
     depends_on:
       - convex
     restart: unless-stopped
@@ -135,57 +140,80 @@ services:
 
 networks:
   a2a:
+    name: a2a
     driver: bridge
+EOF
 ```
 
-Create `.env` in the same directory:
+Create the `.env` file (replace with your actual values):
 
-```
+```bash
+cat > ~/docker-compose/a2a-hub/.env << 'EOF'
+# Required
 ANTHROPIC_API_KEY=sk-ant-...
-GITHUB_PAT=ghp_...
-TELEGRAM_BOT_TOKEN=123456:ABC...
-TELEGRAM_GROUP_ID=-100...
-HUB_BOOTSTRAP_KEY=your-generated-key
+CONVEX_URL=http://convex:3210
+HUB_BOOTSTRAP_KEY=<run: openssl rand -hex 32>
 HUB_URL=https://hub.tarrantcountymakerspace.com
+PORT=4000
+
+# Telegram
+TELEGRAM_BOT_TOKEN=<your-bot-token>
+TELEGRAM_GROUP_ID=<your-group-id>
+
+# Git operations
+GITHUB_PAT=ghp_...
+REPO_PATH=/tmp/Self-Improving-Agent
+
+# LLM models (defaults to claude-sonnet-4-20250514)
+CLASSIFIER_MODEL=claude-sonnet-4-20250514
+REPO_FIXER_MODEL=claude-sonnet-4-20250514
+
+# Tuning
+CONFIDENCE_THRESHOLD=0.85
+EOF
 ```
 
-Then deploy:
+Generate a proper bootstrap key:
+
+```bash
+# Generate and copy this into .env as HUB_BOOTSTRAP_KEY
+openssl rand -hex 32
+```
+
+Start everything:
 
 ```bash
 cd ~/docker-compose/a2a-hub
-docker-compose up -d
+docker compose up -d
 ```
 
 ---
 
-## Step 4: Verify Deployment
-
-Check container logs:
+## Step 4: Verify
 
 ```bash
+# Check containers are running
+docker ps
+
+# Check logs
 docker logs a2a-hub
 docker logs convex
-```
 
-Health check from local machine:
-
-```bash
-# Replace with your VPS IP or domain
-curl http://<vps-ip>:4000/health
+# Health check
+curl http://localhost:4000/health
 # Expected: {"status":"ok","agent":"Intelligent-Hub"}
 
-# Agent Card
-curl http://<vps-ip>:4000/.well-known/agent-card.json
-# Expected: Full agent card JSON with 3 skills
+# Agent card
+curl http://localhost:4000/.well-known/agent-card.json
 ```
 
-Check Telegram — bot should post "Hub is online" in your group.
+Check Telegram — you should see "Hub is online" in your group.
 
 ---
 
-## Step 5: Set Up Reverse Proxy (Optional)
+## Step 5: Traefik SSL (if not already configured)
 
-Use Traefik or Nginx to expose the hub via HTTPS. With Traefik labels in docker-compose:
+Add labels to the a2a-hub service in docker-compose.yml:
 
 ```yaml
 labels:
@@ -198,9 +226,11 @@ labels:
 
 ---
 
-## Step 6: Run Your Local Wrapper (Clark)
+## Step 6: Run Wrapper Agents
 
-Wrapper code lives in Self-Improving-Agent repo. From local machine:
+### Your wrapper (Clark)
+
+From your local machine:
 
 ```bash
 cd ~/Projects/Self-Improving-Agent/wrapper
@@ -211,59 +241,42 @@ npx tsx src/index.ts \
   --name clark
 ```
 
-Expected output:
-```
-Registered: Agent clark registered
-Wrapper started for clark
-Polling https://hub.tarrantcountymakerspace.com every 5000ms
-```
+### Brian's wrapper (Alice)
 
----
-
-## Step 7: Test with Others
-
-1. **Generate agent keys:**
-   ```bash
-   # Call Hub's key generation endpoint
-   curl -X POST http://<vps-ip>:4000/api/agents/register \
-     -H "X-Bootstrap-Key: <your-bootstrap-key>" \
-     -H "Content-Type: application/json" \
-     -d '{"name": "alice"}'
-   ```
-
-2. **Run another wrapper:**
-   ```bash
-   npx tsx src/index.ts \
-     --hub https://hub.tarrantcountymakerspace.com \
-     --key <alices-key> \
-     --name alice
-   ```
-
----
-
-## Step 8: Release
-
-After testing:
+Brian runs from his machine:
 
 ```bash
-git tag -a v1.0.0 -m "A2A Intelligent Hub v1 — Standalone"
-git push origin master --tags
+git clone https://github.com/melvenac/Self-Improving-Agent.git
+cd Self-Improving-Agent/wrapper
+npm install
+npx tsx src/index.ts \
+  --hub https://hub.tarrantcountymakerspace.com \
+  --key <key-you-give-brian> \
+  --name alice
 ```
 
 ---
 
-## Future: Eliminate API Key Dependency
+## Updating the Hub
 
-Currently the Hub makes two small API calls via `ANTHROPIC_API_KEY`:
-- **Classifier** (`classifier.ts`) — 50 tokens max per call, categorizes root causes
-- **Repo Fixer** (`repo-fixer.ts`) — 2000 tokens max, drafts doc fixes (occasional)
+When you make code changes locally:
 
-All heavy LLM work already runs through Claude Max subscription via wrapper `claude --print`.
+```bash
+# Local: build and sync
+cd ~/Projects/A2A-Hub
+npm run build
+rsync -azv --exclude node_modules --exclude .env \
+  ~/Projects/A2A-Hub/ melvenac@172.86.123.176:~/projects/a2a-hub/
 
-**Options to evaluate later:**
-1. **Route through wrappers** — Hub sends classification/fix-drafting tasks to a connected wrapper agent instead of calling the API directly. Zero API cost, all LLM calls use subscription.
-2. **Install Claude Code on VPS** — Hub uses `claude --print` on the server. Requires authenticating Claude Code there.
-3. **Keep hybrid** — Current approach. API costs are ~$0.01/day at moderate usage.
+# VPS: rebuild image and restart
+ssh melvenac@172.86.123.176
+cd ~/projects/a2a-hub
+npm ci && npm run build
+docker build -t a2a-hub:latest .
+cd ~/docker-compose/a2a-hub
+docker compose down
+docker compose up -d
+```
 
 ---
 
@@ -271,8 +284,9 @@ All heavy LLM work already runs through Claude Max subscription via wrapper `cla
 
 | Issue | Fix |
 |-------|-----|
-| Hub can't reach Convex | Check `CONVEX_URL` — use Docker internal network name, not localhost |
-| Telegram bot not posting | Verify `TELEGRAM_BOT_TOKEN` and `TELEGRAM_GROUP_ID`, ensure bot is in the group |
-| Wrapper can't connect | Check Hub URL is publicly accessible, verify API key |
-| `npx convex deploy` fails | Ensure Convex service is running and port 3210 is accessible |
-| Docker build fails on `dist/` | Use the multi-stage Dockerfile above |
+| Hub can't reach Convex | Check `CONVEX_URL` uses Docker network name (`http://convex:3210`), not localhost |
+| Telegram bot not posting | Verify bot token + group ID, ensure bot is added to the group |
+| Wrapper can't connect | Check Hub URL is publicly accessible, verify API key matches |
+| `npx convex deploy` fails | Ensure Convex container is running and port 3210 is accessible from local |
+| Docker build fails on `dist/` | Run `npm run build` before `docker build` — Dockerfile copies `dist/` |
+| Convex types missing | Run `npx convex codegen` before `npm run build` |

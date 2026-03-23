@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 
+const CLASSIFIER_MODEL = process.env.CLASSIFIER_MODEL || "claude-sonnet-4-20250514";
 const VALID_CATEGORIES = ["repo-docs", "repo-script", "repo-config", "user-env", "user-error"] as const;
 type Category = (typeof VALID_CATEGORIES)[number];
 
@@ -12,7 +13,7 @@ export class Classifier {
 
   async classify(trigger: string, action: string): Promise<Category> {
     const response = await this.client.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: CLASSIFIER_MODEL,
       max_tokens: 50,
       system: `You are a root cause classifier. Given an installation error (trigger) and its fix (action), classify the root cause into exactly one category. Respond with ONLY the category string, nothing else.
 
