@@ -1,35 +1,37 @@
 # Project Summary
 
-> **Last Updated:** Session 1 (2026-03-22)
-> **Status:** v1 MVP — mostly built, needs config + docs to be testable with Brian
+> **Last Updated:** Session 2 (2026-03-23)
+> **Status:** v1 MVP — Telegram working, **blocked on Convex connectivity** from Docker
 
 ---
 
 ## Current State
 
-The A2A Intelligent Hub core is deployed and working on VPS. The v1 milestone is close — remaining work is configuration (Telegram) and documentation (README for Brian), not new code.
+Telegram integration is live — the hub broadcasts to the "AI Chat room" group via `@a2a_hub_bot`. However, the hub cannot process messages because the Convex backend isn't reachable from inside the Docker container. This is the critical blocker for v1.
 
 ### What's Working
-- Full hub loop: message → classify → memory check → escalate → respond
-- Convex persistence (5 tables, semantic search) — self-hosted on VPS
+- Telegram bot (`@a2a_hub_bot`) configured and broadcasting ("Hub is online 🟢")
 - Docker deployment at hub.tarrantcountymakerspace.com (Traefik SSL)
-- Wrapper agent tested (poll → claude --print → report)
 - Per-task configurable LLM models (CLASSIFIER_MODEL, REPO_FIXER_MODEL env vars)
 - Agent registration with bootstrap key
 - Agent card at `/.well-known/agent-card.json`
 - .agents/ framework harness scaffolded
+- All source references updated from Self-Improving-Agent to A2A-Hub
 
 ### What's Broken / Blocked
-- Telegram module coded but not configured (needs bot token + group ID)
-- Bootstrap key is `changeme123` — needs hardening before Brian tests
+- **Convex connectivity (CRITICAL):** Hub container can't reach `npx convex dev` on host port 3211. Docker Convex container (port 3210) has no functions deployed — admin key auth for `npx convex deploy` fails. See Session 2 for full details and options.
+- Bootstrap key is `changeme123` — hardening deferred until after Brian testing
 - No README — Brian can't set up his wrapper without docs
 - No unit tests
+- Docker Convex volume mount may be wrong (`/convex_data` vs `/convex/data`)
 
 ### What's Next (v1 remaining)
-- [ ] Configure Telegram (env vars only — code exists)
-- [ ] Harden bootstrap key
+- [x] Configure Telegram (bot token + group ID)
+- [ ] **Fix Convex connectivity** (see Session 2 Next Session Recommendations for options)
 - [ ] Write README with wrapper quickstart
 - [ ] Test end-to-end with Brian (alice wrapper)
+- [ ] Verify experience dedup
+- [ ] Harden bootstrap key (after Brian testing)
 
 ---
 
@@ -38,11 +40,11 @@ The A2A Intelligent Hub core is deployed and working on VPS. The v1 milestone is
 ```
 Wrapper Agents (any A2A-compliant agent — Claude, Gemini, Grok, OpenAI, local)
     ↕ HTTP (register, poll, report)
-A2A Intelligent Hub (Express 5, port 4000)
+A2A Intelligent Hub (Express 5, Docker, port 4000)
     ↕ Convex Client
-Convex Backend (self-hosted, port 3210)
+Convex Backend (npx convex dev on host, port 3211 — Docker container on 3210 has no functions)
     ↕
-Telegram Bot API (notifications, approvals)
+Telegram Bot API (@a2a_hub_bot — notifications, approvals)
 Anthropic API (classifier + repo-fixer — model configurable per task)
 GitHub (push approved fixes)
 ```
@@ -53,7 +55,7 @@ GitHub (push approved fixes)
 
 | Version | Goal | Effort |
 |---|---|---|
-| **v1** | Testable with Brian — Telegram, README, key hardening | Days |
+| **v1** | Testable with Brian — Convex fix, README, key hardening | Days |
 | **v2** | Frontend dashboard, npm wrapper package, proper auth | Weeks |
 | **v3** | Multi-provider LLM, Makerspace integration, platform | Months |
 
@@ -65,7 +67,7 @@ See PRD.md §9 for full roadmap. See INBOX.md for task breakdown.
 
 | Metric | Value |
 |---|---|
-| Total Sessions | 1 |
-| Features Shipped | 8 (core modules + configurable models) |
-| v1 Tasks Remaining | 4 |
-| Known Bugs | 0 |
+| Total Sessions | 2 |
+| Features Shipped | 9 (core modules + configurable models + Telegram) |
+| v1 Tasks Remaining | 5 (Convex fix, README, test, dedup, key) |
+| Known Bugs | 1 (Convex Docker connectivity) |

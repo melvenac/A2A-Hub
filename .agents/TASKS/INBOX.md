@@ -1,6 +1,6 @@
 # Task Inbox — Prioritized Backlog
 
-> **Last Updated:** Session 1 (2026-03-22)
+> **Last Updated:** Session 2 (2026-03-23)
 
 ---
 
@@ -21,7 +21,8 @@ Tasks are organized by MVP version, then by priority within each version.
 > **Goal:** Brian runs an `alice` wrapper, sends real questions, full loop works with Telegram visibility.
 > **Effort:** Days, not weeks — code is built, this is mostly configuration + docs.
 
-- [ ] Configure Telegram integration (bot token + group ID env vars — code already exists in `telegram.ts`)
+- [x] Configure Telegram integration (bot token + group ID env vars — code already exists in `telegram.ts`)
+- [!] Fix Convex connectivity — hub container can't reach Convex backend. See Session 2 for options.
 - [ ] Write README.md — project overview, setup instructions, wrapper quickstart for Brian
 - [ ] Test with Brian: alice wrapper → real installation question → hub classifies → memory stores → repo fix drafted → Aaron approves via Telegram
 - [ ] Verify experience dedup — same trigger shouldn't create duplicate experiences
