@@ -1,6 +1,6 @@
 # Task Inbox — Prioritized Backlog
 
-> **Last Updated:** Session 2 (2026-03-23)
+> **Last Updated:** Session 5 (2026-07-22) — post protocol spine (ADR-006), Telegram removed, autonomous loop gate passed
 
 ---
 
@@ -16,52 +16,59 @@ Tasks are organized by MVP version, then by priority within each version.
 
 ---
 
-## v1 — Testable MVP (Aaron + Brian)
+## v1 — Autonomous loop, verified locally
 
-> **Goal:** Brian runs an `alice` wrapper, sends real questions, full loop works with Telegram visibility.
-> **Effort:** Days, not weeks — code is built, this is mostly configuration + docs.
+> **Goal:** True A2A — 2+ agents converse through the hub with zero human relay, verified on the local stack (VPS was wiped; redeploy comes later).
+> **Effort:** Days.
 
-- [x] Configure Telegram integration (bot token + group ID env vars — code already exists in `telegram.ts`)
-- [x] Fix Convex connectivity — CONVEX_URL set to http://convex:3210, functions deployed via `npx convex deploy` (Session 3)
-- [x] Write README.md — project overview, setup instructions, wrapper quickstart for Brian (Session 3)
-- [ ] Test with Brian: alice wrapper → real installation question → hub classifies → memory stores → repo fix drafted
-- [ ] Verify experience dedup — same trigger shouldn't create duplicate experiences
+- [x] Protocol spine: `to:` addressing, chat channel (peers/sessions/messages), atomic `tasks.claim`, turn caps (v1.1.0, ADR-006)
+- [x] Delete Telegram entirely — replaced by chat channel, humans are peers (v1.1.0)
+- [x] Wrapper daemon (`src/wrapper/daemon.ts`): register → poll → claim → respond; session conversations; LLM or fallback (v1.2.0)
+- [x] **Autonomous 2-agent loop gate PASSED** — alice ↔ bob, 6 turns, DONE convergence, zero human (`scripts/demo-loop.mjs`, v1.2.0)
+- [x] Svelte test client (`client/`, plain Svelte + Vite on :5173) — textbox → `/a2a/message/send` → response pane, `to` addressing; verified via `scripts/verify-client-stack.mjs` (v1.3.0)
+- [ ] Real-LLM gate run — needs `ANTHROPIC_API_KEY` in `.env` (Aaron); daemons auto-switch
+- [ ] Experience dedup — `triggerHash` + upsert in `experiences.store` (plan in forge-to-atlas.md)
+- [ ] docker-compose profiles: local (no Traefik, local Convex) + VPS (Traefik, prod URLs) — one env-gated build
 
-## v2 — Visibility & Developer Experience
+## v2 — Chat channel UX & developer experience
 
-> **Goal:** See what the hub is doing without Docker logs. Make it easy for others to connect agents.
-> **Effort:** Weeks — new features, new frontend.
+> **Goal:** The chat UI becomes the daily driver (replacing what Telegram was for). Easy for others to connect agents.
 
-- [ ] Frontend dashboard (Next.js + Convex) — conversation viewer, experience browser, agent status, real-time updates
-- [ ] npm wrapper package (`a2a-wrapper` CLI) — `npx a2a-wrapper --hub URL --name alice`
-- [ ] Harden bootstrap key (replace `changeme123` with proper generated key) — moved from v1
-- [ ] Proper agent auth — per-agent key generation, key rotation, deprecate bootstrap key for production
-- [ ] Write Vitest test suite for classifier, memory, and executor modules
-- [ ] Add request validation middleware (validate A2A message format)
-- [ ] Add health check for Convex connectivity (not just `{"status":"ok"}`)
-- [ ] Create CHANGELOG.md and tag releases
-- [ ] Add structured logging (pino or winston)
+- [ ] Grow Svelte client into chat UI: session list, live messages, send as `aaron` peer (Hub activity feed = notifications)
+- [ ] PWA setup (service worker, manifest) — restores away-from-desk notifications lost with Telegram
+- [ ] npm wrapper package (`a2a-agent` CLI) — `npx a2a-agent --hub URL --name alice`; package `src/wrapper/daemon.ts`
+- [ ] `agents.register` should upsert (currently duplicates rows on re-register)
+- [ ] Harden auth: X-Agent-Key is presence-checked only — verify against `apiKeyHash`, per-agent keys, rotation
+- [ ] Request validation middleware (A2A message format)
+- [ ] Convex health check on `/health` (not just `{"status":"ok"}`)
+- [ ] Structured logging (pino)
+- [ ] A2A spec alignment: task lifecycle states (`submitted/working/input-required/...`), `message/stream` SSE, per-agent cards
+- [ ] Repo-fix approval flow through chat channel (`input-required` task to human peer; was Telegram buttons)
 
-## v3 — Platform (depends on v2 decisions)
+## v3 — Platform & multi-orchestration dogfood
 
-> **Goal:** Hub becomes a product, not just a tool for Aaron and Brian. Architectural decisions that shouldn't be made yet.
-> **Effort:** Months — significant architecture work.
+> **Goal:** Hub becomes a product; the same bus coordinates dev-time agents on this repo ("both machinery", ADR-006).
 
-- [ ] Multi-provider LLM abstraction — each hub task uses best provider (Anthropic, OpenAI, Gemini, Grok, local). See ADR-004
-- [ ] Eliminate hub's own API key dependency — route classifier/repo-fixer through connected agents
+- [ ] Register dev agents (Forge, resurrected Atlas) on the hub; migrate file mailbox → hub sessions
+- [ ] Orchestrator role: decompose → fan out via `tasks.claim` → fan in; worktree-per-agent for parallel edits
+- [ ] Multi-provider LLM abstraction (ADR-004 follow-on)
 - [ ] Makerspace website integration — Stripe billing, member-facing chat
-- [ ] Advanced escalation — multi-agent routing based on agent capabilities and specializations
+- [ ] Advanced escalation — capability-based multi-agent routing
 - [ ] Rate limiting and abuse protection
 - [ ] SECURITY.md with full auth patterns and audit checklist
 
 ---
 
-## Completed
+## Completed (pre-Session 5 history)
 
-- [x] Implement core modules (classifier, memory, executor, escalation, queue, repo-fixer, telegram, agent-card)
-- [x] Create Convex schema with 5 tables
-- [x] Create Docker + Docker Compose deployment config
-- [x] Deploy hub + Convex to VPS (hub.tarrantcountymakerspace.com)
-- [x] Test wrapper flow end-to-end (message → memory → escalate → respond)
-- [x] Scaffold .agents/ framework harness
-- [x] Make LLM models per-task configurable (CLASSIFIER_MODEL, REPO_FIXER_MODEL env vars) — ADR-004
+- [x] Core modules (classifier, memory, executor, escalation, queue, repo-fixer, agent-card)
+- [x] Convex schema + deploy; Docker/Compose config; VPS deploy (later wiped)
+- [x] Vitest suite (classifier, executor, queue, integration — 10 tests)
+- [x] CHANGELOG.md + tagged releases (v1.1.0, v1.2.0)
+- [x] Per-task configurable LLM models (ADR-004)
+- [x] README with wrapper quickstart
+
+### Dropped
+- ~~Configure Telegram~~ — Telegram removed entirely (ADR-006)
+- ~~Test with Brian via Telegram visibility~~ — superseded by local gate + chat channel; Brian testing returns post-VPS-redeploy
+- ~~Next.js dashboard~~ — superseded by Svelte client growing into chat UI (v2)

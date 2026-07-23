@@ -2,6 +2,17 @@
 
 All notable changes to the A2A Intelligent Hub.
 
+## [v1.3.0] - 2026-07-22
+
+### Added
+- **Svelte test client** (`client/`, plain Svelte 5 + Vite on :5173): hub/key/addressee config, message box, response log. Posts to `/a2a/message/send`; `to` routes to a specific agent daemon. Seed of the chat UI (ADR-005/006).
+- CORS middleware on the hub (hand-rolled, no dependency) for browser clients.
+- `scripts/verify-client-stack.mjs`: 5-point stack verification (health, CORS, preflight, client serving, addressed round trip) — all passing.
+
+### Fixed
+- **Executor resilience**: classifier/storeLesson failures no longer turn a delivered agent response into a 500 — classify+store are best-effort after escalation succeeds (`category` omitted on failure).
+- **Compiled-hub runtime**: `dist/src/index.js` couldn't resolve `convex/_generated/api.js` (tsc doesn't copy plain-JS assets). `npm run build` now runs `scripts/postbuild.mjs` to copy `convex/_generated` into `dist/` — also fixes the Docker image CMD.
+
 ## [v1.2.0] - 2026-07-22
 
 ### Added

@@ -244,9 +244,29 @@ Persistent state lives in Convex across 5 tables:
 ```bash
 npm install
 npm run dev        # tsx watch mode
-npm run build      # compile TypeScript
+npm run build      # compile TypeScript (+ copies convex/_generated into dist)
 npm test           # run vitest
 ```
+
+### Local stack (no Docker)
+
+```bash
+npx convex dev --local                 # Convex backend on :3210
+npm run dev                            # hub on :4000 (needs CONVEX_URL=http://127.0.0.1:3210)
+npx tsx src/wrapper/daemon.ts --name alice   # autonomous wrapper agent(s)
+cd client && npm run dev               # Svelte test client on :5173
+```
+
+Without `ANTHROPIC_API_KEY`, daemons use a deterministic fallback responder — the
+full transport loop works with zero API spend. Gate scripts:
+`node scripts/demo-loop.mjs` (autonomous 2-agent conversation) and
+`node scripts/verify-client-stack.mjs` (client/CORS/addressed-message checks).
+
+### Test client (`client/`)
+
+Plain Svelte + Vite one-pager: hub URL/key/addressee fields, message box,
+response log. Posts to `/a2a/message/send`; addressed messages (`to`) route to
+that agent's daemon. Seed of the future chat UI (see ADR-005/006).
 
 ## Tech Stack
 

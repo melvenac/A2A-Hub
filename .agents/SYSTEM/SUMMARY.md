@@ -25,8 +25,8 @@ Session 5 landed the **protocol spine** (ADR-006): Telegram deleted, custom chat
 - [x] Stand up local stack (`npx convex dev --local` + hub on :4000)
 - [x] **Milestone 2: wrapper daemon** (`src/wrapper/daemon.ts` — poll → claim → respond, register retry, session conversations)
 - [x] **Autonomous 2-agent loop GATE PASSED** (2026-07-22): alice ↔ bob, 6 turns via hub sessions, converged with DONE, zero human after seed (`scripts/demo-loop.mjs`). Fallback-responder mode — transport proven without API spend.
+- [x] Svelte test client (`client/` on :5173, v1.3.0) — send box, `to:` addressing, response log; CORS on hub; 5-point stack verification passing (`scripts/verify-client-stack.mjs`)
 - [ ] Real-LLM run of the same gate (needs `ANTHROPIC_API_KEY` in `.env` — daemon auto-switches)
-- [ ] Svelte test client (Atlas's plan in `forge-to-atlas.md`) — seed of the chat UI
 - [ ] Experience dedup (triggerHash upsert — plan in forge-to-atlas.md)
 - [ ] docker-compose local + VPS profiles (one env-gated build)
 - [ ] `agents.register` should upsert (currently inserts duplicate rows on re-register)

@@ -54,6 +54,19 @@ describe("HubExecutor", () => {
     expect(result.answeredFromMemory).toBe(false);
     expect(result.response).toBe("alice here — done");
   });
+
+  it("still delivers the response when classify/store fails", async () => {
+    const executor = new HubExecutor({
+      searchMemory: vi.fn().mockResolvedValue({ confidence: 0.1, experience: null }),
+      escalate: vi.fn().mockResolvedValue("bob's answer"),
+      storeLesson: vi.fn(),
+      classify: vi.fn().mockRejectedValue(new Error("401 invalid api key")),
+    });
+
+    const result = await executor.handleMessage("anything");
+    expect(result.response).toBe("bob's answer");
+    expect(result.category).toBeUndefined();
+  });
 });
 
 describe("End-to-end flow", () => {

@@ -47,19 +47,23 @@ export class HubExecutor {
     // Step 2: Escalate to the addressed agent, or any available agent
     const agentResponse = await this.deps.escalate(message, to);
 
-    // Step 3: Classify root cause
-    const category = await this.deps.classify(message, agentResponse);
-
-    // Step 4: Store lesson
-    await this.deps.storeLesson({
-      trigger: message,
-      action: agentResponse,
-      context: "Installation troubleshooting via A2A Hub",
-      outcome: "Resolved",
-      confidence: 0.9,
-      sourceAgent: "escalation",
-      category: category as any,
-    });
+    // Steps 3-4 are best-effort: the agent already answered, so a classifier
+    // or storage failure must not turn a delivered response into an error.
+    let category: string | undefined;
+    try {
+      category = await this.deps.classify(message, agentResponse);
+      await this.deps.storeLesson({
+        trigger: message,
+        action: agentResponse,
+        context: "Installation troubleshooting via A2A Hub",
+        outcome: "Resolved",
+        confidence: 0.9,
+        sourceAgent: "escalation",
+        category: category as any,
+      });
+    } catch (error: any) {
+      console.error(`classify/store failed (response still delivered): ${error.message}`);
+    }
 
     return { answeredFromMemory: false, response: agentResponse, category };
   }
