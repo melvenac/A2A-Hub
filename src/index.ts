@@ -6,7 +6,6 @@ import { HubExecutor } from "./executor.js";
 import { Classifier } from "./classifier.js";
 import { Escalation } from "./escalation.js";
 import { AgentQueue } from "./queue.js";
-import { TelegramMirror } from "./telegram.js";
 import { RepoFixer } from "./repo-fixer.js";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api.js";
@@ -27,28 +26,50 @@ const queue = new AgentQueue({
   getPendingTasks: (agentName) => convex.query(api.tasks.getPending, { agentName }),
 });
 
-// Telegram mirror (optional — only if env vars are set)
-let telegram: TelegramMirror | null = null;
-if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_GROUP_ID) {
-  telegram = new TelegramMirror(process.env.TELEGRAM_BOT_TOKEN, process.env.TELEGRAM_GROUP_ID);
+// Notify the human peer through the chat channel (replaces Telegram).
+// Best-effort: hub notifications must never block the agent loop.
+const HUMAN_PEER = process.env.HUMAN_PEER || "aaron";
+let hubSessionId: string | null = null;
+
+async function notifyHuman(content: string) {
+  try {
+    if (!hubSessionId) {
+      await convex.mutation(api.peers.register, { name: "hub", type: "agent" });
+      await convex.mutation(api.peers.register, { name: HUMAN_PEER, type: "human" });
+      hubSessionId = await convex.mutation(api.sessions.create, {
+        title: "Hub activity",
+        participantNames: ["hub", HUMAN_PEER],
+        maxTurns: 100_000, // activity feed, not a bounded agent conversation
+      });
+    }
+    await convex.mutation(api.messages.send, {
+      sessionId: hubSessionId as any,
+      peerName: "hub",
+      content,
+    });
+  } catch (error) {
+    console.error("notifyHuman failed:", error);
+  }
 }
 
 // Hub executor
 const executor = new HubExecutor({
   searchMemory: (query) => memory.search(query),
-  escalate: async (message) => {
-    await telegram?.hubDecision("Escalating to available agent...");
-    return escalation.escalateToAgent(message);
+  escalate: async (message, agentName) => {
+    await notifyHuman(`Escalating${agentName ? ` to ${agentName}` : " to available agent"}...`);
+    return escalation.escalateToAgent(message, agentName);
   },
   storeLesson: async (lesson) => {
     await memory.store(lesson);
-    await telegram?.lessonStored(lesson.trigger, lesson.category);
+    await notifyHuman(`Lesson stored: ${lesson.trigger} → ${lesson.category}`);
 
     // Check if repo fix is needed
     if (["repo-docs", "repo-script", "repo-config"].includes(lesson.category)) {
       const fix = await repoFixer.draftFix(lesson.trigger, lesson.action, lesson.category);
       if (fix) {
-        await telegram?.proposeRepoFix("fix-id", fix.diffPreview, fix.filePaths);
+        await notifyHuman(
+          `Proposed repo fix (${fix.filePaths.join(", ")}):\n${fix.diffPreview.slice(0, 500)}`
+        );
       }
     }
   },
@@ -72,16 +93,18 @@ app.post("/a2a/message/send", async (req, res) => {
   const message = req.body?.params?.message?.parts?.[0]?.text;
   if (!message) return res.status(400).json({ error: "No message text found" });
 
+  // Direct addressing: route to a named agent instead of "whoever's online".
+  const to = req.body?.params?.to ?? req.body?.params?.message?.metadata?.to;
+
   const senderName = req.body?.params?.message?.role || "unknown";
-  await telegram?.incomingQuestion(senderName, message);
+  await notifyHuman(`Incoming from ${senderName}${to ? ` → ${to}` : ""}: ${message}`);
 
   try {
-    const result = await executor.handleMessage(message);
+    const result = await executor.handleMessage(message, to);
 
-    if (result.answeredFromMemory) {
-      await telegram?.hubDecision("Found answer in memory");
-    }
-    await telegram?.response(result.answeredFromMemory ? "Hub (memory)" : "Escalated agent", result.response);
+    await notifyHuman(
+      `${result.answeredFromMemory ? "Hub (memory)" : "Escalated agent"}: ${result.response}`
+    );
 
     res.json({
       jsonrpc: "2.0",
@@ -125,6 +148,23 @@ app.post("/a2a/task/:taskId/respond", async (req, res) => {
   }
 });
 
+// Atomic task claim — first agent wins, others get { claimed: false }.
+app.post("/a2a/task/:taskId/claim", async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const apiKey = req.headers["x-agent-key"] as string;
+    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
+
+    const agentName = req.body?.agentName;
+    if (!agentName) return res.status(400).json({ error: "Missing agentName field" });
+
+    const result = await convex.mutation(api.tasks.claim, { taskId, agentName });
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Agent polling queue
 app.get("/a2a/queue/:agentId", async (req, res) => {
   try {
@@ -150,7 +190,7 @@ app.post("/a2a/heartbeat/:agentId", async (req, res) => {
   }
 });
 
-// Agent registration
+// Agent registration — also registers the agent as a chat peer.
 app.post("/a2a/register", async (req, res) => {
   try {
     const { name, apiKey, agentCard } = req.body;
@@ -162,8 +202,72 @@ app.post("/a2a/register", async (req, res) => {
     const card = agentCard ?? { name, description: `Agent ${name}` };
 
     await convex.mutation(api.agents.register, { name, apiKeyHash, agentCard: card });
-    await telegram?.agentOnline(name);
+    await convex.mutation(api.peers.register, { name, type: "agent" });
+    await notifyHuman(`Agent ${name} is now online`);
     res.json({ ok: true, message: `Agent ${name} registered` });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- Chat channel routes (peers/sessions/messages) ---
+
+// Create a session between named peers (agents and/or humans).
+app.post("/a2a/session", async (req, res) => {
+  try {
+    const apiKey = req.headers["x-agent-key"] as string;
+    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
+
+    const { title, participants, maxTurns } = req.body;
+    if (!Array.isArray(participants) || participants.length < 2) {
+      return res.status(400).json({ error: "participants must list at least 2 peer names" });
+    }
+
+    const sessionId = await convex.mutation(api.sessions.create, {
+      title,
+      participantNames: participants,
+      maxTurns,
+    });
+    res.json({ ok: true, sessionId });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Send a message into a session as a peer. Turn cap enforced in Convex.
+app.post("/a2a/session/:sessionId/message", async (req, res) => {
+  try {
+    const apiKey = req.headers["x-agent-key"] as string;
+    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
+
+    const { from, content } = req.body;
+    if (!from || !content) {
+      return res.status(400).json({ error: "Missing required fields: from, content" });
+    }
+
+    const result = await convex.mutation(api.messages.send, {
+      sessionId: req.params.sessionId as any,
+      peerName: from,
+      content,
+    });
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Poll session messages (optionally only after ?since=<timestamp>).
+app.get("/a2a/session/:sessionId/messages", async (req, res) => {
+  try {
+    const apiKey = req.headers["x-agent-key"] as string;
+    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
+
+    const since = req.query.since ? Number(req.query.since) : undefined;
+    const messages = await convex.query(api.messages.list, {
+      sessionId: req.params.sessionId as any,
+      since,
+    });
+    res.json({ messages });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -172,5 +276,4 @@ app.post("/a2a/register", async (req, res) => {
 const port = parseInt(process.env.PORT || "4000");
 app.listen(port, () => {
   console.log(`Hub running on port ${port}`);
-  telegram?.broadcast("Hub is online 🟢");
 });

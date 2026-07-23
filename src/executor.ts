@@ -4,7 +4,7 @@ const CONFIDENCE_THRESHOLD = parseFloat(process.env.CONFIDENCE_THRESHOLD || "0.8
 
 interface ExecutorDeps {
   searchMemory: (query: string) => Promise<MemoryResult>;
-  escalate: (message: string) => Promise<string>;
+  escalate: (message: string, agentName?: string) => Promise<string>;
   storeLesson: (lesson: {
     trigger: string;
     action: string;
@@ -30,18 +30,22 @@ export class HubExecutor {
     this.deps = deps;
   }
 
-  async handleMessage(message: string): Promise<ExecutorResult> {
-    // Step 1: Search memory
-    const memoryResult = await this.deps.searchMemory(message);
+  async handleMessage(message: string, to?: string): Promise<ExecutorResult> {
+    // Directly addressed messages skip memory — the sender wants that agent,
+    // not a cached answer.
+    if (!to) {
+      // Step 1: Search memory
+      const memoryResult = await this.deps.searchMemory(message);
 
-    if (memoryResult.confidence >= CONFIDENCE_THRESHOLD && memoryResult.experience) {
-      // Answer from memory
-      const response = `Known fix: ${memoryResult.experience.action}\n\nExpected outcome: ${memoryResult.experience.outcome}`;
-      return { answeredFromMemory: true, response };
+      if (memoryResult.confidence >= CONFIDENCE_THRESHOLD && memoryResult.experience) {
+        // Answer from memory
+        const response = `Known fix: ${memoryResult.experience.action}\n\nExpected outcome: ${memoryResult.experience.outcome}`;
+        return { answeredFromMemory: true, response };
+      }
     }
 
-    // Step 2: Escalate to available agent
-    const agentResponse = await this.deps.escalate(message);
+    // Step 2: Escalate to the addressed agent, or any available agent
+    const agentResponse = await this.deps.escalate(message, to);
 
     // Step 3: Classify root cause
     const category = await this.deps.classify(message, agentResponse);

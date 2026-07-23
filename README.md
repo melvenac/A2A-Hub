@@ -185,8 +185,7 @@ cp .env.example .env
 | `HUB_BOOTSTRAP_KEY` | Yes | Key agents use to register |
 | `HUB_URL` | Yes | Public URL of the hub |
 | `PORT` | No | Server port (default: `4000`) |
-| `TELEGRAM_BOT_TOKEN` | No | Telegram bot token for notifications |
-| `TELEGRAM_GROUP_ID` | No | Telegram group for broadcasts |
+| `HUMAN_PEER` | No | Chat-channel peer name for hub notifications (default: `aaron`) |
 | `GITHUB_PAT` | No | GitHub PAT for repo-fixer pushes |
 | `CLASSIFIER_MODEL` | No | Anthropic model for classification (default: `claude-sonnet-4-20250514`) |
 | `REPO_FIXER_MODEL` | No | Anthropic model for fix drafting (default: `claude-sonnet-4-20250514`) |

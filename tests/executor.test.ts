@@ -36,6 +36,24 @@ describe("HubExecutor", () => {
     expect(result.answeredFromMemory).toBe(false);
     expect(escalateFn).toHaveBeenCalled();
   });
+
+  it("skips memory and routes to the named agent when addressed", async () => {
+    const searchFn = vi.fn();
+    const escalateFn = vi.fn().mockResolvedValue("alice here — done");
+
+    const executor = new HubExecutor({
+      searchMemory: searchFn,
+      escalate: escalateFn,
+      storeLesson: vi.fn(),
+      classify: vi.fn().mockResolvedValue("user-env"),
+    });
+
+    const result = await executor.handleMessage("Review this diff", "alice");
+    expect(searchFn).not.toHaveBeenCalled();
+    expect(escalateFn).toHaveBeenCalledWith("Review this diff", "alice");
+    expect(result.answeredFromMemory).toBe(false);
+    expect(result.response).toBe("alice here — done");
+  });
 });
 
 describe("End-to-end flow", () => {

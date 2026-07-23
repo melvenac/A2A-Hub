@@ -1,54 +1,51 @@
 # Project Summary
 
-> **Last Updated:** Session 3 (2026-03-23)
-> **Status:** v1 MVP — Convex connected, hub fully operational
+> **Last Updated:** Session 5 (2026-07-22)
+> **Status:** Local-first rebuild — protocol spine landed, VPS deploy deferred
 
 ---
 
 ## Current State
 
-Hub is fully operational — Convex connected, agent registration working, deploy pipeline automated. Ready for Brian testing.
+**The VPS was wiped (2026-04)** — `hub.tarrantcountymakerspace.com`, the `a2a` Docker network, Convex on `:3210`, and all agent registrations are gone. Direction is local-first iteration; VPS redeploy comes after the autonomous loop is verified.
 
-### What's Working
-- Docker deployment at hub.tarrantcountymakerspace.com (Traefik SSL)
-- Convex backend connected (`http://convex:3210` on Docker `a2a` network)
-- Convex functions deployed (5 tables with indexes)
-- Agent registration verified end-to-end (test-agent, test-agent-2)
-- JSON error responses on all routes (no more HTML stack traces)
-- Multi-stage Dockerfile (TypeScript builds in Docker)
-- Automated deploy script (`scripts/deploy.sh`)
-- README with Brian/alice wrapper quickstart
-- Per-task configurable LLM models (CLASSIFIER_MODEL, REPO_FIXER_MODEL env vars)
-- Agent card at `/.well-known/agent-card.json`
-- Telegram bot configured (broadcasting, but ECONNRESET on polling — transient)
+Session 5 landed the **protocol spine** (ADR-006): Telegram deleted, custom chat channel (peers/sessions/messages) in Convex, direct `to:` addressing, atomic task claims, turn-cap termination.
 
-### What's Not Yet Tested
-- `/a2a/message/send` — the core classify → memory → escalate loop
-- Experience dedup
+### What's Working (code-level; local stack not yet stood up)
+- Build green (`npx tsc`), tests green (10/10, vitest scoped to `tests/` only)
+- Telegram fully removed — code, deps (165 packages), notifications now flow through the chat channel (hub + human as peers in a "Hub activity" session)
+- `to:` addressing on `/a2a/message/send` (`params.to` or `message.metadata.to`) — addressed messages skip memory, route to the named agent
+- Chat channel tables + routes: `POST /a2a/session`, `POST /a2a/session/:id/message`, `GET /a2a/session/:id/messages?since=`
+- Turn caps (default 16) enforced atomically in `messages.send`; sessions auto-close at cap
+- `tasks.claim` atomic mutation + `POST /a2a/task/:taskId/claim` — first agent wins
+- Agent registration also registers the agent as a chat peer
+- Per-task configurable LLM models (CLASSIFIER_MODEL, REPO_FIXER_MODEL)
 
-### What's Next (v1 remaining)
-- [x] Configure Telegram (bot token + group ID)
-- [x] Fix Convex connectivity
-- [x] Write README with wrapper quickstart
-- [ ] Test `/a2a/message/send` end-to-end
-- [ ] Test with Brian (alice wrapper)
-- [ ] Verify experience dedup
+### What's Next
+- [ ] Stand up local stack (`npx convex dev` + hub) — regenerate `convex/_generated` properly
+- [ ] Svelte test client (Atlas's plan in `forge-to-atlas.md`) — seed of the chat UI
+- [ ] **Milestone 2: `a2a-agent` wrapper daemon** (poll queue → run LLM → respond) — the piece that proves zero-human A2A
+- [ ] Autonomous 2-agent loop gate: A sends addressed message → B auto-responds → A receives; turn cap terminates; no human touch
+- [ ] Experience dedup (triggerHash upsert — plan in forge-to-atlas.md)
+- [ ] docker-compose local + VPS profiles (one env-gated build)
 
 ---
 
 ## Architecture Overview
 
 ```
-Wrapper Agents (any A2A-compliant agent — Claude, Gemini, Grok, OpenAI, local)
-    ↕ HTTP (register, poll, report)
-A2A Intelligent Hub (Express 5, Docker, port 4000)
+Wrapper Agents (any A2A-compliant agent — poll outbound; NAT-safe)
+    ↕ HTTP (register, poll, claim, respond, sessions)
+A2A Intelligent Hub (Express 5, port 4000) — rendezvous broker
     ↕ Convex Client
-Convex Backend (Docker container, port 3210, functions deployed)
-    ↕
-Telegram Bot API (@a2a_hub_bot — notifications, approvals)
+Convex Backend (local dev now; VPS later)
+    ├─ Chat channel: peers / sessions / sessionPeers / messages (replaces Telegram)
+    ├─ Tasks (atomic claim), agents, experiences, repoFixes
 Anthropic API (classifier + repo-fixer — model configurable per task)
 GitHub (push approved fixes)
 ```
+
+Humans are peers on the hub, not relays. Hub notifications = messages to the `HUMAN_PEER` (default "aaron").
 
 ---
 
@@ -56,11 +53,11 @@ GitHub (push approved fixes)
 
 | Version | Goal | Effort |
 |---|---|---|
-| **v1** | Testable with Brian — test message loop, dedup | Days |
-| **v2** | Frontend dashboard, npm wrapper package, proper auth | Weeks |
-| **v3** | Multi-provider LLM, Makerspace integration, platform | Months |
+| **v1** | Autonomous 2-agent loop on local stack, Svelte test client | Days–weeks |
+| **v2** | Chat UI grows into PWA, wrapper npm package, proper auth, VPS redeploy | Weeks |
+| **v3** | Full A2A spec compliance (SSE, task states, per-agent cards), multi-provider LLM, dev-time orchestration dogfood | Months |
 
-See PRD.md §9 for full roadmap. See INBOX.md for task breakdown.
+See PRD.md §9, INBOX.md, and ADR-006 in DECISIONS.md.
 
 ---
 
@@ -68,7 +65,6 @@ See PRD.md §9 for full roadmap. See INBOX.md for task breakdown.
 
 | Metric | Value |
 |---|---|
-| Total Sessions | 3 |
-| Features Shipped | 12 (core modules + configurable models + Telegram + Convex deploy + error handling + deploy script + README) |
-| v1 Tasks Remaining | 3 (test message loop, test with Brian, dedup) |
+| Total Sessions | 5 |
+| Tests | 10/10 passing |
 | Known Bugs | 0 |

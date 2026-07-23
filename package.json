@@ -1,6 +1,6 @@
 {
   "name": "a2a-intelligent-hub",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "description": "A2A-compliant intelligent hub for agent-to-agent communication",
   "main": "dist/index.js",
@@ -16,13 +16,11 @@
     "@anthropic-ai/sdk": "latest",
     "convex": "latest",
     "express": "^5.0.0",
-    "node-telegram-bot-api": "latest",
     "simple-git": "latest"
   },
   "devDependencies": {
     "@types/express": "latest",
     "@types/node": "latest",
-    "@types/node-telegram-bot-api": "latest",
     "tsx": "latest",
     "typescript": "latest",
     "vitest": "latest"

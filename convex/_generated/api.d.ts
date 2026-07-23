@@ -10,7 +10,10 @@
 
 import type * as agents from "../agents.js";
 import type * as experiences from "../experiences.js";
+import type * as messages from "../messages.js";
+import type * as peers from "../peers.js";
 import type * as repoFixes from "../repoFixes.js";
+import type * as sessions from "../sessions.js";
 import type * as tasks from "../tasks.js";
 
 import type {
@@ -22,7 +25,10 @@ import type {
 declare const fullApi: ApiFromModules<{
   agents: typeof agents;
   experiences: typeof experiences;
+  messages: typeof messages;
+  peers: typeof peers;
   repoFixes: typeof repoFixes;
+  sessions: typeof sessions;
   tasks: typeof tasks;
 }>;
 

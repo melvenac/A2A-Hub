@@ -74,6 +74,36 @@ export const addMessage = mutation({
   },
 });
 
+// Atomic claim: assigns the task to the agent only if it is still claimable.
+// Convex mutations are transactional, so two agents cannot both win.
+// Shared by runtime wrappers and dev-time orchestration (ADR: "both machinery").
+export const claim = mutation({
+  args: {
+    taskId: v.string(),
+    agentName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const task = await ctx.db
+      .query("tasks")
+      .withIndex("by_taskId", (q) => q.eq("taskId", args.taskId))
+      .first();
+    if (!task) return { claimed: false as const, reason: "not-found" };
+
+    const claimable =
+      (task.status === "pending" || task.status === "escalated") &&
+      (!task.assignedAgent || task.assignedAgent === args.agentName);
+    if (!claimable) {
+      return { claimed: false as const, reason: "already-claimed" };
+    }
+
+    await ctx.db.patch(task._id, {
+      status: "in-progress",
+      assignedAgent: args.agentName,
+    });
+    return { claimed: true as const };
+  },
+});
+
 export const getPending = query({
   args: { agentName: v.string() },
   handler: async (ctx, args) => {
