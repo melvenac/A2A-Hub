@@ -256,6 +256,21 @@ app.post("/a2a/session/:sessionId/message", async (req, res) => {
   }
 });
 
+// Discover active sessions for a peer — wrapper daemons poll this.
+app.get("/a2a/peer/:peerName/sessions", async (req, res) => {
+  try {
+    const apiKey = req.headers["x-agent-key"] as string;
+    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
+
+    const sessions = await convex.query(api.sessions.listForPeer, {
+      peerName: req.params.peerName,
+    });
+    res.json({ sessions });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Poll session messages (optionally only after ?since=<timestamp>).
 app.get("/a2a/session/:sessionId/messages", async (req, res) => {
   try {

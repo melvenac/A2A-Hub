@@ -22,12 +22,14 @@ Session 5 landed the **protocol spine** (ADR-006): Telegram deleted, custom chat
 - Per-task configurable LLM models (CLASSIFIER_MODEL, REPO_FIXER_MODEL)
 
 ### What's Next
-- [ ] Stand up local stack (`npx convex dev` + hub) — regenerate `convex/_generated` properly
+- [x] Stand up local stack (`npx convex dev --local` + hub on :4000)
+- [x] **Milestone 2: wrapper daemon** (`src/wrapper/daemon.ts` — poll → claim → respond, register retry, session conversations)
+- [x] **Autonomous 2-agent loop GATE PASSED** (2026-07-22): alice ↔ bob, 6 turns via hub sessions, converged with DONE, zero human after seed (`scripts/demo-loop.mjs`). Fallback-responder mode — transport proven without API spend.
+- [ ] Real-LLM run of the same gate (needs `ANTHROPIC_API_KEY` in `.env` — daemon auto-switches)
 - [ ] Svelte test client (Atlas's plan in `forge-to-atlas.md`) — seed of the chat UI
-- [ ] **Milestone 2: `a2a-agent` wrapper daemon** (poll queue → run LLM → respond) — the piece that proves zero-human A2A
-- [ ] Autonomous 2-agent loop gate: A sends addressed message → B auto-responds → A receives; turn cap terminates; no human touch
 - [ ] Experience dedup (triggerHash upsert — plan in forge-to-atlas.md)
 - [ ] docker-compose local + VPS profiles (one env-gated build)
+- [ ] `agents.register` should upsert (currently inserts duplicate rows on re-register)
 
 ---
 
