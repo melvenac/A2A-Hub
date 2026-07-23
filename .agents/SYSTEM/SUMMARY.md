@@ -1,7 +1,7 @@
 # Project Summary
 
-> **Last Updated:** Session 5 (2026-07-22)
-> **Status:** Local-first rebuild — protocol spine landed, VPS deploy deferred
+> **Last Updated:** Session 5 (2026-07-23)
+> **Status:** v1.3.0 Released — autonomous 2-agent loop proven (zero human relay), Svelte test client live; local-first, VPS redeploy deferred
 
 ---
 
@@ -11,8 +11,11 @@
 
 Session 5 landed the **protocol spine** (ADR-006): Telegram deleted, custom chat channel (peers/sessions/messages) in Convex, direct `to:` addressing, atomic task claims, turn-cap termination.
 
-### What's Working (code-level; local stack not yet stood up)
-- Build green (`npx tsc`), tests green (10/10, vitest scoped to `tests/` only)
+### What's Working (verified on the running local stack)
+- Build green, tests green (11/11, vitest scoped to `tests/`)
+- **Autonomous 2-agent loop** — alice↔bob via hub sessions, zero human relay (gate: `scripts/demo-loop.mjs`)
+- **Svelte test client** (`client/` :5173) + CORS + 5-point verification (`scripts/verify-client-stack.mjs`)
+- Executor resilience: classify/store failures no longer 500 a delivered response
 - Telegram fully removed — code, deps (165 packages), notifications now flow through the chat channel (hub + human as peers in a "Hub activity" session)
 - `to:` addressing on `/a2a/message/send` (`params.to` or `message.metadata.to`) — addressed messages skip memory, route to the named agent
 - Chat channel tables + routes: `POST /a2a/session`, `POST /a2a/session/:id/message`, `GET /a2a/session/:id/messages?since=`
@@ -68,5 +71,6 @@ See PRD.md §9, INBOX.md, and ADR-006 in DECISIONS.md.
 | Metric | Value |
 |---|---|
 | Total Sessions | 5 |
-| Tests | 10/10 passing |
-| Known Bugs | 0 |
+| Version | v1.3.0 (tagged + pushed) |
+| Tests | 11/11 passing |
+| Known Bugs | 0 (known debt: `agents.register` duplicates on re-register) |

@@ -18,9 +18,9 @@ The A2A Intelligent Hub is a central coordination server for agent-to-agent (A2A
 1. **A2A Protocol Compliance** — Exposes `/.well-known/agent-card.json`, handles A2A `tasks/send` messages
 2. **Root Cause Classification** — Uses Anthropic API (50 tokens max) to categorize incoming issues into: `repo-docs`, `repo-script`, `repo-config`, `user-env`, `user-error`
 3. **Persistent Memory** — Stores experiences (trigger/action/context/outcome) in Convex with semantic search
-4. **Repo Fixer** — Drafts documentation/config fixes as diffs, queues for human approval via Telegram
+4. **Repo Fixer** — Drafts documentation/config fixes as diffs, queues for human approval via the chat channel
 5. **Task Queue & Escalation** — Assigns tasks to available wrapper agents, escalates when no agent can handle
-6. **Telegram Notifications** — Async notifications to user's Telegram group for approvals, escalations, and status
+6. **Chat Channel Notifications** — Hub notifications flow to the human peer via Convex-backed sessions (peers/sessions/messages, ADR-006); Telegram removed entirely
 7. **Wrapper Agent Coordination** — Agents register, poll for tasks, and report results via HTTP API
 
 ---
@@ -34,7 +34,7 @@ The A2A Intelligent Hub is a central coordination server for agent-to-agent (A2A
 | Database | Convex (self-hosted or cloud) |
 | AI (Hub internal) | Anthropic SDK (model configurable — used only for classifier + repo-fixer) |
 | Protocol | A2A JS SDK (`@a2a-js/sdk`) |
-| Notifications | Telegram Bot API (`node-telegram-bot-api`) |
+| Notifications | Custom chat channel (Convex peers/sessions/messages, ADR-006) |
 | Git Operations | `simple-git` |
 | Build | `tsc` → `dist/` |
 | Dev | `tsx watch` |
@@ -47,7 +47,7 @@ The A2A Intelligent Hub is a central coordination server for agent-to-agent (A2A
 
 | Role | Description |
 |---|---|
-| **Hub Operator** | Aaron — deploys the hub, approves repo fixes via Telegram, manages agent keys |
+| **Hub Operator** | Aaron — deploys the hub, approves repo fixes via the chat channel (a peer on the hub), manages agent keys |
 | **Wrapper Agent** | Any A2A-compliant agent (Claude Code, Gemini, Grok, OpenAI, local models) that registers with the hub and polls for tasks |
 | **Bootstrap Admin** | Uses `HUB_BOOTSTRAP_KEY` to register new agents |
 
