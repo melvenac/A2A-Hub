@@ -1,38 +1,39 @@
 # Project Summary
 
-> **Last Updated:** Session 5 (2026-07-23)
-> **Status:** v1.3.0 Released — autonomous 2-agent loop proven (zero human relay), Svelte test client live; local-first, VPS redeploy deferred
+> **Last Updated:** Session 6 (2026-07-23)
+> **Status:** v1.4.0 Released — v1 milestone COMPLETE (real-LLM autonomous loop proven); chat client now a usable channel (history, human composer, @mentions, extend)
 
 ---
 
 ## Current State
 
-**The VPS was wiped (2026-04)** — `hub.tarrantcountymakerspace.com`, the `a2a` Docker network, Convex on `:3210`, and all agent registrations are gone. Direction is local-first iteration; VPS redeploy comes after the autonomous loop is verified.
+**The VPS was wiped (2026-04)** — `hub.tarrantcountymakerspace.com`, the `a2a` Docker network, Convex on `:3210`, and all agent registrations are gone. Direction is local-first iteration; VPS redeploy comes after compose profiles land.
 
-Session 5 landed the **protocol spine** (ADR-006): Telegram deleted, custom chat channel (peers/sessions/messages) in Convex, direct `to:` addressing, atomic task claims, turn-cap termination.
+**v1 is done.** Session 6 passed the real-LLM gate (alice↔bob on Haiku, DONE convergence, zero human) and jumped ahead into v2 chat-channel UX: the Svelte client is now a Grok-style chat app and Aaron converses with agents as a peer.
 
 ### What's Working (verified on the running local stack)
-- Build green, tests green (11/11, vitest scoped to `tests/`)
-- **Autonomous 2-agent loop** — alice↔bob via hub sessions, zero human relay (gate: `scripts/demo-loop.mjs`)
-- **Svelte test client** (`client/` :5173) + CORS + 5-point verification (`scripts/verify-client-stack.mjs`)
-- Executor resilience: classify/store failures no longer 500 a delivered response
-- Telegram fully removed — code, deps (165 packages), notifications now flow through the chat channel (hub + human as peers in a "Hub activity" session)
-- `to:` addressing on `/a2a/message/send` (`params.to` or `message.metadata.to`) — addressed messages skip memory, route to the named agent
-- Chat channel tables + routes: `POST /a2a/session`, `POST /a2a/session/:id/message`, `GET /a2a/session/:id/messages?since=`
-- Turn caps (default 16) enforced atomically in `messages.send`; sessions auto-close at cap
-- `tasks.claim` atomic mutation + `POST /a2a/task/:taskId/claim` — first agent wins
-- Agent registration also registers the agent as a chat peer
-- Per-task configurable LLM models (CLASSIFIER_MODEL, REPO_FIXER_MODEL)
+- **Real-LLM autonomous loop** — alice↔bob via hub sessions on `claude-haiku-4-5` (`WRAPPER_MAX_TOKENS=300`), DONE convergence, zero human relay
+- **Chat client** (`client/` :5173): date-grouped session history (all sessions, closed included), transcript viewer with live polling, **human composer** (chat as `aaron` peer), rename, extend button, agent↔agent seed row
+- **@mention reply routing** (deterministic, daemon-side): `@name` targets agents; no mention = ask-the-room; group sessions never cascade agent→agent replies; race-safe (gates on newest message addressed to *me*)
+- **Session extend/reopen** — `POST /a2a/session/:id/extend` adds turns and revives cap-closed conversations with transcript intact
+- Daemon hardening: no LLM spend on capped sessions, failed sends not marked replied, DONE detection tolerant of punctuation/markdown, transcript speaker labels with deterministic label-strip on send
+- Persona: agents know they're peers among humans *and* agents + the @mention convention
+- Build green, tests green (11/11); mention matrix 4/4; `scripts/demo-loop.mjs` takes seed + turns as CLI args
+- Everything from v1.1.0–v1.3.0: chat channel tables/routes, `to:` addressing, atomic claims, turn caps, CORS, executor resilience, postbuild dist copy
+
+### Known Issues / Debt
+- `CLASSIFIER_MODEL` default (`claude-sonnet-4-20250514`) 404s on Aaron's key — hub currently started with `CLASSIFIER_MODEL=claude-haiku-4-5-20251001`; change the default in code
+- DONE sentinel leaks: any message *ending* with "DONE" reads as a sign-off (structured end-flag is the v2 fix)
+- `agents.register` duplicates rows on re-register (upsert fix pending)
+- Background processes started from CC sessions die silently on this machine — needs `start-stack.ps1` (Aaron-owned terminals)
+- GitNexus index stale (v1.1.0); `npx` broken in resumed CC sessions — reindex from a fresh terminal
 
 ### What's Next
-- [x] Stand up local stack (`npx convex dev --local` + hub on :4000)
-- [x] **Milestone 2: wrapper daemon** (`src/wrapper/daemon.ts` — poll → claim → respond, register retry, session conversations)
-- [x] **Autonomous 2-agent loop GATE PASSED** (2026-07-22): alice ↔ bob, 6 turns via hub sessions, converged with DONE, zero human after seed (`scripts/demo-loop.mjs`). Fallback-responder mode — transport proven without API spend.
-- [x] Svelte test client (`client/` on :5173, v1.3.0) — send box, `to:` addressing, response log; CORS on hub; 5-point stack verification passing (`scripts/verify-client-stack.mjs`)
-- [ ] Real-LLM run of the same gate (needs `ANTHROPIC_API_KEY` in `.env` — daemon auto-switches)
+- [ ] Per-agent personas with real roles (generic assistant answers add no value)
+- [ ] `start-stack.ps1` — one-click Convex + hub + daemons + client in Aaron's own terminals
 - [ ] Experience dedup (triggerHash upsert — plan in forge-to-atlas.md)
 - [ ] docker-compose local + VPS profiles (one env-gated build)
-- [ ] `agents.register` should upsert (currently inserts duplicate rows on re-register)
+- [ ] Structured end-of-conversation flag (replace DONE sentinel); session delete/bookmarks in client
 
 ---
 
@@ -40,7 +41,7 @@ Session 5 landed the **protocol spine** (ADR-006): Telegram deleted, custom chat
 
 ```
 Wrapper Agents (any A2A-compliant agent — poll outbound; NAT-safe)
-    ↕ HTTP (register, poll, claim, respond, sessions)
+    ↕ HTTP (register, poll, claim, respond, sessions, extend)
 A2A Intelligent Hub (Express 5, port 4000) — rendezvous broker
     ↕ Convex Client
 Convex Backend (local dev now; VPS later)
@@ -48,9 +49,10 @@ Convex Backend (local dev now; VPS later)
     ├─ Tasks (atomic claim), agents, experiences, repoFixes
 Anthropic API (classifier + repo-fixer — model configurable per task)
 GitHub (push approved fixes)
+Chat client (Svelte, :5173) — history sidebar, human composer, @mentions
 ```
 
-Humans are peers on the hub, not relays. Hub notifications = messages to the `HUMAN_PEER` (default "aaron").
+Humans are peers on the hub, not relays. Aaron chats inside sessions as the `aaron` peer; `@name` targets one agent, no mention asks the room.
 
 ---
 
@@ -58,11 +60,11 @@ Humans are peers on the hub, not relays. Hub notifications = messages to the `HU
 
 | Version | Goal | Effort |
 |---|---|---|
-| **v1** | Autonomous 2-agent loop on local stack, Svelte test client | Days–weeks |
-| **v2** | Chat UI grows into PWA, wrapper npm package, proper auth, VPS redeploy | Weeks |
+| **v1** | ✅ Autonomous 2-agent loop (real LLM) on local stack, chat client | DONE (Session 6) |
+| **v2** | Chat UI → PWA, wrapper npm package, proper auth, personas, VPS redeploy | Weeks |
 | **v3** | Full A2A spec compliance (SSE, task states, per-agent cards), multi-provider LLM, dev-time orchestration dogfood | Months |
 
-See PRD.md §9, INBOX.md, and ADR-006 in DECISIONS.md.
+See PRD.md §9, INBOX.md, and ADR-006/007 in DECISIONS.md.
 
 ---
 
@@ -70,7 +72,7 @@ See PRD.md §9, INBOX.md, and ADR-006 in DECISIONS.md.
 
 | Metric | Value |
 |---|---|
-| Total Sessions | 5 |
-| Version | v1.3.0 (tagged + pushed) |
-| Tests | 11/11 passing |
-| Known Bugs | 0 (known debt: `agents.register` duplicates on re-register) |
+| Total Sessions | 6 |
+| Version | v1.4.0 (tagged + pushed) |
+| Tests | 11/11 passing (+ 4/4 mention matrix, live) |
+| Known Bugs | 0 blocking (debt list above) |

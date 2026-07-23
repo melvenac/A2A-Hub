@@ -1,22 +1,24 @@
 # Next Session Handoff
 
-> Written at end of Session 5 (2026-07-23). Relay baton, not a log.
+> Written at end of Session 6 (2026-07-23). Relay baton, not a log.
 
 ## Pick up here
 
-1. **Real-LLM gate run** — blocked only on Aaron putting `ANTHROPIC_API_KEY` in `.env`. Then: restart hub + daemons (they auto-switch off fallback), `node scripts/demo-loop.mjs`. Watch token spend: daemon cap is `WRAPPER_MAX_TOKENS=300`, model `WRAPPER_MODEL` (default haiku).
-2. **Experience dedup** — plan already written in `forge-to-atlas.md` (§triggerHash). ~15 LOC in `convex/experiences.ts` + schema index.
-3. **docker-compose profiles** — local + VPS from one compose file; hub image CMD is `dist/src/index.js` now (postbuild copies `convex/_generated`).
+1. **Per-agent personas** — alice/bob currently give generic assistant answers. Wire real roles via `--persona` or a small persona config; the daemon default persona now covers peer-identity + @mentions, so this is purely about giving each agent a specialty.
+2. **`start-stack.ps1`** — CC-launched background processes (hub, daemons, vite) died silently TWICE in Session 6. Write a script Aaron runs in his own terminal: Convex (`npx convex dev --local --local-force-upgrade`), hub (`node --env-file=.env dist/src/index.js` with `CONVEX_URL`/`PORT`/`CLASSIFIER_MODEL=claude-haiku-4-5-20251001`), both daemons (`node --env-file=.env dist/src/wrapper/daemon.js --name X`), client (`node node_modules/vite/bin/vite.js` in `client/`).
+3. Carried: experience dedup (forge-to-atlas.md §triggerHash), docker-compose profiles, `CLASSIFIER_MODEL` code default fix.
 
 ## Watch out for
 
-- **This machine's resumed CC sessions can corrupt subprocess PATH** — if `npx`/`vitest`/`git` "not recognized": use `node node_modules/<pkg>/bin/<bin>`, `npm i --ignore-scripts`, run compiled `dist/`. Fresh sessions are fine.
-- **GitNexus index is stale at v1.1.0 (2474785)** — HEAD is v1.3.0 (6efa2f1). Run `npx gitnexus analyze` in a healthy terminal (embeddings are 0, no flag needed).
-- Local stack may still be running from Session 5: Convex :3210, hub :4000 (compiled dist), alice+bob daemons, client :5173. Re-verify with `node scripts/verify-client-stack.mjs` before assuming state.
-- `agents.register` duplicates rows on re-register (upsert fix is in INBOX v2).
-- Atlas is inactive (Aaron confirmed) — log to the mailbox for the record, never wait on replies.
+- **`.env` at repo root holds Aaron's real `ANTHROPIC_API_KEY`** — gitignored; nothing auto-loads it (no dotenv). Always launch with `node --env-file=.env`.
+- **DONE sentinel leaks**: any message *ending* with "DONE" (even "don't say DONE.") reads as a sign-off after the punctuation-tolerance fix. Phrase seeds/tests accordingly. Structured end-flag is the proper fix (INBOX v2).
+- **Resumed CC sessions corrupt subprocess PATH** (npx/git break) — use `node node_modules/<pkg>/bin/...`; also TaskStop orphans node children — sweep `wrapper.daemon` processes and check port 4000 before restarts.
+- The stack may still be running from Session 6 (Convex :3210, hub :4000, alice+bob real-LLM daemons, vite :5173). `node scripts/verify-client-stack.mjs` before assuming state.
+- GitNexus index stale at v1.1.0; `gitnexus_detect_changes` skipped at the v1.4.0 commit (npx broken). Run `npx gitnexus analyze` from a fresh terminal.
+- Mention matrix test lives at `~/.claude/jobs/973eef6e/tmp/mention-test.mjs` (job dir — copy into `scripts/` if you want it permanent).
 
 ## Open questions
 
-- When does the VPS come back? (Compose profiles should land first.)
-- Chat UI growth: keep plain Svelte or move to SvelteKit when it becomes the real chat channel? (Atlas's original scope said plain Svelte for the test client; the PWA decision is still open.)
+- Chat UI: when does plain Svelte stop being enough (PWA/SvelteKit decision, INBOX v2)?
+- Session delete: hard delete with message cascade, or archive-only?
+- VPS timing unchanged — compose profiles first.

@@ -2,6 +2,22 @@
 
 All notable changes to the A2A Intelligent Hub.
 
+## [v1.4.0] - 2026-07-23
+
+### Added
+- **Real-LLM autonomous loop verified** — v1 milestone complete: alice↔bob converse through hub sessions on `claude-haiku-4-5` and converge with DONE, zero human relay.
+- **Session extend/reopen**: `sessions.extend` mutation + `POST /a2a/session/:id/extend` (`{addTurns}`) raises `maxTurns` and reopens cap-closed sessions — conversations resume with transcript intact instead of being reseeded.
+- **Chat client** (Grok-style rebuild of `client/`): date-grouped session history sidebar (all sessions incl. closed), transcript viewer with live polling, **human composer** (chat inside sessions as the `HUMAN_PEER`), session rename, extend button, agent↔agent seed row, @mention chips.
+- **@mention reply routing** (deterministic, daemon-side; ADR-007): `@name` messages are answered only by the mentioned agents; no mention = every agent replies ("ask the room"); unaddressed agent→agent messages in group sessions get no auto-reply (no cascades). Gating keys on the newest message addressed to *me* — race-safe when multiple agents answer the same room question.
+- New hub routes: `GET /a2a/sessions` (full history with participants), `POST /a2a/session/:id/rename`; `GET /a2a/peer/:name/sessions?includeClosed=1`. `messages.list` now returns `fromType`; `listForPeer` returns `participants`.
+- Persona: agents know they are hub peers among humans *and* other AI agents, plus the @mention convention. Transcript lines carry speaker labels (`name: …`).
+- `scripts/demo-loop.mjs` takes the seed message and max turns as CLI args; watch window scales with turn count.
+
+### Fixed
+- **Daemon reply bookkeeping**: failed sends are no longer marked as replied (a session extend can now revive the pending question); capped/closed sessions are skipped *before* generating a reply (no wasted LLM spend at the turn cap).
+- **DONE convergence**: sign-off detection tolerates trailing punctuation/markdown (`DONE.`, `**DONE**`) in daemons, demo loop, and client. Note: any message ending with "DONE" now reads as a sign-off.
+- Models mimicking transcript speaker labels ("alice: …") — labels are stripped deterministically on send; intentional `@name` handoffs preserved.
+
 ## [v1.3.0] - 2026-07-22
 
 ### Added

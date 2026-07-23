@@ -274,8 +274,61 @@ app.get("/a2a/peer/:peerName/sessions", async (req, res) => {
 
     const sessions = await convex.query(api.sessions.listForPeer, {
       peerName: req.params.peerName,
+      includeClosed: req.query.includeClosed === "1",
     });
     res.json({ sessions });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Full session history for the chat UI.
+app.get("/a2a/sessions", async (req, res) => {
+  try {
+    const apiKey = req.headers["x-agent-key"] as string;
+    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
+
+    const sessions = await convex.query(api.sessions.listAll, {});
+    res.json({ sessions });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/a2a/session/:sessionId/rename", async (req, res) => {
+  try {
+    const apiKey = req.headers["x-agent-key"] as string;
+    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
+
+    const title = typeof req.body?.title === "string" ? req.body.title.trim() : "";
+    if (!title) return res.status(400).json({ error: "Missing required field: title" });
+
+    await convex.mutation(api.sessions.rename, {
+      sessionId: req.params.sessionId as any,
+      title,
+    });
+    res.json({ ok: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Grant more turns to a session (reopens it if the cap closed it).
+app.post("/a2a/session/:sessionId/extend", async (req, res) => {
+  try {
+    const apiKey = req.headers["x-agent-key"] as string;
+    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
+
+    const addTurns = Number(req.body?.addTurns);
+    if (!Number.isInteger(addTurns) || addTurns < 1) {
+      return res.status(400).json({ error: "addTurns must be a positive integer" });
+    }
+
+    const result = await convex.mutation(api.sessions.extend, {
+      sessionId: req.params.sessionId as any,
+      addTurns,
+    });
+    res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

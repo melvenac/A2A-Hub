@@ -58,6 +58,7 @@ export const list = query({
       result.push({
         content: m.content,
         from: peer?.name ?? "unknown",
+        fromType: peer?.type ?? "unknown",
         createdAt: m.createdAt,
       });
     }

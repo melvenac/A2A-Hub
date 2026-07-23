@@ -257,16 +257,30 @@ npx tsx src/wrapper/daemon.ts --name alice   # autonomous wrapper agent(s)
 cd client && npm run dev               # Svelte test client on :5173
 ```
 
-Without `ANTHROPIC_API_KEY`, daemons use a deterministic fallback responder — the
-full transport loop works with zero API spend. Gate scripts:
-`node scripts/demo-loop.mjs` (autonomous 2-agent conversation) and
-`node scripts/verify-client-stack.mjs` (client/CORS/addressed-message checks).
+Put `ANTHROPIC_API_KEY=sk-ant-...` in `.env` (gitignored) and launch with
+`node --env-file=.env` — nothing auto-loads it. Without a key, daemons use a
+deterministic fallback responder so the full transport loop works with zero API
+spend. Gate scripts: `node scripts/demo-loop.mjs "seed message" [maxTurns]`
+(autonomous 2-agent conversation) and `node scripts/verify-client-stack.mjs`
+(client/CORS/addressed-message checks).
 
-### Test client (`client/`)
+### Chat client (`client/`)
 
-Plain Svelte + Vite one-pager: hub URL/key/addressee fields, message box,
-response log. Posts to `/a2a/message/send`; addressed messages (`to`) route to
-that agent's daemon. Seed of the future chat UI (see ADR-005/006).
+Plain Svelte + Vite chat app (the ADR-005/006 chat channel): date-grouped
+session history sidebar (rename, closed sessions visible), live transcript
+viewer, and a composer — you chat inside sessions as the human peer (default
+`aaron`). Sessions that hit their turn cap can be extended/reopened in place.
+
+**@mention routing** (deterministic, enforced by the daemons): a message
+containing `@name` is answered only by those agents; no mention = every agent
+in the session replies ("ask the room"); unaddressed agent→agent messages in
+group sessions get no auto-reply, so rooms don't cascade. Agents hand off to
+each other by writing `@name`. A message that *ends* with `DONE` (any trailing
+punctuation) closes the conversation.
+
+Session lifecycle routes: `GET /a2a/sessions` (full history),
+`POST /a2a/session/:id/extend` (`{addTurns}` — reopens cap-closed sessions),
+`POST /a2a/session/:id/rename` (`{title}`).
 
 ## Tech Stack
 

@@ -33,9 +33,10 @@ if (!NAME) {
   console.error("Usage: daemon.ts --name <agentName> [--persona <text>]");
   process.exit(1);
 }
+const NAME_LC = NAME.toLowerCase();
 const PERSONA =
   arg("--persona") ||
-  `You are ${NAME}, an autonomous agent on the A2A hub. Reply briefly and helpfully. If the exchange has reached a natural conclusion, end your reply with DONE.`;
+  `You are ${NAME}, an autonomous agent peer on the A2A hub. Sessions may include humans and other AI agents — the participant you're replying to is not necessarily human. Transcript lines are prefixed with the sender's name, but write your own replies plain — never prefix them with a name label. Messages addressed @name are meant for that participant; to address someone specific, start your message with @theirname. Reply briefly and helpfully. When the exchange reaches a natural conclusion, end your reply with DONE.`;
 
 const HUB_URL = process.env.HUB_URL || "http://127.0.0.1:4000";
 const AGENT_KEY = process.env.AGENT_KEY || "dev-key";
@@ -107,32 +108,66 @@ async function handleSessions() {
   const { sessions } = await hub(`/a2a/peer/${NAME}/sessions`);
   for (const session of sessions ?? []) {
     const id = session._id;
+    // At the cap, don't generate a reply that can't be sent. Leaving the
+    // message unmarked lets us answer it if the session gets extended.
+    if (!session.isActive || session.turnCount >= session.maxTurns) continue;
     const { messages } = await hub(`/a2a/session/${id}/messages`);
     if (!messages?.length) continue;
 
+    // Conversation is over when the latest message signs off with DONE
+    // (tolerant of trailing punctuation/markdown: "DONE.", "**DONE**").
     const last = messages[messages.length - 1];
-    if (last.from === NAME) continue;
-    if ((repliedTo.get(id) ?? 0) >= last.createdAt) continue;
-    // Conversation is over when the other side says DONE.
-    if (/\bDONE\b\s*$/.test(last.content.trim())) {
-      repliedTo.set(id, last.createdAt);
-      continue;
-    }
+    if (/\bDONE\b\W*$/.test(last.content.trim())) continue;
 
+    // @mention gating (deterministic): a message with mentions is only for
+    // the mentioned agents. Without mentions, 1:1 sessions always reply;
+    // group sessions only answer humans (stops agent↔agent reply cascades —
+    // agents hand off explicitly by writing @name).
+    //
+    // Gate on the newest message addressed to ME, not the newest message
+    // overall — otherwise the first agent to answer a room question makes
+    // every other agent see "last message is from an agent" and go mute.
+    const isGroup = (session.participants?.length ?? 2) > 2;
+    const qualifies = (m: any) => {
+      if (m.from === NAME) return false;
+      const mentions = [...m.content.matchAll(/@([a-z0-9_-]+)/gi)].map((x) =>
+        x[1].toLowerCase()
+      );
+      if (mentions.length > 0) return mentions.includes(NAME_LC);
+      return !isGroup || m.fromType === "human";
+    };
+    const trigger = [...messages].reverse().find(qualifies);
+    if (!trigger) continue;
+    const myLast = [...messages].reverse().find((m: any) => m.from === NAME);
+    if (myLast && myLast.createdAt >= trigger.createdAt) continue;
+    if ((repliedTo.get(id) ?? 0) >= trigger.createdAt) continue;
+
+    // Label other speakers so the model can tell participants apart.
     const transcript: Turn[] = messages.map((m: any) => ({
       role: m.from === NAME ? "assistant" : "user",
-      content: m.content,
+      content: m.from === NAME ? m.content : `${m.from}: ${m.content}`,
     }));
-    const reply = await generateReply(transcript);
+    let reply = await generateReply(transcript);
+    // Models sometimes mimic the transcript's "name: " labels — strip a
+    // leading label when it names a session participant. Intentional
+    // "@name" handoffs are left alone (they carry mention routing).
+    const label = reply.match(/^\s*([a-z0-9_-]+):\s+/i);
+    const peerNames = (session.participants ?? []).map((p: any) =>
+      String(p.name ?? p).toLowerCase()
+    );
+    if (label && (peerNames.includes(label[1].toLowerCase()) || label[1].toLowerCase() === NAME_LC)) {
+      reply = reply.slice(label[0].length);
+    }
 
     const result = await hub(`/a2a/session/${id}/message`, {
       method: "POST",
       body: JSON.stringify({ from: NAME, content: reply }),
     });
-    repliedTo.set(id, last.createdAt);
     if (result.ok) {
+      repliedTo.set(id, trigger.createdAt);
       console.log(`[${NAME}] replied in session ${id} (turn ${result.turn})`);
     } else {
+      // Not marked as replied — a session extend can revive it later.
       console.log(`[${NAME}] session ${id}: ${result.reason}`);
     }
   }

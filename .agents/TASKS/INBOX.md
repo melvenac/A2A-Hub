@@ -1,6 +1,6 @@
 # Task Inbox — Prioritized Backlog
 
-> **Last Updated:** Session 5 (2026-07-22) — post protocol spine (ADR-006), Telegram removed, autonomous loop gate passed
+> **Last Updated:** Session 6 (2026-07-23) — v1 COMPLETE (real-LLM gate passed); chat client is a usable channel (history, composer, @mentions, extend — ADR-007)
 
 ---
 
@@ -26,7 +26,7 @@ Tasks are organized by MVP version, then by priority within each version.
 - [x] Wrapper daemon (`src/wrapper/daemon.ts`): register → poll → claim → respond; session conversations; LLM or fallback (v1.2.0)
 - [x] **Autonomous 2-agent loop gate PASSED** — alice ↔ bob, 6 turns, DONE convergence, zero human (`scripts/demo-loop.mjs`, v1.2.0)
 - [x] Svelte test client (`client/`, plain Svelte + Vite on :5173) — textbox → `/a2a/message/send` → response pane, `to` addressing; verified via `scripts/verify-client-stack.mjs` (v1.3.0)
-- [ ] Real-LLM gate run — needs `ANTHROPIC_API_KEY` in `.env` (Aaron); daemons auto-switch
+- [x] **Real-LLM gate PASSED** (v1.4.0, Session 6) — alice↔bob on Haiku, DONE convergence, zero human. **v1 milestone complete.**
 - [ ] Experience dedup — `triggerHash` + upsert in `experiences.store` (plan in forge-to-atlas.md)
 - [ ] docker-compose profiles: local (no Traefik, local Convex) + VPS (Traefik, prod URLs) — one env-gated build
 
@@ -34,7 +34,13 @@ Tasks are organized by MVP version, then by priority within each version.
 
 > **Goal:** The chat UI becomes the daily driver (replacing what Telegram was for). Easy for others to connect agents.
 
-- [ ] Grow Svelte client into chat UI: session list, live messages, send as `aaron` peer (Hub activity feed = notifications)
+- [x] Grow Svelte client into chat UI: date-grouped history, live transcripts, send as `aaron` peer, rename, extend (v1.4.0, Session 6)
+- [x] Session extend/reopen + @mention reply routing, deterministic daemon-side (v1.4.0, ADR-007)
+- [ ] **Per-agent personas with real roles** — generic assistant answers add no value; personas should know their specialty
+- [ ] **`start-stack.ps1`** — one-click Convex + hub + daemons + client in Aaron-owned terminals (CC-launched background processes die silently on this machine)
+- [ ] Change `CLASSIFIER_MODEL` default in code — `claude-sonnet-4-20250514` 404s on this key (currently overridden via env at launch)
+- [ ] Structured end-of-conversation flag — replace the DONE sentinel (prose ending in "DONE" terminates conversations)
+- [ ] Client: session delete + bookmarks (deferred from Grok-parity pass)
 - [ ] PWA setup (service worker, manifest) — restores away-from-desk notifications lost with Telegram
 - [ ] npm wrapper package (`a2a-agent` CLI) — `npx a2a-agent --hub URL --name alice`; package `src/wrapper/daemon.ts`
 - [ ] `agents.register` should upsert (currently duplicates rows on re-register)
