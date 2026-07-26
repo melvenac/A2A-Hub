@@ -1,6 +1,6 @@
 # Task Inbox — Prioritized Backlog
 
-> **Last Updated:** Session 7 (2026-07-24) — v1 COMPLETE (real-LLM gate passed); chat client is a usable channel (history, composer, @mentions, extend — ADR-007); Session 7 added personas + `start-stack.ps1` (uncommitted, pending live verification)
+> **Last Updated:** Session 8 (2026-07-26) — Session 7's work verified live and shipped as v1.5.0/v1.5.1 (tagged locally, **not pushed**); `/health` now probes Convex (ADR-009); agent registration verified end-to-end. Two new live bugs found: `@`-parsing over-match and stale client turn counter
 
 ---
 
@@ -38,6 +38,15 @@ Tasks are organized by MVP version, then by priority within each version.
 - [x] Session extend/reopen + @mention reply routing, deterministic daemon-side (v1.4.0, ADR-007)
 - [x] **Per-agent personas with real roles** — role text auto-loads from `personas/<name>.md` (or `--persona`/`--persona-file`), composed with hub conventions; alice=learner-assistant, bob=mentor; `--print-persona` for debug (Session 7)
 - [x] **`start-stack.ps1`** — one-click Convex + hub + daemons + client in Aaron-owned terminals, with build step + port-readiness waits (Session 7; ASCII-only, PS 5.1-safe)
+- [x] **Live verification of Session 7 work** (Session 8) — stack cold-started, `verify-client-stack` 5/5, persona demo `GATE PASSED`, shipped as v1.5.0
+- [x] **`/health` probes Convex** (Session 8, ADR-009) — `503 degraded` when the DB is unreachable; client honors it. Failure path tested by killing Convex
+- [x] **`REPO_FIXER_MODEL` 404 fixed** (Session 8, v1.5.1) — `claude-sonnet-4-20250514` retired 2026-06-15; now `claude-haiku-4-5-20251001`, so the whole hub is on Haiku 4.5
+- [ ] **Push v1.5.0 + v1.5.1** — `git push origin master --tags`. Both committed and tagged locally only
+- [ ] **Fix `@`-parsing over-match** (`daemon.ts:165`) — `/@([a-z0-9_-]+)/gi` runs against raw content, so `@anthropic-ai/sdk`, `@media`, decorators, and email addresses read as mention routing and silently mute every agent. Gate on session participants; `peerNames` is already built at line 187
+- [ ] **Fix stale turn counter** (`App.svelte:77`) — the 2s poll refreshes `transcript` but never `activeSession`, so the `N/M` cap indicator freezes at load-time value. Open session can use `transcript.length` free; sidebar needs a throttled `loadSessions()`
+- [ ] **`scripts/register-agent.mjs`** — one command for register → heartbeat → session → send → await reply. The registration path has no automated coverage (`verify-client-stack.mjs` never registers an agent)
+- [ ] **Validate `X-Agent-Key`** — every guarded route only checks presence; a bogus key returns 200. `apiKeyHash` is stored at registration and never compared. Fine for local dev, must land before any non-local exposure
+- [ ] **GitNexus re-index blocked** — `npx gitnexus analyze` fails with a Windows file lock on `.gitnexus\lbug` held by the running `gitnexus mcp` servers; index pinned at `e4fbdef`. Needs the MCP servers stopped, or a Defender exclusion
 - [x] Change `CLASSIFIER_MODEL` default in code — now `claude-haiku-4-5-20251001` (Session 7). NOTE: `REPO_FIXER_MODEL` default is still the 404-ing sonnet-4 id (repo-fixer unused in current loop)
 - [ ] Structured end-of-conversation flag — replace the DONE sentinel (prose ending in "DONE" terminates conversations)
 - [ ] Client: session delete + bookmarks (deferred from Grok-parity pass)
