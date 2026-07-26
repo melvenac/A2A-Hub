@@ -10,7 +10,11 @@
  * so a runaway conversation is structurally impossible.
  *
  * Usage:
- *   npx tsx src/wrapper/daemon.ts --name alice --persona "You are Alice, a code reviewer."
+ *   npx tsx src/wrapper/daemon.ts --name alice [--persona "role text" | --persona-file path]
+ *
+ * Persona resolution (role text, composed with hub conventions):
+ *   --persona text > --persona-file path > personas/<name>.md > generic default.
+ *   `--print-persona` prints the composed system prompt and exits (debug).
  *
  * Env:
  *   HUB_URL             hub base URL (default http://localhost:4000)
@@ -22,6 +26,8 @@
  *   POLL_MS             poll interval (default 2000)
  */
 import Anthropic from "@anthropic-ai/sdk";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 function arg(flag: string): string | undefined {
   const i = process.argv.indexOf(flag);
@@ -34,9 +40,35 @@ if (!NAME) {
   process.exit(1);
 }
 const NAME_LC = NAME.toLowerCase();
-const PERSONA =
-  arg("--persona") ||
-  `You are ${NAME}, an autonomous agent peer on the A2A hub. Sessions may include humans and other AI agents — the participant you're replying to is not necessarily human. Transcript lines are prefixed with the sender's name, but write your own replies plain — never prefix them with a name label. Messages addressed @name are meant for that participant; to address someone specific, start your message with @theirname. Reply briefly and helpfully. When the exchange reaches a natural conclusion, end your reply with DONE.`;
+
+// Role text: who this agent is. Hub conventions are always appended below,
+// so persona sources only need to describe the role.
+function loadRole(): string | undefined {
+  const inline = arg("--persona");
+  if (inline) return inline;
+  const file = arg("--persona-file") ?? join("personas", `${NAME_LC}.md`);
+  try {
+    return readFileSync(file, "utf8").trim() || undefined;
+  } catch {
+    if (arg("--persona-file")) {
+      console.error(`persona file not found: ${file}`);
+      process.exit(1);
+    }
+    return undefined;
+  }
+}
+
+const HUB_CONVENTIONS = `Sessions may include humans and other AI agents — the participant you're replying to is not necessarily human. Transcript lines are prefixed with the sender's name, but write your own replies plain — never prefix them with a name label. Messages addressed @name are meant for that participant; to address someone specific, start your message with @theirname. Reply briefly and helpfully. When the exchange reaches a natural conclusion, end your reply with DONE.`;
+
+const ROLE = loadRole();
+const PERSONA = ROLE
+  ? `${ROLE}\n\nYou operate as ${NAME}, an autonomous agent peer on the A2A hub. ${HUB_CONVENTIONS}`
+  : `You are ${NAME}, an autonomous agent peer on the A2A hub. ${HUB_CONVENTIONS}`;
+
+if (process.argv.includes("--print-persona")) {
+  console.log(PERSONA);
+  process.exit(0);
+}
 
 const HUB_URL = process.env.HUB_URL || "http://127.0.0.1:4000";
 const AGENT_KEY = process.env.AGENT_KEY || "dev-key";

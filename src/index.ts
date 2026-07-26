@@ -25,7 +25,7 @@ app.use((req, res, next) => {
 });
 
 // Initialize dependencies
-const convexUrl = process.env.CONVEX_URL!;
+const convexUrl = process.env.CONVEX_URL || "http://127.0.0.1:3210";
 const convex = new ConvexHttpClient(convexUrl);
 const anthropic = new Anthropic();
 const memory = new MemoryEngine(convexUrl);
@@ -87,8 +87,34 @@ const executor = new HubExecutor({
 });
 
 // Routes
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok", agent: hubAgentCard.name });
+// Health has to reflect the whole hub, not just this process. A Convex backend
+// that dies under a live hub left this endpoint answering "ok" for days while
+// every persistence call behind it failed -- so probe the database too. The
+// probe is bounded: a hung backend must surface as degraded, not hang /health.
+app.get("/health", async (_req, res) => {
+  const started = Date.now();
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    await Promise.race([
+      convex.query(api.peers.list, {}),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("convex probe timed out after 3000ms")), 3000);
+      }),
+    ]);
+    res.json({
+      status: "ok",
+      agent: hubAgentCard.name,
+      convex: { status: "ok", latencyMs: Date.now() - started },
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: "degraded",
+      agent: hubAgentCard.name,
+      convex: { status: "unreachable", error: (error as Error).message },
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 });
 
 app.get("/.well-known/agent-card.json", (_req, res) => {

@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-const CLASSIFIER_MODEL = process.env.CLASSIFIER_MODEL || "claude-sonnet-4-20250514";
+const CLASSIFIER_MODEL = process.env.CLASSIFIER_MODEL || "claude-haiku-4-5-20251001";
 const VALID_CATEGORIES = ["repo-docs", "repo-script", "repo-config", "user-env", "user-error"] as const;
 type Category = (typeof VALID_CATEGORIES)[number];
 

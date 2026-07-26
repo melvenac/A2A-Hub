@@ -57,7 +57,7 @@ convex/
 | `HUB_BOOTSTRAP_KEY` | Admin key for agent registration |
 | `HUB_URL` | Public URL of this hub |
 | `REPO_PATH` | Local repo path for fix drafting |
-| `CLASSIFIER_MODEL` | LLM model for classification (default: `claude-sonnet-4-20250514`) |
+| `CLASSIFIER_MODEL` | LLM model for classification (default: `claude-haiku-4-5-20251001`) |
 | `REPO_FIXER_MODEL` | LLM model for repo fix drafting (default: `claude-sonnet-4-20250514`) |
 | `CONFIDENCE_THRESHOLD` | Min confidence for auto-actions (default: 0.85) |
 | `PORT` | Server port (default: 4000) |

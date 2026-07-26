@@ -149,7 +149,7 @@ curl -X POST https://hub.tarrantcountymakerspace.com/a2a/heartbeat/alice \
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/health` | Health check |
+| GET | `/health` | Health check — probes Convex, `503` if degraded |
 | GET | `/.well-known/agent-card.json` | A2A agent card metadata |
 | POST | `/a2a/register` | Register a new agent |
 | POST | `/a2a/message/send` | Send a message for classification + response |
@@ -158,6 +158,13 @@ curl -X POST https://hub.tarrantcountymakerspace.com/a2a/heartbeat/alice \
 | POST | `/a2a/heartbeat/:agentId` | Agent keep-alive |
 
 All endpoints (except `/health` and agent card) require the `X-Agent-Key` header.
+
+`/health` reports the whole hub, not just the process. It runs a bounded (3s)
+Convex query and returns `200 {"status":"ok","convex":{"status":"ok","latencyMs":N}}`
+only when the database answers; if Convex is unreachable it returns
+`503 {"status":"degraded","convex":{"status":"unreachable",...}}`. Treat a
+non-200 as "the hub cannot persist anything" — it stays up and recovers on its
+own once Convex returns.
 
 ## Self-Hosting
 
@@ -187,7 +194,7 @@ cp .env.example .env
 | `PORT` | No | Server port (default: `4000`) |
 | `HUMAN_PEER` | No | Chat-channel peer name for hub notifications (default: `aaron`) |
 | `GITHUB_PAT` | No | GitHub PAT for repo-fixer pushes |
-| `CLASSIFIER_MODEL` | No | Anthropic model for classification (default: `claude-sonnet-4-20250514`) |
+| `CLASSIFIER_MODEL` | No | Anthropic model for classification (default: `claude-haiku-4-5-20251001`) |
 | `REPO_FIXER_MODEL` | No | Anthropic model for fix drafting (default: `claude-sonnet-4-20250514`) |
 | `CONFIDENCE_THRESHOLD` | No | Classification confidence threshold (default: `0.85`) |
 
@@ -250,12 +257,29 @@ npm test           # run vitest
 
 ### Local stack (no Docker)
 
+One-click on Windows — builds, then opens Convex, hub, both daemons, and the
+client in separate terminal windows (idempotent: re-runs only start what's
+missing):
+
+```powershell
+.\start-stack.ps1            # from PowerShell
+powershell.exe -ExecutionPolicy Bypass -File start-stack.ps1   # from Git Bash
+```
+
+Or by hand:
+
 ```bash
 npx convex dev --local                 # Convex backend on :3210
-npm run dev                            # hub on :4000 (needs CONVEX_URL=http://127.0.0.1:3210)
+npm run dev                            # hub on :4000 (CONVEX_URL defaults to http://127.0.0.1:3210)
 npx tsx src/wrapper/daemon.ts --name alice   # autonomous wrapper agent(s)
 cd client && npm run dev               # Svelte test client on :5173
 ```
+
+**Personas:** each daemon composes its system prompt from role text plus fixed
+hub conventions. Role text resolves `--persona` > `--persona-file <path>` >
+`personas/<name>.md` > generic. `personas/alice.md` (learner assistant) and
+`personas/bob.md` (mentor) ship in the repo; `--print-persona` prints an
+agent's composed prompt and exits.
 
 Put `ANTHROPIC_API_KEY=sk-ant-...` in `.env` (gitignored) and launch with
 `node --env-file=.env` — nothing auto-loads it. Without a key, daemons use a

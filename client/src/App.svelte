@@ -14,7 +14,11 @@
     try {
       const res = await fetch(`${hubUrl}/health`);
       const body = await res.json();
-      health = `online (${body.agent})`;
+      // 503 means the hub is up but Convex is not. Don't report that as online
+      // -- nothing will persist, and a green light there hides the real fault.
+      health = res.ok
+        ? `online (${body.agent})`
+        : `degraded — convex ${body.convex?.status ?? "unknown"}`;
     } catch {
       health = "unreachable";
     }

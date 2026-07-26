@@ -2,6 +2,29 @@
 
 All notable changes to the A2A Intelligent Hub.
 
+## [v1.5.0] - 2026-07-26
+
+### Added
+- **Per-agent personas**: each daemon composes its system prompt from role text plus fixed hub conventions. Role text resolves `--persona` > `--persona-file <path>` > `personas/<name>.md` > generic default. `personas/alice.md` (learner assistant) and `personas/bob.md` (mentor) ship in the repo. `--print-persona` prints the composed prompt and exits.
+- **`start-stack.ps1`**: one-command local stack — builds, then opens Convex, hub, both daemons, and the client in separate terminal windows. Idempotent: each piece skips itself if already running, so a re-run only starts what's missing. Windows are user-owned, so the stack survives an agent session ending.
+- **`/health` now probes Convex** (bounded to 3s) and reports `convex.latencyMs`. Returns `503 {"status":"degraded"}` when the database is unreachable instead of a blanket `ok`.
+
+### Changed
+- `CONVEX_URL` defaults to `http://127.0.0.1:3210`; local dev no longer needs it set.
+- `CLASSIFIER_MODEL` default → `claude-haiku-4-5-20251001`.
+- `.env.example` trimmed to match the post-Telegram deployment shape.
+
+### Fixed
+- **`/health` reported `ok` on a hub that could not persist anything.** A Convex backend that died under a live hub left the endpoint green for days while every write failed. Verified by killing Convex (`503` in 15ms), then restoring it (auto-recovery to `200`).
+- **`verify-client-stack.mjs` hung forever** when a daemon could not answer — the round-trip `fetch` was unbounded. All requests now have timeouts (10s; 60s for the model leg) and report an actionable failure.
+- **`verify-client-stack.mjs` asserted `reply.includes("[bob")`**, a prefix only the `[<name> fallback]` path emits — `HUB_CONVENTIONS` tells the model to reply plain. The check therefore passed *only* while the API key was broken. It now asserts a reply returned and labels whether the model or the fallback served it, so a silent regression to fallback is visible.
+- **`start-stack.ps1` had no readiness wait for the client** (:5173), the only window without one.
+- **`start-stack.ps1` port probes were IPv4-only** while vite binds `::1` only, so the client's skip-if-running check could never match and a re-run would spawn a second vite. `Test-PortBusy`/`Wait-ForPort` now probe both address families.
+- **Chat client ignored `res.ok`** on `/health`, so it would render "online" from a `503` body.
+
+### Removed
+- `.agents/workflows/{start,task,test,end}.md` — duplicates of the tracked `.claude/commands/*` equivalents.
+
 ## [v1.4.0] - 2026-07-23
 
 ### Added

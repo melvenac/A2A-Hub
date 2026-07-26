@@ -1,15 +1,26 @@
 # Product Requirements — A2A Intelligent Hub
 
-> **Version:** 1.0
+> **Version:** 1.1
 > **Owner:** Aaron (Tarrant County Makerspace)
 
 ---
 
 ## 1. Project Overview
 
-The A2A Intelligent Hub is a central coordination server for agent-to-agent (A2A) communication. It receives messages from wrapper agents, classifies root causes, stores lessons learned, drafts repo fixes, and escalates tasks between connected agents. It serves as the "brain" of a self-improving multi-agent system.
+### The problem
 
-**For whom:** Solo developer running multiple AI agents that need to coordinate, share knowledge, and autonomously fix documentation/config issues. Agent-agnostic — any A2A-compliant agent can participate regardless of LLM backend.
+Helping someone learn Claude Code (or any AI-first dev environment) remotely doesn't work today. Teaching Brian or Hisham means a Google video call with commands dictated through a chat window — tedious, error-prone, and one problem at a time. Worse, common problems Aaron has already solved on his own machine don't translate: the fix lives in his head or his shell history, not anywhere the learner's agent can reach.
+
+The insight: **both sides already have an AI agent.** Instead of human-relays-to-human, let Aaron's local agent talk directly to Brian's agent (Alice) — solve problems, teach by building, and resolve errors remotely, with the humans watching and steering rather than relaying.
+
+The A2A Intelligent Hub is the rendezvous point that makes this possible: a central coordination server for agent-to-agent (A2A) communication. It receives messages from wrapper agents, classifies root causes, stores lessons learned, drafts repo fixes, and escalates tasks between connected agents. It serves as the "brain" of a self-improving multi-agent system.
+
+### Motivating use cases
+
+1. **Remote teaching / pair-fixing (primary — drives the roadmap).** Aaron's agent ↔ Brian's Alice through the hub. NAT-safe outbound polling means Brian opens no ports; humans sit in the same session as co-equal peers (`aaron`, `brian`) and jump in via @mentions instead of dictating commands. The `experiences` store turns "I solved this locally" into an answer the hub can serve the next time any learner's agent hits the same error. `repoFixes` drafts the fix to the learner's repo, gated by human approval — the right posture for teaching.
+2. **Local multi-agent collaboration (secondary).** An orchestration agent delegates tasks to coder agents on the same dev server via the task queue (atomic claims = worker pool). Note: for same-machine orchestration, Claude Code's native subagents/agent teams are often the better tool because they share context. The hub's edge is agents on **different machines, different owners, or different LLM stacks** — which is use case 1.
+
+**For whom:** Developers mentoring other developers remotely through their AI agents; secondarily, a solo developer running multiple AI agents that need to coordinate, share knowledge, and autonomously fix documentation/config issues. Agent-agnostic — any A2A-compliant agent can participate regardless of LLM backend.
 
 ---
 
@@ -100,70 +111,48 @@ See `ENTITIES.md` for full schema documentation. Key tables:
 
 ## 9. Roadmap
 
-### v1 — Testable MVP (Aaron + Brian)
+### v1 — Protocol Spine Proven Locally — ✅ COMPLETE (v1.4.0)
 
-> **Goal:** Brian runs an `alice` wrapper, sends real questions, full loop works with reliable mobile messaging.
-> **Effort:** Days — code is built, mostly configuration + docs.
+> **Goal (as delivered):** Two real-LLM agents converse to convergence through the hub with zero human relay, and a human can join any session as a co-equal peer through a chat client.
+> **Note:** The original v1 goal ("Brian runs an alice wrapper remotely") required a reachable hub; the VPS was wiped 2026-04, so v1 was proven locally and the Brian end-to-end test moved to v2 behind redeploy.
 
 | Feature | Status |
 |---|---|
 | Core hub loop (classify → memory → escalate → respond) | Done |
-| Convex persistence (5 tables, semantic search) | Done |
-| Docker deployment on VPS | Done |
-| Wrapper agent (poll → claude --print → report) | Done |
+| Convex persistence + semantic search | Done |
+| Wrapper daemon (poll → LLM reply → report, deterministic fallback without key) | Done (v1.2.0) |
 | Per-task configurable LLM models (ADR-004) | Done |
 | ~~Configure Telegram~~ — dropped per ADR-005 | Dropped |
-| Custom Convex channel (see below) | Not started |
-| Harden bootstrap key | Not started |
-| README for Brian's wrapper setup | Not started |
-| End-to-end test with Brian (alice wrapper) | Not started |
+| Chat channel — Convex peers/sessions/messages, humans as co-equal peers (ADR-006) | Done (v1.1.0) |
+| Svelte chat client — history, composer, @mentions, rename, session extend | Done (v1.3.0–v1.4.0) |
+| Autonomous 2-agent loop, real LLM (alice↔bob on Haiku, turn caps, DONE convergence) | Done (v1.4.0) |
+| Session extend/reopen + deterministic @mention reply routing (ADR-007) | Done (v1.4.0) |
+| `--persona` system-prompt plumbing in wrapper daemon | Done |
+| ~~Docker deployment on VPS~~ — VPS wiped 2026-04, redeploy is v2 | Regressed |
 
-#### Custom Convex Channel — Reliable Mobile Messaging for v1
+> **Design pivot:** the originally planned "Custom Convex Channel" (an MCP channel server bridging Convex to Claude Code, with permission relay) was superseded. What shipped instead is a native Convex chat channel (peers/sessions/messages) with a Svelte client — no MCP layer. See ADR-006/007 in `DECISIONS.md` for the reasoning trail.
 
-> **Why:** The Telegram plugin drops ~70% of messages due to fire-and-forget MCP notifications (ADR-005). Building a full messaging app is v2 scope. A custom Convex-backed channel bridges the gap — fixes drops now, stays in the Claude Code channels ecosystem, and gets permission relay for free.
+### v2 — Remote Teaching Ready (Aaron + Brian)
 
-**What it is:** A custom MCP server (Claude Code channel) that uses Convex as a message queue instead of delivering notifications directly.
+> **Goal:** Use case 1 becomes real — Brian installs a wrapper in minutes, Alice talks to Aaron's agent through a hub on the internet, and both humans watch and steer from the chat client.
+> **Effort:** Weeks — deploy + auth + packaging + UX.
+> **Architecture reference:** `reference/MESSAGING-APP-ARCHITECTURE.md`
 
-**Flow:**
-```
-Phone (PWA or simple web UI)
-  → POST to Convex httpAction
-    → message written to Convex "channelMessages" table (persisted)
-      → Channel server polls/subscribes to Convex for new messages
-        → mcp.notification() to Claude Code (only when ready)
-          → Claude processes, replies via reply tool
-            → reply written to Convex table
-              → PWA sees reply in real-time via Convex subscription
-```
+**Path to Brian (in order):**
+- Real per-agent personas — role text per agent (mentor/learner), baked into launch config (`--persona` plumbing already done)
+- `start-stack.ps1` — one-click Convex + hub + daemons + client locally
+- Fix `CLASSIFIER_MODEL` code default (current default 404s on this key; overridden via env at launch)
+- Proper agent auth — per-agent key generation, rotation, deprecate shared `dev-key` and bootstrap key
+- Redeploy hub + Convex on VPS (Docker Compose, `restart: unless-stopped`)
+- npm wrapper package (`a2a-wrapper` CLI) + setup README — Brian's onboarding takes minutes and isn't itself the thing being taught
+- End-to-end test with Brian (Alice ↔ Aaron's agent, remote)
 
-**What to build:**
-1. **Convex table** — `channelMessages` (content, sender, status: pending/delivered/read, timestamps)
-2. **Convex httpAction** — receives messages from the web UI, writes to table
-3. **Custom channel server** — MCP server with `claude/channel` + `claude/channel/permission` capabilities. Subscribes to Convex for new messages, delivers to Claude Code only when the session is ready. Marks messages as delivered.
-4. **Minimal web UI** — single-page Next.js app (or even plain HTML) with Convex client. Send messages, see replies in real-time. Deploy as PWA for phone home screen.
-5. **Permission relay** — channel forwards tool-approval prompts to the web UI so Aaron can approve Bash/Write/Edit from his phone.
-
-**Why this works for v1:**
-- Messages persist in Convex — zero drops regardless of Claude Code state
-- Permission relay lets Aaron approve tools remotely (free from channels architecture)
-- Minimal frontend needed — just a chat input + message list
-- Shares the same Convex backend the Hub already uses
-- Natural stepping stone to the full v2 messaging app (same tables, same patterns)
-
-### v2 — Messaging App & Developer Experience
-
-> **Goal:** Purpose-built messaging app replaces Telegram. See what the hub is doing. Make it easy for others to connect.
-> **Effort:** Weeks — new features, new frontend.
-> **Architecture:** See `reference/MESSAGING-APP-ARCHITECTURE.md`
-
-- **Messaging app (Next.js + Convex PWA)** — real-time chat, conversation history, multi-participant sessions. Replaces Telegram entirely (ADR-005). Install as PWA on phone.
-- **Peer model (Honcho-inspired)** — humans and agents as first-class entities with evolving profiles, per-session observation settings
-- **Background reasoning** — Convex background functions extract insights from conversations continuously. Messaging = Memory.
-- **Multi-participant sessions** — mixed human+AI conversations with per-participant visibility config
-- Frontend dashboard — conversation viewer, experience browser, agent status (integrated into messaging app)
-- npm wrapper package (`a2a-wrapper` CLI) — easy onboarding for new agents
-- Proper agent auth — per-agent key generation, rotation, deprecate bootstrap key
-- Test suite (Vitest), request validation, structured logging
+**Chat/UX track:**
+- Grow Svelte client toward PWA — installable on phone, real-time via Convex subscriptions
+- Frontend dashboard — conversation viewer, experience browser, agent status
+- Peer model (Honcho-inspired) — evolving profiles, per-session observation settings
+- Background reasoning — Convex background functions extract insights from conversations continuously. Messaging = Memory.
+- Test suite growth (Vitest), request validation, structured logging
 
 ### v3 — Platform (depends on v2 decisions)
 

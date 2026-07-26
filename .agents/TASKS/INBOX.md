@@ -1,6 +1,6 @@
 # Task Inbox — Prioritized Backlog
 
-> **Last Updated:** Session 6 (2026-07-23) — v1 COMPLETE (real-LLM gate passed); chat client is a usable channel (history, composer, @mentions, extend — ADR-007)
+> **Last Updated:** Session 7 (2026-07-24) — v1 COMPLETE (real-LLM gate passed); chat client is a usable channel (history, composer, @mentions, extend — ADR-007); Session 7 added personas + `start-stack.ps1` (uncommitted, pending live verification)
 
 ---
 
@@ -36,9 +36,9 @@ Tasks are organized by MVP version, then by priority within each version.
 
 - [x] Grow Svelte client into chat UI: date-grouped history, live transcripts, send as `aaron` peer, rename, extend (v1.4.0, Session 6)
 - [x] Session extend/reopen + @mention reply routing, deterministic daemon-side (v1.4.0, ADR-007)
-- [ ] **Per-agent personas with real roles** — generic assistant answers add no value; personas should know their specialty
-- [ ] **`start-stack.ps1`** — one-click Convex + hub + daemons + client in Aaron-owned terminals (CC-launched background processes die silently on this machine)
-- [ ] Change `CLASSIFIER_MODEL` default in code — `claude-sonnet-4-20250514` 404s on this key (currently overridden via env at launch)
+- [x] **Per-agent personas with real roles** — role text auto-loads from `personas/<name>.md` (or `--persona`/`--persona-file`), composed with hub conventions; alice=learner-assistant, bob=mentor; `--print-persona` for debug (Session 7)
+- [x] **`start-stack.ps1`** — one-click Convex + hub + daemons + client in Aaron-owned terminals, with build step + port-readiness waits (Session 7; ASCII-only, PS 5.1-safe)
+- [x] Change `CLASSIFIER_MODEL` default in code — now `claude-haiku-4-5-20251001` (Session 7). NOTE: `REPO_FIXER_MODEL` default is still the 404-ing sonnet-4 id (repo-fixer unused in current loop)
 - [ ] Structured end-of-conversation flag — replace the DONE sentinel (prose ending in "DONE" terminates conversations)
 - [ ] Client: session delete + bookmarks (deferred from Grok-parity pass)
 - [ ] PWA setup (service worker, manifest) — restores away-from-desk notifications lost with Telegram
