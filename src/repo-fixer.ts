@@ -3,7 +3,7 @@ import simpleGit from "simple-git";
 import { writeFileSync, readFileSync } from "fs";
 import { join } from "path";
 
-const REPO_FIXER_MODEL = process.env.REPO_FIXER_MODEL || "claude-sonnet-4-20250514";
+const REPO_FIXER_MODEL = process.env.REPO_FIXER_MODEL || "claude-haiku-4-5-20251001";
 const REPO_PATH = process.env.REPO_PATH || "/tmp/A2A-Hub";
 const REPO_URL = process.env.REPO_URL || "https://github.com/melvenac/A2A-Hub.git";
 

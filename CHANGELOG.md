@@ -2,6 +2,11 @@
 
 All notable changes to the A2A Intelligent Hub.
 
+## [v1.5.1] - 2026-07-26
+
+### Fixed
+- **`REPO_FIXER_MODEL` defaulted to a retired model.** `claude-sonnet-4-20250514` reached its retirement date on 2026-06-15; `GET /v1/models/claude-sonnet-4-20250514` returns `404 not_found_error`, so every `RepoFixer.draftFix` call would have thrown rather than drafting a fix. Default is now `claude-haiku-4-5-20251001`, matching the classifier and the wrapper daemon — the whole hub is on Haiku 4.5. Verified live: the new ID returns `200` (200K context, 64K max output, comfortably above repo-fixer's 2000-token cap).
+
 ## [v1.5.0] - 2026-07-26
 
 ### Added
