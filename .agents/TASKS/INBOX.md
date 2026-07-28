@@ -1,6 +1,6 @@
 # Task Inbox — Prioritized Backlog
 
-> **Last Updated:** Session 8 (2026-07-26) — Session 7's work verified live and shipped as v1.5.0/v1.5.1 (tagged locally, **not pushed**); `/health` now probes Convex (ADR-009); agent registration verified end-to-end. Two new live bugs found: `@`-parsing over-match and stale client turn counter
+> **Last Updated:** Session 10 (2026-07-28) — both live bugs from Session 8 fixed and shipped as v1.5.2, verified against a running stack; GitNexus re-indexed. v1.5.0/v1.5.1/v1.5.2 are all tagged locally and **not pushed**
 
 ---
 
@@ -41,9 +41,9 @@ Tasks are organized by MVP version, then by priority within each version.
 - [x] **Live verification of Session 7 work** (Session 8) — stack cold-started, `verify-client-stack` 5/5, persona demo `GATE PASSED`, shipped as v1.5.0
 - [x] **`/health` probes Convex** (Session 8, ADR-009) — `503 degraded` when the DB is unreachable; client honors it. Failure path tested by killing Convex
 - [x] **`REPO_FIXER_MODEL` 404 fixed** (Session 8, v1.5.1) — `claude-sonnet-4-20250514` retired 2026-06-15; now `claude-haiku-4-5-20251001`, so the whole hub is on Haiku 4.5
-- [ ] **Push v1.5.0 + v1.5.1** — `git push origin master --tags`. Both committed and tagged locally only
-- [ ] **Fix `@`-parsing over-match** (`daemon.ts:165`) — `/@([a-z0-9_-]+)/gi` runs against raw content, so `@anthropic-ai/sdk`, `@media`, decorators, and email addresses read as mention routing and silently mute every agent. Gate on session participants; `peerNames` is already built at line 187
-- [ ] **Fix stale turn counter** (`App.svelte:77`) — the 2s poll refreshes `transcript` but never `activeSession`, so the `N/M` cap indicator freezes at load-time value. Open session can use `transcript.length` free; sidebar needs a throttled `loadSessions()`
+- [x] **`@`-parsing over-match fixed** (Session 10, v1.5.2) — gating extracted to `src/wrapper/mentions.ts` and gated on session participants; 11 unit cases, mutation-verified, confirmed live in a 3-participant session
+- [x] **Stale turn counter fixed** (Session 10, v1.5.2) — header reads the live count off `transcript`; poll re-lists sessions every 5th tick
+- [ ] **Push v1.5.0 + v1.5.1 + v1.5.2** — `git push origin master --tags`. All three committed and tagged locally only
 - [ ] **`scripts/register-agent.mjs`** — one command for register → heartbeat → session → send → await reply. The registration path has no automated coverage (`verify-client-stack.mjs` never registers an agent)
 - [ ] **Validate `X-Agent-Key`** — every guarded route only checks presence; a bogus key returns 200. `apiKeyHash` is stored at registration and never compared. Fine for local dev, must land before any non-local exposure
 - [ ] **GitNexus re-index blocked** — `npx gitnexus analyze` fails with a Windows file lock on `.gitnexus\lbug` held by the running `gitnexus mcp` servers; index pinned at `e4fbdef`. Needs the MCP servers stopped, or a Defender exclusion

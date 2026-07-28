@@ -28,17 +28,24 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import {
+  isParticipant,
+  qualifiesAsTrigger,
+  type GateContext,
+} from "./mentions.js";
 
 function arg(flag: string): string | undefined {
   const i = process.argv.indexOf(flag);
   return i >= 0 ? process.argv[i + 1] : undefined;
 }
 
-const NAME = arg("--name") || process.env.AGENT_NAME;
-if (!NAME) {
+const nameArg = arg("--name") || process.env.AGENT_NAME;
+if (!nameArg) {
   console.error("Usage: daemon.ts --name <agentName> [--persona <text>]");
   process.exit(1);
 }
+// Re-bind so the narrowing survives into the closures below.
+const NAME: string = nameArg;
 const NAME_LC = NAME.toLowerCase();
 
 // Role text: who this agent is. Hub conventions are always appended below,
@@ -151,24 +158,21 @@ async function handleSessions() {
     const last = messages[messages.length - 1];
     if (/\bDONE\b\W*$/.test(last.content.trim())) continue;
 
-    // @mention gating (deterministic): a message with mentions is only for
-    // the mentioned agents. Without mentions, 1:1 sessions always reply;
-    // group sessions only answer humans (stops agent↔agent reply cascades —
-    // agents hand off explicitly by writing @name).
-    //
-    // Gate on the newest message addressed to ME, not the newest message
-    // overall — otherwise the first agent to answer a room question makes
-    // every other agent see "last message is from an agent" and go mute.
-    const isGroup = (session.participants?.length ?? 2) > 2;
-    const qualifies = (m: any) => {
-      if (m.from === NAME) return false;
-      const mentions = [...m.content.matchAll(/@([a-z0-9_-]+)/gi)].map((x) =>
-        x[1].toLowerCase()
-      );
-      if (mentions.length > 0) return mentions.includes(NAME_LC);
-      return !isGroup || m.fromType === "human";
+    // @mention gating (deterministic) lives in ./mentions.ts so it is testable
+    // without booting this loop. Gate on the newest message addressed to ME,
+    // not the newest message overall — otherwise the first agent to answer a
+    // room question makes every other agent see "last message is from an
+    // agent" and go mute.
+    const gate: GateContext = {
+      name: NAME,
+      participants: (session.participants ?? []).map((p: any) =>
+        String(p.name ?? p)
+      ),
+      isGroup: (session.participants?.length ?? 2) > 2,
     };
-    const trigger = [...messages].reverse().find(qualifies);
+    const trigger = [...messages].reverse().find((m: any) =>
+      qualifiesAsTrigger(m, gate)
+    );
     if (!trigger) continue;
     const myLast = [...messages].reverse().find((m: any) => m.from === NAME);
     if (myLast && myLast.createdAt >= trigger.createdAt) continue;
@@ -184,10 +188,7 @@ async function handleSessions() {
     // leading label when it names a session participant. Intentional
     // "@name" handoffs are left alone (they carry mention routing).
     const label = reply.match(/^\s*([a-z0-9_-]+):\s+/i);
-    const peerNames = (session.participants ?? []).map((p: any) =>
-      String(p.name ?? p).toLowerCase()
-    );
-    if (label && (peerNames.includes(label[1].toLowerCase()) || label[1].toLowerCase() === NAME_LC)) {
+    if (label && isParticipant(label[1], gate)) {
       reply = reply.slice(label[0].length);
     }
 

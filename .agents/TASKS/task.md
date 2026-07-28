@@ -1,19 +1,23 @@
 # Current Sprint
 
-> **Focus:** v2 — Session 7's work is verified and shipped; next is the two live bugs, then registration DX
+> **Focus:** v2 — both live bugs are fixed and shipped as v1.5.2; next is registration DX
 
 ---
 
 ## Active Tasks
 
-1. **Push v1.5.0 + v1.5.1** — `git push origin master --tags`. Both are committed and annotated-tagged locally; nothing has left the machine
-2. **Fix `@`-parsing over-match** (`daemon.ts:165`) — treat `@word` as routing only when it matches a session participant. `peerNames` is already built at line 187 for label-stripping; reuse it. Add a regression test with `@anthropic-ai/sdk` in the body
-3. **Fix stale turn counter** (`App.svelte:77`) — `openSession`'s poll updates `transcript` but never `activeSession`, so the cap indicator freezes. Header can render `transcript.length` for free; sidebar needs `loadSessions()` on a throttle (~every 5th poll)
-4. **`scripts/register-agent.mjs`** — wrap register → heartbeat → open-or-reuse session → send → poll for reply. Doubles as the missing smoke test for the registration path
-5. **Experience dedup** — `triggerHash` (sha256 of normalized trigger) + `by_triggerHash` index; patch-on-conflict in `experiences.store`
-6. **docker-compose profiles** — local (no Traefik, local Convex, :5173 client) + VPS (Traefik, prod URLs); one env-gated build
+1. **`scripts/register-agent.mjs`** — wrap register → heartbeat → open-or-reuse session → send → poll for reply. Doubles as the missing smoke test for the registration path
+2. **Experience dedup** — `triggerHash` (sha256 of normalized trigger) + `by_triggerHash` index; patch-on-conflict in `experiences.store`
+3. **docker-compose profiles** — local (no Traefik, local Convex, :5173 client) + VPS (Traefik, prod URLs); one env-gated build
 
-## Done This Sprint (Session 8)
+## Done This Sprint (Session 10)
+
+- [x] **Re-indexed GitNexus** — 443 symbols / 600 relationships / 3 flows; the `.gitnexus\lbug` lock that blocked Sessions 8-9 did not recur
+- [x] **Fixed `@`-parsing over-match** — gating extracted to `src/wrapper/mentions.ts` and gated on session participants; 11 unit cases in `tests/mentions.test.ts`, mutation-verified (removing the participant filter fails 3 of them), then confirmed live in a 3-participant session
+- [x] **Fixed stale turn counter** — header reads the live count off `transcript`; poll re-lists sessions every 5th tick so the sidebar and live/closed flag track
+- [x] **Shipped v1.5.2** — full suite 22/22, `verify-client-stack` 5/5 with a real model reply
+
+## Done Previously (Session 8)
 
 - [x] **Ran `start-stack.ps1` end-to-end** — cleared a 3-day-stale stack first (Convex backend dead under a live hub), then cold-started clean; `verify-client-stack` 5/5, exit 0
 - [x] **Persona demo passed** — `--print-persona` confirmed per-agent composition; live loop converged with DONE in 2 turns, bob in mentor character verbatim
@@ -30,8 +34,8 @@ Aaron chats with agents at :5173 as the `aaron` peer. `@name` targets one agent;
 
 ## Success Criteria
 
-- A message containing `@anthropic-ai/sdk` does not suppress replies (task 2)
-- The turn counter tracks the transcript live without a manual refresh (task 3)
+- [x] A message containing `@anthropic-ai/sdk` does not suppress replies — live: alice and bob both answered
+- [x] The turn counter tracks the transcript live without a manual refresh
 - `node scripts/register-agent.mjs <name> --say "..." --to alice` registers and returns a reply in one command
 - Sending the same trigger twice creates one `experiences` row (dedup task)
 - `docker compose --profile local up` reproduces the scripted stack (compose task)

@@ -74,6 +74,13 @@
     activeSessionId = id;
     transcript = [];
     converged = false;
+    // The poll only refreshes the transcript. `activeSession` is derived from
+    // `sessions`, so its turnCount/isActive would sit at their load-time values
+    // and freeze the cap indicator -- which is the one warning that says the
+    // session is about to auto-close. Re-list every 5th tick (~10s) so the
+    // sidebar and the closed/live flag catch up; the header reads the live
+    // count off `transcript` (turnCount is incremented once per message).
+    let ticks = 0;
     const poll = async () => {
       try {
         const res = await fetch(`${hubUrl}/a2a/session/${id}/messages`, { headers: hdrs() });
@@ -82,6 +89,7 @@
         transcript = body.messages || [];
         const last = transcript[transcript.length - 1];
         converged = transcript.length >= 2 && last && /\bDONE\b\W*$/.test(last.content.trim());
+        if (++ticks % 5 === 0) loadSessions();
       } catch (error) {
         sessionsError = error.message;
       }
@@ -322,7 +330,7 @@
           <input class="turns" type="number" bind:value={extendBy} min="1" max="32" title="turns to add" />
           <button class="ghost" on:click={extendSession} disabled={extending}>+ extend</button>
           <span class="health">
-            {#if converged}converged (DONE){:else if activeSession.isActive === false}closed{:else}live · {activeSession.turnCount}/{activeSession.maxTurns}{/if}
+            {#if converged}converged (DONE){:else if activeSession.isActive === false}closed{:else}live · {Math.max(transcript.length, activeSession.turnCount)}/{activeSession.maxTurns}{/if}
           </span>
         </span>
       </div>

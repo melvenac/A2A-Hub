@@ -2,6 +2,15 @@
 
 All notable changes to the A2A Intelligent Hub.
 
+## [v1.5.2] - 2026-07-28
+
+### Fixed
+- **`@`-mention routing matched any `@word`, muting whole rooms.** The daemon ran `/@([a-z0-9_-]+)/gi` against raw message content, so a message mentioning `@anthropic-ai/sdk`, a CSS at-rule, a decorator or an email address was read as addressed to a participant who does not exist — every agent in the session went silent with no error to explain it. An `@word` is now routing only when it names a session participant; anything else falls through to the normal rule (1:1 always replies, group sessions answer humans), so a typo'd handle reads as a question to the room rather than silence. Verified live in a 3-participant session: `did the @anthropic-ai/sdk bump land?` drew replies from both alice and bob, while `@bob only you: ...` still routed to bob alone.
+- **Chat client's turn counter froze at its load-time value.** `openSession`'s 2s poll refreshed the transcript but never `activeSession`, which is derived from the session list — so the `N/M` cap indicator sat still (a 3-turn conversation displayed `1/6`) and hid the warning that a session was about to hit its cap and auto-close. The header now reads the live count off the transcript (`turnCount` is incremented once per message), and the poll re-lists sessions every 5th tick (~10s) so the sidebar counts and the live/closed flag catch up.
+
+### Changed
+- Mention gating moved out of `daemon.ts` into `src/wrapper/mentions.ts` (`routingMentions`, `qualifiesAsTrigger`, `isParticipant`). The daemon registers and starts polling at import time, so the gate could not be tested in place; `tests/mentions.test.ts` covers it with 11 cases.
+
 ## [v1.5.1] - 2026-07-26
 
 ### Fixed
