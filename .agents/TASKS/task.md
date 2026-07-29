@@ -1,16 +1,24 @@
 # Current Sprint
 
-> **Focus:** v2 — both live bugs are fixed and shipped as v1.5.2; next is registration DX
+> **Focus:** v2 — repo-resident peers ship in v1.6.0; next is on-demand spawn so a peer doesn't have to be running to answer
 
 ---
 
 ## Active Tasks
 
-1. **`scripts/register-agent.mjs`** — wrap register → heartbeat → open-or-reuse session → send → poll for reply. Doubles as the missing smoke test for the registration path
-2. **Experience dedup** — `triggerHash` (sha256 of normalized trigger) + `by_triggerHash` index; patch-on-conflict in `experiences.store`
-3. **docker-compose profiles** — local (no Traefik, local Convex, :5173 client) + VPS (Traefik, prod URLs); one env-gated build
+1. **On-demand spawn** — hub receives a message for a repo peer with no live daemon → launches a headless agent rooted at that repo, gets the answer, lets it exit. Zero idle cost, and the piece that actually retires the file mailbox instead of out-competing it
+2. **Git history for repo peers** — a repo expert should be best at "when did this change and why", but Bash is denied by default. A scoped `Bash(git log *)` / `Bash(git show *)` allow rule keeps the trust boundary while unblocking it
+3. **Experience dedup** — `triggerHash` (sha256 of normalized trigger) + `by_triggerHash` index; patch-on-conflict in `experiences.store`
+4. **docker-compose profiles** — local (no Traefik, local Convex, :5173 client) + VPS (Traefik, prod URLs); one env-gated build
 
-## Done This Sprint (Session 10)
+## Done This Sprint (Session 11)
+
+- [x] **Repo-resident peers** (ADR-010) — `--repo <path>` swaps reply generation for a Claude Agent SDK session rooted in that repo, at the daemon's single existing seam. Read-only by default; `--repo-bash` opts in
+- [x] **`scripts/ask-agent.mjs`** — the entrance from a live coding session (subsumes most of the old `register-agent.mjs` task: register → session → send → poll is the same flow)
+- [x] **Verified live cross-repo** — asked the `gitnexus` peer about the `.gitnexus\lbug` lock; 43s, four `file:line` citations, all four checked verbatim against the repo. It diagnosed the re-index failure that blocked Sessions 8-9 here
+- [x] **Read the Agent SDK's real API rather than recalling it** — `allowedTools` does not restrict (only auto-approves), so read-only had to be built on `disallowedTools`. Getting this from the docs instead of memory is the reason the peer isn't write-capable by accident
+
+## Done Previously (Session 10)
 
 - [x] **Re-indexed GitNexus** — 443 symbols / 600 relationships / 3 flows; the `.gitnexus\lbug` lock that blocked Sessions 8-9 did not recur
 - [x] **Fixed `@`-parsing over-match** — gating extracted to `src/wrapper/mentions.ts` and gated on session participants; 11 unit cases in `tests/mentions.test.ts`, mutation-verified (removing the participant filter fails 3 of them), then confirmed live in a 3-participant session
@@ -36,6 +44,7 @@ Aaron chats with agents at :5173 as the `aaron` peer. `@name` targets one agent;
 
 - [x] A message containing `@anthropic-ai/sdk` does not suppress replies — live: alice and bob both answered
 - [x] The turn counter tracks the transcript live without a manual refresh
-- `node scripts/register-agent.mjs <name> --say "..." --to alice` registers and returns a reply in one command
+- [x] `node scripts/ask-agent.mjs <peer> "question"` returns a grounded answer from that peer's repo in one command
+- A message for a repo peer that isn't running still gets answered (on-demand spawn)
 - Sending the same trigger twice creates one `experiences` row (dedup task)
 - `docker compose --profile local up` reproduces the scripted stack (compose task)

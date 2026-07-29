@@ -1,6 +1,6 @@
 # Task Inbox — Prioritized Backlog
 
-> **Last Updated:** Session 10 (2026-07-28) — both live bugs from Session 8 fixed and shipped as v1.5.2, verified against a running stack; GitNexus re-indexed. v1.5.0/v1.5.1/v1.5.2 are all tagged locally and **not pushed**
+> **Last Updated:** Session 11 (2026-07-29) — repo-resident peers shipped as v1.6.0 (ADR-010): a peer can answer from a codebase it's resident in, verified live cross-repo with citations. Everything through v1.5.2 is pushed
 
 ---
 
@@ -44,7 +44,11 @@ Tasks are organized by MVP version, then by priority within each version.
 - [x] **`@`-parsing over-match fixed** (Session 10, v1.5.2) — gating extracted to `src/wrapper/mentions.ts` and gated on session participants; 11 unit cases, mutation-verified, confirmed live in a 3-participant session
 - [x] **Stale turn counter fixed** (Session 10, v1.5.2) — header reads the live count off `transcript`; poll re-lists sessions every 5th tick
 - [ ] **Push v1.5.0 + v1.5.1 + v1.5.2** — `git push origin master --tags`. All three committed and tagged locally only
-- [ ] **`scripts/register-agent.mjs`** — one command for register → heartbeat → session → send → await reply. The registration path has no automated coverage (`verify-client-stack.mjs` never registers an agent)
+- [x] **Repo-resident peers + `ask-agent.mjs`** (Session 11, v1.6.0, ADR-010) — `--repo <path>` answers from an Agent SDK session rooted in that repo; `ask-agent.mjs` is the entrance from a coding session. Verified live cross-repo with four verbatim-checked citations
+- [ ] **On-demand spawn** — hub launches a headless agent for a repo peer that isn't running, then lets it exit. Removes "wait until the daemon is up" and is what retires the file mailbox
+- [ ] **Amend PRD §1 use-case priority** — the PRD marks local/cross-repo multi-agent *secondary* and argues subagents are usually better for same-machine work; Aaron's stated primary use case is cross-repo, and the subagent argument doesn't hold (subagents share context — the value here is the target repo's agent already holding its own). Needs Aaron's sign-off, not a unilateral edit
+- [ ] **Scoped Bash for repo peers** — `Bash(git log *)` / `Bash(git show *)` so a repo expert can answer "when did this change and why" without opening full shell access
+- [ ] ~~`scripts/register-agent.mjs`~~ — largely subsumed by `ask-agent.mjs` (same register → session → send → poll flow). Keep only if a heartbeat/queue smoke test is still wanted separately
 - [ ] **Validate `X-Agent-Key`** — every guarded route only checks presence; a bogus key returns 200. `apiKeyHash` is stored at registration and never compared. Fine for local dev, must land before any non-local exposure
 - [ ] **GitNexus re-index blocked** — `npx gitnexus analyze` fails with a Windows file lock on `.gitnexus\lbug` held by the running `gitnexus mcp` servers; index pinned at `e4fbdef`. Needs the MCP servers stopped, or a Defender exclusion
 - [x] Change `CLASSIFIER_MODEL` default in code — now `claude-haiku-4-5-20251001` (Session 7). NOTE: `REPO_FIXER_MODEL` default is still the 404-ing sonnet-4 id (repo-fixer unused in current loop)

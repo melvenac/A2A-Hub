@@ -1,7 +1,7 @@
 # Project Summary
 
-> **Last Updated:** Session 10 (2026-07-28)
-> **Status:** v1.5.2 Released — both live bugs from Session 8 fixed and verified against a running stack; GitNexus index current again
+> **Last Updated:** Session 11 (2026-07-29)
+> **Status:** v1.6.0 Released — peers can now answer from a codebase they're resident in (ADR-010); the human is no longer the relay between repos
 
 ---
 
@@ -12,6 +12,8 @@
 **v1 is done.** Session 6 passed the real-LLM gate (alice↔bob on Haiku, DONE convergence, zero human) and jumped ahead into v2 chat-channel UX: the Svelte client is now a Grok-style chat app and Aaron converses with agents as a peer.
 
 ### What's Working (verified on the running local stack)
+- **Repo-resident peers** (Session 11, ADR-010) — `daemon.ts --repo <path>` answers from a Claude Agent SDK session rooted in that repo instead of from a persona string. Read-only by default (`disallowedTools` + `permissionMode: "dontAsk"`); `--repo-bash` opts into shell. Verified live: the `gitnexus` peer answered a cross-repo question in 43s with four `file:line` citations, all checked verbatim — and diagnosed the `.gitnexus\lbug` lock that blocked Sessions 8-9
+- **`scripts/ask-agent.mjs`** (Session 11) — the entrance for a coding session: register → 2-peer session → send → poll. Previously the only ways into a session were the chat client (human typing) or a daemon (autonomous)
 - **`/health` reports the whole hub** (Session 8) — bounded 3s Convex probe; `200` with `convex.latencyMs` when healthy, `503 degraded` when the DB is unreachable. Failure path tested for real (killed Convex → 503 in 15ms → restarted → auto-recovered to 200). Chat client honors it
 - **Whole hub on Haiku 4.5** (Session 8) — classifier, repo-fixer, and wrapper daemon all default to `claude-haiku-4-5-20251001`
 - **`start-stack.ps1` exercised end-to-end** (Session 8) — all five windows up, readiness waits satisfied, idempotent re-run correctly skips what's already running (incl. the client, after the IPv6 probe fix)
@@ -40,7 +42,10 @@
 - [x] `start-stack.ps1` — build + Convex + hub + daemons + client with readiness waits (Session 7)
 - [x] Aaron runs `start-stack.ps1` once end-to-end; then a persona demo (Session 8 — 5/5 + GATE PASSED)
 - [x] Fix `@`-parsing over-match and the stale turn counter → v1.5.2 (Session 10)
-- [ ] **Push** — v1.5.0, v1.5.1 and v1.5.2 are committed and tagged locally but not pushed
+- [x] Repo-resident peers + `ask-agent.mjs` → v1.6.0 (Session 11, ADR-010)
+- [ ] **On-demand spawn** — hub launches a headless agent when a message arrives for a repo peer that isn't running. This is the piece that retires the file mailbox rather than out-competing it
+- [ ] **Amend PRD §1** — it lists cross-repo/local multi-agent as *secondary* and argues subagents are usually better for same-machine work. Aaron's actual primary use case is cross-repo, and the subagent argument doesn't apply (subagents share context; the value here is the target repo's agent already holding its own state). Aaron's call — not amended unilaterally
+- [ ] Give repo peers git history — currently blocked on Bash being the trust boundary; a scoped `Bash(git log *)` allow rule is the likely answer
 - [ ] `scripts/register-agent.mjs` — one-command agent registration; the registration path has no automated coverage
 - [ ] Experience dedup (triggerHash upsert — plan in forge-to-atlas.md)
 - [ ] docker-compose local + VPS profiles (one env-gated build)
@@ -83,7 +88,7 @@ See PRD.md §9, INBOX.md, and ADR-006/007 in DECISIONS.md.
 
 | Metric | Value |
 |---|---|
-| Total Sessions | 10 |
-| Version | v1.5.2 (tagged locally — **not pushed**) |
-| Tests | 22/22 passing; `verify-client-stack` 5/5; live 3-participant mention check PASS |
+| Total Sessions | 11 |
+| Version | v1.6.0 |
+| Tests | 33/33 passing; `verify-client-stack` 5/5; live cross-repo ask PASS (4/4 citations verified) |
 | Known Bugs | 0 blocking, 0 live non-blocking |

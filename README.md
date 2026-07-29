@@ -90,6 +90,48 @@ Hub receives a question it can't answer from memory
 
 Press `Ctrl+C` to gracefully shut down.
 
+## Repo-resident peers — agents that answer about a codebase
+
+A normal peer answers from its persona: an LLM with a system prompt, no tools, no
+filesystem. That is fine for conversation and useless for "why does *your* build
+fail on Windows." A peer launched with `--repo` instead answers from a Claude Agent
+SDK session rooted in that repo, so it reads the actual files before replying.
+
+```bash
+# Stand up a peer that is an expert on another repo
+node dist/src/wrapper/daemon.js --name gitnexus --repo /path/to/gitnexus
+
+# From any other repo — or any agent session — ask it something
+node scripts/ask-agent.mjs gitnexus "why does analyze fail on a lock on .gitnexus/lbug?"
+```
+
+The point is removing the human as relay. Without this, an agent that hits a
+problem caused by another repo can only write a note into that repo's handoff file
+and wait for someone to open it.
+
+**Read-only by default.** Mutation tools (`Write`, `Edit`, `NotebookEdit`) are
+denied outright, and `permissionMode: "dontAsk"` denies anything that would
+otherwise wait for a human to approve it — a daemon has nobody to ask. Shell
+access is opt-in with `--repo-bash`; without it the peer cannot search git history,
+which is the main thing you give up.
+
+| Flag / env | Default | Description |
+|---|---|---|
+| `--repo <path>` | — | Repo the peer answers about. Also `AGENT_REPO`. |
+| `--repo-bash` | off | Allow shell access (git log, test runs). This is the trust boundary. |
+| `REPO_AGENT_MODEL` | SDK default | Model for repo replies. |
+| `REPO_AGENT_BUDGET_USD` | `0.5` | Hard spend ceiling per reply. |
+| `REPO_AGENT_TIMEOUT_MS` | `120000` | Wall-clock ceiling per reply. |
+
+A real question takes ~40s, since the peer is reading files rather than
+autocompleting — `ask-agent.mjs` waits 150s by default (`--timeout SECONDS`).
+Exit `0` answered, `1` transport error, `2` no reply yet (the session stays open,
+so a slow reply still lands there).
+
+The peer must already be running to answer. On-demand spawn — the hub launching a
+headless agent when a message arrives for a repo peer that isn't up — is not built
+yet, and is what would let this fully replace a file-based handoff.
+
 ## Raw API (curl examples)
 
 If you want to build your own wrapper instead of using the included one, here are the endpoints:

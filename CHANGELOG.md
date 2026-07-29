@@ -2,6 +2,19 @@
 
 All notable changes to the A2A Intelligent Hub.
 
+## [v1.6.0] - 2026-07-29
+
+### Added
+- **Repo-resident peers (ADR-010).** `daemon.ts --repo <path>` makes a peer a standing expert on one codebase: replies come from a Claude Agent SDK session rooted at that path, with tool access to its files, instead of from a persona string. Until now a peer was a persona plus a Messages API call — no tools, no filesystem — so "why does `gitnexus analyze` fail on a lock on `.gitnexus\lbug`" was unanswerable in principle. The swap happens at the daemon's single reply seam, so mention gating, turn caps, DONE detection, and the no-cascade rule are unchanged. Env: `REPO_AGENT_MODEL`, `REPO_AGENT_BUDGET_USD` (default `0.5`), `REPO_AGENT_TIMEOUT_MS` (default `120000`).
+- **`scripts/ask-agent.mjs`** — ask another repo's agent a question and wait: register → open a 2-peer session → send → poll. This is the entrance for a coding session, which was previously locked out; the only ways into a hub session were the chat client (a human typing) and a daemon (autonomous). `node scripts/ask-agent.mjs gitnexus "why does analyze hold a lock?"`. `--json` for programmatic use; exit `2` distinguishes "no reply yet" from a transport error.
+
+### Security
+- **Repo peers are read-only by default.** Enforced with `disallowedTools`, never `allowedTools` — in the Agent SDK `allowedTools` only auto-approves and does **not** restrict the agent to that set, so an allowlist would leave `Write` reachable through the permission flow. `permissionMode: "dontAsk"` denies anything that would otherwise wait for a human, because a daemon has nobody to approve a prompt and the alternative to denying is hanging. Shell access is opt-in via `--repo-bash`.
+- `settingSources: ["project"]` loads the target repo's own `CLAUDE.md` and `.claude/settings.json` but not the operator's global settings, which describe how the operator works rather than how the repo behaves.
+
+### Verified
+- Live cross-repo ask against `C:\Users\melve\Projects\gitnexus`: the `gitnexus` peer returned the lock mechanism plus four `file:line` citations in 43s, every citation checked verbatim against the repo. It diagnosed the GitNexus re-index failure that blocked Sessions 8 and 9 in this repo — `run-analyze.ts:262-272` swallows the Windows sharing violation on `fs.rm`, and `initLbug` at line 272 (unlike the query paths) has no busy-retry, so an analyze racing a live MCP server fails on the first lock hit.
+
 ## [v1.5.2] - 2026-07-28
 
 ### Fixed

@@ -11,6 +11,11 @@
  *
  * Usage:
  *   npx tsx src/wrapper/daemon.ts --name alice [--persona "role text" | --persona-file path]
+ *   npx tsx src/wrapper/daemon.ts --name gitnexus --repo C:\path\to\gitnexus [--repo-bash]
+ *
+ * --repo makes this peer a standing expert on one codebase: replies come from a
+ * Claude Agent SDK session rooted there (tool access to its files) instead of
+ * from the persona string. Read-only unless --repo-bash. See repo-reply.ts.
  *
  * Persona resolution (role text, composed with hub conventions):
  *   --persona text > --persona-file path > personas/<name>.md > generic default.
@@ -27,12 +32,13 @@
  */
 import Anthropic from "@anthropic-ai/sdk";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import {
   isParticipant,
   qualifiesAsTrigger,
   type GateContext,
 } from "./mentions.js";
+import { makeRepoReplier } from "./repo-reply.js";
 
 function arg(flag: string): string | undefined {
   const i = process.argv.indexOf(flag);
@@ -86,6 +92,21 @@ const POLL_MS = parseInt(process.env.POLL_MS || "2000");
 const headers = { "Content-Type": "application/json", "X-Agent-Key": AGENT_KEY };
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
 
+// --repo turns this peer into a standing expert on one codebase: replies come
+// from an Agent SDK session rooted there, with tool access to its files, instead
+// of from the persona string alone. Read-only unless --repo-bash is passed.
+const REPO_PATH = arg("--repo") ?? process.env.AGENT_REPO;
+const repoReplier = REPO_PATH
+  ? makeRepoReplier({
+      repoPath: resolve(REPO_PATH),
+      name: NAME,
+      model: process.env.REPO_AGENT_MODEL,
+      maxBudgetUsd: parseFloat(process.env.REPO_AGENT_BUDGET_USD || "0.5"),
+      timeoutMs: parseInt(process.env.REPO_AGENT_TIMEOUT_MS || "120000"),
+      allowBash: process.argv.includes("--repo-bash"),
+    })
+  : null;
+
 async function hub(path: string, init?: RequestInit): Promise<any> {
   const res = await fetch(`${HUB_URL}${path}`, { headers, ...init });
   if (!res.ok) throw new Error(`${path} → ${res.status}: ${await res.text()}`);
@@ -98,6 +119,7 @@ type Turn = { role: "user" | "assistant"; content: string };
 // so the transport loop can be verified without API spend.
 let fallbackCount = 0;
 async function generateReply(transcript: Turn[]): Promise<string> {
+  if (repoReplier) return repoReplier(transcript);
   if (anthropic) {
     const msg = await anthropic.messages.create({
       model: MODEL,
@@ -225,7 +247,12 @@ async function main() {
       await new Promise((r) => setTimeout(r, 2000));
     }
   }
-  console.log(`[${NAME}] registered with hub at ${HUB_URL} (llm: ${anthropic ? MODEL : "fallback"})`);
+  const mode = repoReplier
+    ? `repo:${resolve(REPO_PATH!)}${process.argv.includes("--repo-bash") ? " +bash" : " read-only"}`
+    : anthropic
+      ? MODEL
+      : "fallback";
+  console.log(`[${NAME}] registered with hub at ${HUB_URL} (replies: ${mode})`);
 
   while (true) {
     try {
