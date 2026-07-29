@@ -14,7 +14,15 @@
 6. **Experience dedup** — `triggerHash` (sha256 of normalized trigger) + `by_triggerHash` index; patch-on-conflict in `experiences.store`
 7. **docker-compose profiles** — local (no Traefik, local Convex, :5173 client) + VPS (Traefik, prod URLs); one env-gated build. Now v3 work — deprioritized behind the v2 prerequisites
 
-## Done This Sprint (Session 11)
+## Done This Sprint (Session 11, continued)
+
+- [x] **Shipped v1.6.1** — repo replies carry branch/SHA/dirty provenance, inserted before the `DONE` sentinel so convergence detection survives (mutation-verified). Suite 41/41
+- [x] **PRD v1.2** — cross-repo promoted to primary use case on Aaron's call; roadmap renumbered (v2 cross-repo → v3 remote → v4 platform); three trust-domain prerequisites named in §8
+- [x] **Recorded repo-peer network isolation as deliberate** (ADR-010 amendment) — `dontAsk` denies `WebFetch`/`WebSearch`; kept so a peer can't become an exfiltration path
+- [x] **Swapped the gitnexus checkout** — `tools-src\gitnexus` (main @ 1.6.9, 166 MB) replaces `Projects\gitnexus` (side branch @ 1.6.3, 1.9 GB, 867 commits stale); index deregistered, local commit saved as a patch
+- [x] **Pruned the stack** — 8 windows → 6; two were zombies from the Convex-timeout cascade
+
+## Done Earlier This Sprint (Session 11)
 
 - [x] **Repo-resident peers** (ADR-010) — `--repo <path>` swaps reply generation for a Claude Agent SDK session rooted in that repo, at the daemon's single existing seam. Read-only by default; `--repo-bash` opts in
 - [x] **`scripts/ask-agent.mjs`** — the entrance from a live coding session (subsumes most of the old `register-agent.mjs` task: register → session → send → poll is the same flow)

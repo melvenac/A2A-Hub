@@ -1,7 +1,7 @@
 # Project Summary
 
 > **Last Updated:** Session 11 (2026-07-29)
-> **Status:** v1.6.0 Released — peers can now answer from a codebase they're resident in (ADR-010); the human is no longer the relay between repos
+> **Status:** v1.6.1 Released — peers answer from a codebase they're resident in and say which checkout they answered from (ADR-010); the human is no longer the relay between repos
 
 ---
 
@@ -14,6 +14,7 @@
 ### What's Working (verified on the running local stack)
 - **Repo-resident peers** (Session 11, ADR-010) — `daemon.ts --repo <path>` answers from a Claude Agent SDK session rooted in that repo instead of from a persona string. Read-only by default (`disallowedTools` + `permissionMode: "dontAsk"`); `--repo-bash` opts into shell. Verified live: the `gitnexus` peer answered a cross-repo question in 43s with four `file:line` citations, all checked verbatim — and diagnosed the `.gitnexus\lbug` lock that blocked Sessions 8-9
 - **`scripts/ask-agent.mjs`** (Session 11) — the entrance for a coding session: register → 2-peer session → send → poll. Previously the only ways into a session were the chat client (human typing) or a daemon (autonomous)
+- **Repo replies carry provenance** (Session 11, v1.6.1) — branch, short SHA, dirty flag on every reply, inserted before the `DONE` sentinel so convergence still fires. Caught the `gitnexus` peer answering from a checkout 867 commits stale
 - **`/health` reports the whole hub** (Session 8) — bounded 3s Convex probe; `200` with `convex.latencyMs` when healthy, `503 degraded` when the DB is unreachable. Failure path tested for real (killed Convex → 503 in 15ms → restarted → auto-recovered to 200). Chat client honors it
 - **Whole hub on Haiku 4.5** (Session 8) — classifier, repo-fixer, and wrapper daemon all default to `claude-haiku-4-5-20251001`
 - **`start-stack.ps1` exercised end-to-end** (Session 8) — all five windows up, readiness waits satisfied, idempotent re-run correctly skips what's already running (incl. the client, after the IPv6 probe fix)
@@ -30,6 +31,10 @@
 - Everything from v1.1.0–v1.3.0: chat channel tables/routes, `to:` addressing, atomic claims, turn caps, CORS, executor resilience, postbuild dist copy
 
 ### Known Issues / Debt
+- **Repo peers sometimes fabricate citations** (Session 11) — 3 of 4 verification passes were exact; one invented a path segment and attached a real line number to a wrong claim. Check every path before acting on it. Provenance tells you the checkout, not whether a citation is real
+- **Two daemons can claim one peer name and race** (Session 11) — `repliedTo` is per-process, so nothing dedupes across them; a stale build answered after an apparently clean restart. Hub should supersede a second registration for a live peer
+- **Repo peers can't answer "is this dependency current"** — no network access by design (ADR-010 amendment); the asking side must supply it
+- **Tool checkouts drift from their global installs** — `npm i -g` and `git pull` are unrelated; provenance makes the drift visible, not fixed
 - **`X-Agent-Key` is never validated** — every guarded route only checks presence; a bogus key returns 200. `apiKeyHash` is stored at registration and never compared
 - DONE sentinel leaks: any message *ending* with "DONE" reads as a sign-off (structured end-flag is the v2 fix)
 - `agents.register` duplicates rows on re-register (upsert fix pending)
@@ -92,6 +97,6 @@ See PRD.md §1 and §9, INBOX.md, and ADR-006/007/010 in DECISIONS.md.
 | Metric | Value |
 |---|---|
 | Total Sessions | 11 |
-| Version | v1.6.0 |
-| Tests | 33/33 passing; `verify-client-stack` 5/5; live cross-repo ask PASS (4/4 citations verified) |
-| Known Bugs | 0 blocking, 0 live non-blocking |
+| Version | v1.6.1 |
+| Tests | 41/41 passing; `verify-client-stack` 5/5; live cross-repo asks verified against the real repo |
+| Known Bugs | 0 blocking; 2 live non-blocking (citation fabrication, duplicate-peer race) |
