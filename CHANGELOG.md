@@ -2,6 +2,17 @@
 
 All notable changes to the A2A Intelligent Hub.
 
+## [v1.6.1] - 2026-07-29
+
+### Added
+- **Repo replies carry provenance** — branch, short SHA, and a dirty-tree flag are appended to every repo-peer reply. A peer is only as current as its checkout, and a stale checkout is *silent*: the `gitnexus` peer was answering from a side branch 867 commits behind `origin/main` at v1.6.3 while the installed CLI ran v1.6.9, and nothing in its replies hinted at it. Computed by the daemon (`execFileSync`), not asked of the agent, since Bash is denied to it. Non-git paths add no footer rather than failing.
+
+### Fixed
+- The provenance footer is inserted **before** a trailing `DONE`, not after it. The daemon detects convergence by testing whether the newest message *ends* with the sentinel, so a naive append would have silently stopped every repo-peer session from converging. Guarded by tests on that exact interaction, mutation-verified (the naive version fails them).
+
+### Security
+- **Repo peers have no network access, now deliberately.** Only mutation tools and Bash were denied explicitly, but `WebFetch`/`WebSearch` require approval and `permissionMode: "dontAsk"` denies rather than prompts — so the isolation was accidental. Keeping it: a repo expert should answer from the repo, and an isolated peer can't be turned into an exfiltration path by a question from another agent, which matters more once peers serve requests from other machines. Cost: a peer can't answer "is this dependency current." Re-enabling the network tools is a security change, not a capability tweak. Recorded as an amendment to ADR-010.
+
 ## [v1.6.0] - 2026-07-29
 
 ### Added

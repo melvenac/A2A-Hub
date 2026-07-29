@@ -1,10 +1,69 @@
 import { describe, it, expect } from "vitest";
 import {
   renderPrompt,
+  readRepoProvenance,
   repoConventions,
   resolveDisallowedTools,
+  withProvenance,
   type Turn,
 } from "../src/wrapper/repo-reply.js";
+
+/** The daemon's convergence test, duplicated here so this file can assert against it. */
+const DONE_SENTINEL = /\bDONE\b\W*$/;
+
+describe("withProvenance", () => {
+  it("appends the checkout it answered from", () => {
+    const out = withProvenance("The lock is held by the MCP pool.", "main @ abc1234");
+    expect(out).toContain("The lock is held by the MCP pool.");
+    expect(out).toContain("main @ abc1234");
+  });
+
+  it("keeps DONE last so the daemon still detects convergence", () => {
+    // The bug this guards: a footer appended *after* DONE leaves the sentinel
+    // mid-string, and sessions silently stop converging.
+    const reply = "All four citations check out. DONE";
+    const out = withProvenance(reply, "main @ abc1234");
+    expect(DONE_SENTINEL.test(out.trim())).toBe(true);
+    expect(out).toContain("main @ abc1234");
+    // ...and the footer is genuinely present *before* the sentinel, not dropped.
+    expect(out.indexOf("abc1234")).toBeLessThan(out.lastIndexOf("DONE"));
+  });
+
+  it("preserves convergence for the punctuated and bold DONE forms", () => {
+    for (const reply of ["Done here. DONE.", "Wrapped up. **DONE**"]) {
+      const out = withProvenance(reply, "main @ abc1234");
+      expect(DONE_SENTINEL.test(out.trim())).toBe(true);
+      expect(out).toContain("abc1234");
+    }
+  });
+
+  it("surfaces a dirty working tree", () => {
+    const out = withProvenance("answer", "chore/x @ c076049 (uncommitted changes)");
+    expect(out).toContain("uncommitted changes");
+  });
+
+  it("returns the reply untouched when provenance is unavailable", () => {
+    expect(withProvenance("answer. DONE", null)).toBe("answer. DONE");
+  });
+
+  it("does not duplicate DONE", () => {
+    const out = withProvenance("answer DONE", "main @ abc1234");
+    expect(out.match(/DONE/g)).toHaveLength(1);
+  });
+});
+
+describe("readRepoProvenance", () => {
+  it("reports branch and sha for a real git repo", () => {
+    const p = readRepoProvenance(process.cwd());
+    expect(p).toMatch(/ @ [0-9a-f]{7,}/);
+  });
+
+  it("returns null for a non-git path rather than throwing", () => {
+    // A peer pointed at a plain directory should stay silent about provenance,
+    // not crash the reply.
+    expect(readRepoProvenance("C:\\Windows\\Temp")).toBeNull();
+  });
+});
 
 describe("resolveDisallowedTools", () => {
   // The security-relevant line in this module. `allowedTools` in the Agent SDK

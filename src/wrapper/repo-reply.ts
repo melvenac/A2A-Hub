@@ -12,6 +12,7 @@
  * approve a prompt, so the alternative to denying is hanging.
  */
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { execFileSync } from "node:child_process";
 
 export interface Turn {
   role: "user" | "assistant";
@@ -63,6 +64,53 @@ export function renderPrompt(transcript: Turn[], name: string): string {
     .join("\n\n");
   const latest = transcript[transcript.length - 1]?.content ?? "";
   return `Earlier in this conversation:\n\n${history}\n\n---\n\nRespond to the latest message:\n\n${latest}`;
+}
+
+/**
+ * What the peer is actually speaking for: branch, commit, and whether the tree
+ * is dirty.
+ *
+ * A repo peer is only as current as its checkout, and a stale checkout is
+ * silent — the answer comes back just as confident. Session 11 found the
+ * `gitnexus` peer answering from a side branch 867 commits behind `main` while
+ * the installed CLI ran six patch versions ahead; nothing in the reply hinted at
+ * it. Provenance is computed here rather than asked of the agent because Bash is
+ * denied to it — the daemon can run git, the agent cannot.
+ */
+export function readRepoProvenance(repoPath: string): string | null {
+  const git = (args: string[]) =>
+    execFileSync("git", ["-C", repoPath, ...args], {
+      encoding: "utf8",
+      timeout: 5000,
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  try {
+    const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
+    const sha = git(["rev-parse", "--short", "HEAD"]);
+    const dirty = git(["status", "--porcelain"]).length > 0;
+    return `${branch} @ ${sha}${dirty ? " (uncommitted changes)" : ""}`;
+  } catch {
+    return null; // not a git repo, or git unavailable — say nothing rather than guess
+  }
+}
+
+/**
+ * Attach the provenance footer without breaking convergence detection.
+ *
+ * The daemon decides a conversation is over by testing whether the newest
+ * message *ends* with DONE. A footer appended after DONE would leave the
+ * sentinel mid-string and quietly stop sessions from ever converging, so the
+ * footer goes before it.
+ */
+export function withProvenance(reply: string, provenance: string | null): string {
+  if (!provenance) return reply;
+  const footer = `_(answered from ${provenance})_`;
+  const done = reply.match(/\s*\bDONE\b\W*$/);
+  if (done) {
+    const body = reply.slice(0, reply.length - done[0].length).trimEnd();
+    return `${body}\n\n${footer}\n\nDONE`;
+  }
+  return `${reply.trimEnd()}\n\n${footer}`;
 }
 
 export function repoConventions(name: string, repoPath: string): string {
@@ -123,7 +171,12 @@ export function makeRepoReplier(config: RepoReplierConfig) {
 
       for await (const message of messages) {
         if (message.type !== "result") continue;
-        if (message.subtype === "success") return message.result.trim();
+        if (message.subtype === "success") {
+          return withProvenance(
+            message.result.trim(),
+            readRepoProvenance(repoPath),
+          );
+        }
         // Budget and turn ceilings are expected outcomes, not crashes — report
         // them into the conversation so the asking agent can narrow its question
         // instead of watching a silent non-answer.
