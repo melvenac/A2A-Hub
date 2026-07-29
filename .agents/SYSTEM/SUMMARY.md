@@ -77,10 +77,13 @@ Humans are peers on the hub, not relays. Aaron chats inside sessions as the `aar
 | Version | Goal | Effort |
 |---|---|---|
 | **v1** | ✅ Autonomous 2-agent loop (real LLM) on local stack, chat client | DONE (Session 6) |
-| **v2** | Chat UI → PWA, wrapper npm package, proper auth, personas, VPS redeploy | Weeks |
-| **v3** | Full A2A spec compliance (SSE, task states, per-agent cards), multi-provider LLM, dev-time orchestration dogfood | Months |
+| **v2** | **Cross-repo agent-to-agent, proven locally** — repo-resident peers (✅ v1.6.0), on-demand spawn, and the three trust-domain prerequisites. No external dependency | Days–weeks |
+| **v3** | Remote teaching (Aaron + Brian) — VPS redeploy, key management, real-network failure modes, wrapper npm package, PWA client | Weeks; gated on v2 + Brian's availability |
+| **v4** | Platform — multi-provider LLM, full A2A spec compliance, makerspace/billing integration | Months |
 
-See PRD.md §9, INBOX.md, and ADR-006/007 in DECISIONS.md.
+> **Priority changed 2026-07-29 (Aaron's call, PRD v1.2):** cross-repo is now the *primary* use case, ahead of the Brian/remote work. It's the same protocol at a shorter distance and the only version verifiable without a second person. The catch is that one machine has one trust domain, so auth, peer identity, and authorization are invisible locally and load-bearing remotely — PRD §8 names all three as v2 prerequisites, not later hardening.
+
+See PRD.md §1 and §9, INBOX.md, and ADR-006/007/010 in DECISIONS.md.
 
 ---
 

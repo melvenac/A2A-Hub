@@ -30,9 +30,11 @@ Tasks are organized by MVP version, then by priority within each version.
 - [ ] Experience dedup — `triggerHash` + upsert in `experiences.store` (plan in forge-to-atlas.md)
 - [ ] docker-compose profiles: local (no Traefik, local Convex) + VPS (Traefik, prod URLs) — one env-gated build
 
-## v2 — Chat channel UX & developer experience
+## v2 — Cross-repo agent-to-agent, proven locally
 
-> **Goal:** The chat UI becomes the daily driver (replacing what Telegram was for). Easy for others to connect agents.
+> **Goal:** Any repo's agent can ask any other repo's agent a question and get a grounded answer, with no human relaying and no peer needing to be hand-started. Renamed 2026-07-29 (PRD v1.2) when cross-repo was promoted to the primary use case — the chat/UX and developer-experience items that used to live here moved to v3, since they serve the remote/Brian goal.
+>
+> Completed items below predate the renumbering and are kept in place rather than re-filed.
 
 - [x] Grow Svelte client into chat UI: date-grouped history, live transcripts, send as `aaron` peer, rename, extend (v1.4.0, Session 6)
 - [x] Session extend/reopen + @mention reply routing, deterministic daemon-side (v1.4.0, ADR-007)
@@ -43,32 +45,53 @@ Tasks are organized by MVP version, then by priority within each version.
 - [x] **`REPO_FIXER_MODEL` 404 fixed** (Session 8, v1.5.1) — `claude-sonnet-4-20250514` retired 2026-06-15; now `claude-haiku-4-5-20251001`, so the whole hub is on Haiku 4.5
 - [x] **`@`-parsing over-match fixed** (Session 10, v1.5.2) — gating extracted to `src/wrapper/mentions.ts` and gated on session participants; 11 unit cases, mutation-verified, confirmed live in a 3-participant session
 - [x] **Stale turn counter fixed** (Session 10, v1.5.2) — header reads the live count off `transcript`; poll re-lists sessions every 5th tick
-- [ ] **Push v1.5.0 + v1.5.1 + v1.5.2** — `git push origin master --tags`. All three committed and tagged locally only
+- [x] **Push v1.5.0 + v1.5.1 + v1.5.2** (Session 10) — pushed with tags; nothing had left the machine since Session 7
 - [x] **Repo-resident peers + `ask-agent.mjs`** (Session 11, v1.6.0, ADR-010) — `--repo <path>` answers from an Agent SDK session rooted in that repo; `ask-agent.mjs` is the entrance from a coding session. Verified live cross-repo with four verbatim-checked citations
-- [ ] **On-demand spawn** — hub launches a headless agent for a repo peer that isn't running, then lets it exit. Removes "wait until the daemon is up" and is what retires the file mailbox
-- [ ] **Amend PRD §1 use-case priority** — the PRD marks local/cross-repo multi-agent *secondary* and argues subagents are usually better for same-machine work; Aaron's stated primary use case is cross-repo, and the subagent argument doesn't hold (subagents share context — the value here is the target repo's agent already holding its own). Needs Aaron's sign-off, not a unilateral edit
+- [x] **PRD §1 use-case priority amended** (Session 11, PRD v1.2, Aaron's call) — cross-repo is now the primary use case with its own roadmap phase (v2) ahead of the Brian/remote work (v3). §8 gained three named trust-domain prerequisites
+
+### Prerequisites — the current phase
+
+> These four are the phase. The three security items are **prerequisites, not hardening**: nothing local fails without them, which is precisely why they have to be decided rather than discovered. See PRD §8.
+
+- [ ] **On-demand spawn** — hub launches a headless agent for a repo peer that isn't running, then lets it exit. Removes the last "wait until a human starts something," and is what retires the file mailbox rather than out-competing it
+- [ ] **Validate `X-Agent-Key`** (PRD §8.1) — every guarded route only checks presence; a bogus key returns 200. `apiKeyHash` is stored at registration and never compared, so this is close to a one-function fix. Until it lands, the local system runs a *different* security model than the remote one, which defeats the point of proving the protocol locally first. Note `ask-agent.mjs` now registers ephemeral peers freely, so the surface is wider than it was
+- [ ] **Namespace peer identity by owner** (PRD §8.2) — peer names are bare strings unique by convention; two machines each running a `gitnexus` peer collide with no owner field to disambiguate. Do it before two machines exist, not after they collide. Local default should keep it invisible day-to-day
+- [ ] **"Who may ask this peer what" as a concept** (PRD §8.3) — with a permissive local default. A repo peer reads files on request; locally that's Aaron asking about Aaron's disk, remotely it's a remote party causing reads on someone else's. Read-only (ADR-010) narrows the blast radius but doesn't answer who may ask. Adding policy later should mean filling in a value, not introducing a layer
+
+### Cross-repo polish (same phase, lower priority)
+
 - [ ] **Scoped Bash for repo peers** — `Bash(git log *)` / `Bash(git show *)` so a repo expert can answer "when did this change and why" without opening full shell access
+- [ ] **Repo → peer discovery** — so `ask-agent.mjs` takes a path instead of a hand-passed name
+- [ ] **Decide the entrance shape** — keep the script, or expose the hub as an MCP server (`a2a_ask(peer, question)`). Re-read ADR-006/007 first; an MCP channel layer was superseded once, though for a different purpose
 - [ ] ~~`scripts/register-agent.mjs`~~ — largely subsumed by `ask-agent.mjs` (same register → session → send → poll flow). Keep only if a heartbeat/queue smoke test is still wanted separately
-- [ ] **Validate `X-Agent-Key`** — every guarded route only checks presence; a bogus key returns 200. `apiKeyHash` is stored at registration and never compared. Fine for local dev, must land before any non-local exposure
-- [ ] **GitNexus re-index blocked** — `npx gitnexus analyze` fails with a Windows file lock on `.gitnexus\lbug` held by the running `gitnexus mcp` servers; index pinned at `e4fbdef`. Needs the MCP servers stopped, or a Defender exclusion
+- [x] **GitNexus re-index unblocked** (Session 10) — analyze now completes with the MCP servers running. Root cause found by the `gitnexus` peer itself in Session 11: `run-analyze.ts:262-272` swallows the Windows sharing violation on `fs.rm`, and `initLbug` (unlike the query paths) has no busy-retry, so it's a race with a live MCP server rather than a hard block
 - [x] Change `CLASSIFIER_MODEL` default in code — now `claude-haiku-4-5-20251001` (Session 7). NOTE: `REPO_FIXER_MODEL` default is still the 404-ing sonnet-4 id (repo-fixer unused in current loop)
+- [x] Convex health check on `/health` — shipped Session 8 as ADR-009 (`503 degraded`, not an advisory field)
+
+## v3 — Remote teaching (Aaron + Brian) + chat/UX
+
+> **Goal:** Use case 2 becomes real — Brian installs a wrapper in minutes and Alice talks to Aaron's agent over the internet, with the chat UI as the daily driver for watching and steering. Gated on v2 *and* on Brian's availability, which is why it now follows cross-repo rather than leading.
+
+- [ ] **Real-network failure modes** — TLS/DNS, connection dropped mid-answer, retry/idempotency, version skew between two machines, CORS from a non-localhost origin. The genuinely new surface no local test can reach
+- [ ] **Per-agent key generation + rotation**, deprecate shared `dev-key` and bootstrap key. Builds on v2's key *validation*: v2 closes the hole, v3 makes key management usable
+- [ ] Redeploy hub + Convex on VPS (Docker Compose, `restart: unless-stopped`); docker-compose local + VPS profiles
+- [ ] npm wrapper package (`a2a-agent` CLI) — `npx a2a-agent --hub URL --name alice`; package `src/wrapper/daemon.ts`
+- [ ] End-to-end test with Brian (Alice ↔ Aaron's agent, remote)
 - [ ] Structured end-of-conversation flag — replace the DONE sentinel (prose ending in "DONE" terminates conversations)
 - [ ] Client: session delete + bookmarks (deferred from Grok-parity pass)
 - [ ] PWA setup (service worker, manifest) — restores away-from-desk notifications lost with Telegram
-- [ ] npm wrapper package (`a2a-agent` CLI) — `npx a2a-agent --hub URL --name alice`; package `src/wrapper/daemon.ts`
 - [ ] `agents.register` should upsert (currently duplicates rows on re-register)
-- [ ] Harden auth: X-Agent-Key is presence-checked only — verify against `apiKeyHash`, per-agent keys, rotation
 - [ ] Request validation middleware (A2A message format)
-- [ ] Convex health check on `/health` (not just `{"status":"ok"}`)
 - [ ] Structured logging (pino)
 - [ ] A2A spec alignment: task lifecycle states (`submitted/working/input-required/...`), `message/stream` SSE, per-agent cards
 - [ ] Repo-fix approval flow through chat channel (`input-required` task to human peer; was Telegram buttons)
+- [ ] Experience dedup — `triggerHash` (sha256 of normalized trigger) + `by_triggerHash` index; patch-on-conflict in `experiences.store`
 
-## v3 — Platform & multi-orchestration dogfood
+## v4 — Platform & multi-orchestration dogfood
 
 > **Goal:** Hub becomes a product; the same bus coordinates dev-time agents on this repo ("both machinery", ADR-006).
 
-- [ ] Register dev agents (Forge, resurrected Atlas) on the hub; migrate file mailbox → hub sessions
+- [ ] Register dev agents (Forge, resurrected Atlas) on the hub; migrate file mailbox → hub sessions. Note: v2's on-demand spawn is most of this — once a repo peer answers without being hand-started, the mailbox has no remaining job
 - [ ] Orchestrator role: decompose → fan out via `tasks.claim` → fan in; worktree-per-agent for parallel edits
 - [ ] Multi-provider LLM abstraction (ADR-004 follow-on)
 - [ ] Makerspace website integration — Stripe billing, member-facing chat

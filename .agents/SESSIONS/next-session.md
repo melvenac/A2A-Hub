@@ -2,12 +2,16 @@
 
 > Written at end of Session 11 (2026-07-29). Relay baton, not a log.
 
+> **Priority changed at the end of Session 11 (Aaron's call).** Cross-repo agent-to-agent is now the **primary** use case with its own roadmap phase (PRD v1.2: v2 cross-repo → v3 remote/Brian → v4 platform). Reasoning: same protocol at a shorter distance, and the only version verifiable without a second person in the loop. The catch he agreed with: one machine has one trust domain, so auth, peer identity, and authorization are invisible locally and load-bearing remotely — PRD §8 now names all three as v2 *prerequisites*, not later hardening. Items 2-4 below exist because no cross-repo test can ever fail on them.
+
 ## Pick up here
 
 1. **On-demand spawn.** A repo peer only answers if its daemon is already running. The hub should see a message for a repo peer with no live registration, launch a headless agent rooted at that repo, take the answer, and let it exit. Zero idle cost, no N-daemons-polling problem — and this is the piece that actually *retires* the file mailbox rather than out-competing it. Everything else in the ask path already works.
-2. **Give repo peers git history.** Bash is denied by default (it's the trust boundary), so the peer can't answer "when did this change and why" — arguably what a repo expert should be best at. A scoped allow rule (`Bash(git log *)`, `Bash(git show *)`) keeps the boundary. Per the Agent SDK docs, a scoped rule leaves the tool available and denies non-matching calls in every permission mode.
-3. **PRD §1 needs Aaron's decision, not an edit.** The PRD marks local/cross-repo multi-agent as *secondary* and argues Claude Code subagents are usually better for same-machine work. Aaron's stated primary use case is cross-repo, and that argument doesn't apply — subagents are better *because they share context*, but the whole value here is that the target repo's agent already holds its own `.agents/` state and gotchas. This is cross-**context**, not cross-machine. Flagged, deliberately not amended unilaterally.
-4. Carried: experience dedup (forge-to-atlas.md §triggerHash), docker-compose profiles.
+2. **Validate `X-Agent-Key`** (PRD §8.1). Presence-only checks; a bogus key returns 200. `apiKeyHash` is already stored at registration and never compared, so this is close to a one-function fix. Do it *now*, while it feels pointless — that's the whole argument. Note `ask-agent.mjs` registers ephemeral peers freely, so the surface just widened.
+3. **Namespace peer identity by owner** (PRD §8.2). Bare names collide the moment a second machine also runs a `gitnexus` peer. Cheap before two machines exist, a migration after. Keep it invisible locally with a default.
+4. **"Who may ask this peer what"** (PRD §8.3) — the concept, with a permissive local default. Read-only (ADR-010) narrows the blast radius but doesn't answer who may ask. Later policy should be filling in a value, not introducing a layer.
+5. **Give repo peers git history.** Bash is denied by default (it's the trust boundary), so the peer can't answer "when did this change and why" — arguably what a repo expert should be best at. A scoped allow rule (`Bash(git log *)`, `Bash(git show *)`) keeps the boundary. Per the Agent SDK docs, a scoped rule leaves the tool available and denies non-matching calls in every permission mode.
+6. Carried, now v3: experience dedup (forge-to-atlas.md §triggerHash), docker-compose profiles.
 
 ## Watch out for
 
@@ -19,7 +23,7 @@
 - **`start-stack.ps1`'s 120s Convex wait is too short from cold**, and the failure cascades — Convex never binds :3210, the script continues, and the daemon windows die with it, leaving a `503 degraded` hub and verify failures unrelated to the code under test. Recovery: `npx convex dev --local --once`, then a persistent Convex window, wait for the port, then `start-stack.ps1 -SkipBuild`.
 - **GitNexus does not index `.svelte`** — `impact`/`context` return "not found" for `client/src`. Coverage gap, not a safe result.
 - **`.ps1` files must stay ASCII-only** — PS 5.1 reads BOM-less files as ANSI; em-dash bytes decode into smart quotes that terminate strings.
-- **`X-Agent-Key` is never validated** — every guarded route only checks presence. Fine for local dev; must land before any non-local exposure. Note this now matters more: `ask-agent.mjs` registers ephemeral peers freely.
+- **`X-Agent-Key` is never validated** — now a v2 prerequisite (item 2 above), not background debt. The trap is that it will keep feeling like debt, because nothing on one machine fails without it.
 - **Test peers accumulate** — `scout` (S8), two mention-check sessions (S10), plus `gitnexus` and an `ask-<pid>` peer from this session. Harmless; delete if they clutter.
 - **`.env` holds Aaron's real `ANTHROPIC_API_KEY`** — gitignored. The Agent SDK resolves credentials itself (env or the `ant`/Claude Code profile), so a repo peer may work even where the daemon's Messages API path would 401 — don't read a working repo peer as proof the key is good.
 - Aaron launches from **Git Bash** — `.ps1` needs `powershell.exe -ExecutionPolicy Bypass -File start-stack.ps1`.

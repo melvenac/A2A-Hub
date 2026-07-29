@@ -1,15 +1,18 @@
 # Current Sprint
 
-> **Focus:** v2 — repo-resident peers ship in v1.6.0; next is on-demand spawn so a peer doesn't have to be running to answer
+> **Focus:** v2 — cross-repo agent-to-agent, proven locally. Repo-resident peers shipped in v1.6.0; the phase closes with on-demand spawn plus the three trust-domain prerequisites (PRD §8)
 
 ---
 
 ## Active Tasks
 
 1. **On-demand spawn** — hub receives a message for a repo peer with no live daemon → launches a headless agent rooted at that repo, gets the answer, lets it exit. Zero idle cost, and the piece that actually retires the file mailbox instead of out-competing it
-2. **Git history for repo peers** — a repo expert should be best at "when did this change and why", but Bash is denied by default. A scoped `Bash(git log *)` / `Bash(git show *)` allow rule keeps the trust boundary while unblocking it
-3. **Experience dedup** — `triggerHash` (sha256 of normalized trigger) + `by_triggerHash` index; patch-on-conflict in `experiences.store`
-4. **docker-compose profiles** — local (no Traefik, local Convex, :5173 client) + VPS (Traefik, prod URLs); one env-gated build
+2. **Validate `X-Agent-Key`** (PRD §8.1) — presence-only checks mean a bogus key returns 200; `apiKeyHash` is already stored and never compared. Prerequisite, not hardening: nothing local fails without it, so no cross-repo test will ever surface it, and leaving it open means the local system proves a *different* security model than the remote one
+3. **Namespace peer identity by owner** (PRD §8.2) — bare peer names collide across machines. Cheap before two machines exist; a migration after
+4. **"Who may ask this peer what"** (PRD §8.3) — the concept, with a permissive local default, so adding policy later fills in a value instead of introducing a layer
+5. **Scoped Bash for repo peers** — `Bash(git log *)` / `Bash(git show *)` so a repo expert can answer "when did this change and why" without full shell access
+6. **Experience dedup** — `triggerHash` (sha256 of normalized trigger) + `by_triggerHash` index; patch-on-conflict in `experiences.store`
+7. **docker-compose profiles** — local (no Traefik, local Convex, :5173 client) + VPS (Traefik, prod URLs); one env-gated build. Now v3 work — deprioritized behind the v2 prerequisites
 
 ## Done This Sprint (Session 11)
 
