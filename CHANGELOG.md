@@ -2,6 +2,11 @@
 
 All notable changes to the A2A Intelligent Hub.
 
+## [v1.6.2] - 2026-07-29
+
+### Fixed
+- **Repo-peer budget was too small to finish its main job.** `maxBudgetUsd` defaulted to `0.5` by analogy to the hub's other caps — but the classifier is a 50-token call and a repo peer reads a codebase before answering. A real scoping question ("where does this logic live, which config should I reuse, which files change") died on `error_max_budget_usd` after 103s, and completed in 83s for well under `3.00`. Default is now `2`, and the per-reply timeout `180000` to match. Sizing a cap by analogy to an unrelated task was the mistake; scoping is this peer's primary use case, so a cap that can't complete one is mis-set.
+
 ## [v1.6.1] - 2026-07-29
 
 ### Added

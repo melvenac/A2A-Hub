@@ -120,11 +120,13 @@ which is the main thing you give up.
 | `--repo <path>` | — | Repo the peer answers about. Also `AGENT_REPO`. |
 | `--repo-bash` | off | Allow shell access (git log, test runs). This is the trust boundary. |
 | `REPO_AGENT_MODEL` | SDK default | Model for repo replies. |
-| `REPO_AGENT_BUDGET_USD` | `0.5` | Hard spend ceiling per reply. |
-| `REPO_AGENT_TIMEOUT_MS` | `120000` | Wall-clock ceiling per reply. |
+| `REPO_AGENT_BUDGET_USD` | `2` | Hard spend ceiling per reply. Scoping questions ("where is X, which files change") cost well under this; `0.5` was too low to finish one. |
+| `REPO_AGENT_TIMEOUT_MS` | `180000` | Wall-clock ceiling per reply. |
 
-A real question takes ~40s, since the peer is reading files rather than
-autocompleting — `ask-agent.mjs` waits 150s by default (`--timeout SECONDS`).
+A lookup takes ~20-40s and a scoping question ~80s, since the peer is reading
+files rather than autocompleting — `ask-agent.mjs` waits 150s by default
+(`--timeout SECONDS`). A reply that exceeds the budget or turn cap says so
+instead of failing silently.
 Exit `0` answered, `1` transport error, `2` no reply yet (the session stays open,
 so a slow reply still lands there).
 

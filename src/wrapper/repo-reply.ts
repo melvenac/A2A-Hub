@@ -26,7 +26,15 @@ export interface RepoReplierConfig {
   name: string;
   /** Model override; omit to use the SDK default. */
   model?: string;
-  /** Hard spend ceiling per reply. */
+  /**
+   * Hard spend ceiling per reply.
+   *
+   * Sized for the peer's actual job. The first default (0.50) was set by analogy
+   * to the hub's other budget caps — but the classifier is a 50-token call and a
+   * repo peer reads a codebase before answering. A real scoping question ("where
+   * is this logic, what config should I reuse, which files change") died on
+   * `error_max_budget_usd` at 0.50 and completed for well under 3.00.
+   */
   maxBudgetUsd?: number;
   /** Wall-clock ceiling per reply. */
   timeoutMs?: number;
@@ -134,8 +142,8 @@ export function makeRepoReplier(config: RepoReplierConfig) {
     repoPath,
     name,
     model,
-    maxBudgetUsd = 0.5,
-    timeoutMs = 120_000,
+    maxBudgetUsd = 2,
+    timeoutMs = 180_000,
     allowBash = false,
   } = config;
 

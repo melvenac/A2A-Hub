@@ -101,8 +101,8 @@ const repoReplier = REPO_PATH
       repoPath: resolve(REPO_PATH),
       name: NAME,
       model: process.env.REPO_AGENT_MODEL,
-      maxBudgetUsd: parseFloat(process.env.REPO_AGENT_BUDGET_USD || "0.5"),
-      timeoutMs: parseInt(process.env.REPO_AGENT_TIMEOUT_MS || "120000"),
+      maxBudgetUsd: parseFloat(process.env.REPO_AGENT_BUDGET_USD || "2"),
+      timeoutMs: parseInt(process.env.REPO_AGENT_TIMEOUT_MS || "180000"),
       allowBash: process.argv.includes("--repo-bash"),
     })
   : null;
