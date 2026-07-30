@@ -76,6 +76,19 @@
 
 ---
 
+## Addendum — work after the first close-out
+
+- **Re-indexed GitNexus** (496 nodes / 700 edges / 5 flows). First run failed in `copyCsvWithRetry` → `copyNodeCSVs`, a plain re-run succeeded, third said "Already up to date" — live confirmation of the *race* the peer diagnosed, not a hard block. Practical rule is "re-run it," not "stop the MCP servers."
+- **Traced the staleness hook to GitNexus, not SIA** — `~/.claude/hooks/gitnexus/gitnexus-hook.cjs`, registered in *global* `~/.claude/settings.json`. Its gate is a bare HEAD-vs-`lastCommit` comparison with no file check, so it has a guaranteed false positive: `analyze` rewrites `CLAUDE.md`/`AGENTS.md`, committing them moves HEAD, hook fires. No quiet state exists.
+- **Used the peer for its first real errand** — scoping the fix. It returned 4/4 verified citations and found two things I would have missed: **three copies** of the hook (`hooks/claude`, `gitnexus-claude-plugin/hooks`, `hooks/antigravity`), and that the hooks are plain CJS and cannot import the shared TypeScript extension map, with an existing parity-test precedent in the repo for that exact problem.
+- **Re-ran `gitnexus setup -c claude`** — refreshed the installed hook 268 → 502 lines. Valid agent ids are `cursor`/`claude`/`antigravity`/`opencode`/`codex` (not `claude-code`). Backed up `settings.json` first; it was left byte-identical.
+- **Shipped v1.6.2** — budget default 0.5 → 2, timeout 120s → 180s.
+- **Measured what the peer actually runs:** `claude-opus-5[1m]`, credential source `ANTHROPIC_API_KEY`, ~$0.10/turn floor.
+
+### Two corrections I had to make
+- Told Aaron the swap gave "a peer whose answers match the 1.6.9 you run." Wrong — `main` is **353 commits ahead** of the v1.6.9 tag; a clone's `package.json` shows the last *released* version. The mismatch flipped from 867 behind to 353 ahead. Which checkout is right depends on the question: main for "how do I fix this upstream," a release tag for "why does my binary do this."
+- Guessed `gitnexus setup` might not refresh a stale hook script. It does — "hooks (already configured)" refers only to the settings registration.
+
 ## Post-Session Checklist
 
 - [x] Session log completed (this file)

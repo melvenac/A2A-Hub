@@ -1,7 +1,7 @@
 # Project Summary
 
 > **Last Updated:** Session 11 (2026-07-29)
-> **Status:** v1.6.1 Released — peers answer from a codebase they're resident in and say which checkout they answered from (ADR-010); the human is no longer the relay between repos
+> **Status:** v1.6.2 Released — peers answer from a codebase they're resident in and say which checkout they answered from (ADR-010); the human is no longer the relay between repos. Repo peers run **Opus 5** on a metered `ANTHROPIC_API_KEY` at ~$0.10/turn floor — not haiku, and not the subscription
 
 ---
 
@@ -97,6 +97,6 @@ See PRD.md §1 and §9, INBOX.md, and ADR-006/007/010 in DECISIONS.md.
 | Metric | Value |
 |---|---|
 | Total Sessions | 11 |
-| Version | v1.6.1 |
+| Version | v1.6.2 |
 | Tests | 41/41 passing; `verify-client-stack` 5/5; live cross-repo asks verified against the real repo |
 | Known Bugs | 0 blocking; 2 live non-blocking (citation fabrication, duplicate-peer race) |
