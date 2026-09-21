@@ -39,27 +39,42 @@ export const send = mutation({
   },
 });
 
-// Poll messages in a session, optionally only those after a timestamp.
+// Poll messages in a session, optionally only those after a turn number
+// (preferred) or a timestamp (legacy).
+//
+// `turn` is the message's 1-based position in the room, which is what
+// `send` reports back as the turn it wrote. It is derived from insertion
+// order rather than stored, so rooms written before this change are numbered
+// correctly too. A turn number is the cursor a reader can trust: unlike a
+// timestamp it cannot be advanced by the reader's own write.
 export const list = query({
   args: {
     sessionId: v.id("sessions"),
     since: v.optional(v.number()),
+    after: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const all = await ctx.db
       .query("messages")
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
       .collect();
-    const filtered = args.since ? all.filter((m) => m.createdAt > args.since!) : all;
+
+    const numbered = all.map((m, i) => ({ message: m, turn: i + 1 }));
+    const filtered = numbered.filter(
+      ({ message, turn }) =>
+        (args.after === undefined || turn > args.after) &&
+        (args.since === undefined || message.createdAt > args.since),
+    );
 
     const result = [];
-    for (const m of filtered) {
-      const peer = await ctx.db.get(m.peerId);
+    for (const { message, turn } of filtered) {
+      const peer = await ctx.db.get(message.peerId);
       result.push({
-        content: m.content,
+        content: message.content,
         from: peer?.name ?? "unknown",
         fromType: peer?.type ?? "unknown",
-        createdAt: m.createdAt,
+        createdAt: message.createdAt,
+        turn,
       });
     }
     return result;
