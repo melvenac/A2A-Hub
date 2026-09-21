@@ -53,8 +53,10 @@ describe("read cursor", () => {
     expect(pending[0].content).toBe("turn 15 was dropped");
   });
 
-  it("two peer turns, ME reads the inbox -> both printed and cursor is the last", () => {
-    const sessionId = room("inbox-advances");
+  // Consumption is --wait's job. --inbox reports without advancing, which is
+  // covered at the CLI level in hub-talk.cli.test.ts.
+  it("two peer turns, a --wait consumes both -> cursor is the last", () => {
+    const sessionId = room("wait-advances");
 
     const messages = [
       { from: PEER, content: "first", createdAt: 1 },

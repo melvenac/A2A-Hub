@@ -245,20 +245,28 @@ async function main() {
   // that send — the same drop, reached through the fallback. Replaying a
   // backlog once is noise; skipping a turn is data loss, so this fails closed.
   const after = readCursor(ME, sessionId, 0);
+
+  // --inbox is the "did I miss anything" check, so it must not consume what
+  // it reports: advancing the cursor here would destroy the evidence of a
+  // skip in the act of showing it. It reads the whole room and leaves the
+  // cursor where it was. Only --wait advances.
+  if (INBOX && !WAIT) {
+    const all = await fetchTurns(0);
+    printTurns(all);
+    console.error(
+      `[hub-talk] ${all.length} turns, ${takeAfter(all, after, ME).length} unread after turn ${after} (cursor unchanged)`,
+    );
+    return 0;
+  }
+
+  if (!WAIT) return 0;
+
   let messages = await fetchTurns(after);
 
   const emit = (pending) => {
     printTurns(pending);
     writeCursor(ME, sessionId, maxTurn(pending));
   };
-
-  if (INBOX && !WAIT) {
-    const unread = takeAfter(messages, after, ME);
-    if (unread.length) emit(unread);
-    return 0;
-  }
-
-  if (!WAIT) return 0;
 
   const pending = takeAfter(messages, after, ME);
   if (pending.length) {
