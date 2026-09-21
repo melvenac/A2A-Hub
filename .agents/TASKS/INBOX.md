@@ -83,7 +83,26 @@ Tasks are organized by MVP version, then by priority within each version.
 
 > **Goal:** Use case 2 becomes real — Brian installs a wrapper in minutes and Alice talks to Aaron's agent over the internet, with the chat UI as the daily driver for watching and steering. Gated on v2 *and* on Brian's availability, which is why it now follows cross-repo rather than leading.
 
-- [ ] **Real-network failure modes** — TLS/DNS, connection dropped mid-answer, retry/idempotency, version skew between two machines, CORS from a non-localhost origin. The genuinely new surface no local test can reach
+- [ ] **Onboard a truly remote agent — the ordered sequence.** A Grok bot on its own Linux host asked to join on 2026-09-20 and could not: the hub lives on a Tailscale address, so a process outside the tailnet cannot route to it at all. It ran its calls from Aaron's desktop instead — a remote brain driving a local hand, which proves nothing about remote participation.
+
+  Putting its host on the tailnet was rejected deliberately, and the reason is the point: **Brian will never be on Aaron's tailnet.** An agent that needs private network access to reach the hub is not the v3 scenario; it is v2 with extra steps. Network-level access is standing in for application-level auth, and swapping one for the other is the whole of v3. A tailnet auth key also grants far more than the hub — the tailnet holds `mailserver`, `vps`, `worthitwindows-vps` and two desktops, and Tailscale's default ACL is allow-all.
+
+  Do these in order; several will disconnect every agent at once if done early:
+  1. **Redeploy tcm with v1.7.0.** `54d35e1` (`cp -r convex/_generated dist/...`) must travel or the image crashes at import. Best window is when Aaron rolls the seats — the disruption is already paid for, and the seats restart with fresh config anyway.
+  2. **Provision per-agent keys at that same roll.** Every agent runs on `daemon.ts`'s default `dev-key` today, so validation currently distinguishes "knows the string dev-key" from "doesn't" and establishes no peer identity. Remove the `dev-key` fallback so nobody ships it by accident.
+  3. **Leave `AUTH_MODE=warn` and read the logs until they are quiet.** Strict before the keys exist 403s every agent mid-loop, including the rooms that would carry the message saying what broke.
+  4. **Flip `AUTH_MODE=strict`.**
+  5. **Expose the hub.** `tailscale funnel 4000` on tcm is one command and gives HTTPS without port forwarding.
+  6. **Remote agent registers with its own key** over the public URL. That is the test.
+
+  **Three things must be true before step 5, and one is not yet:**
+  - **Revocation is unverified against real data.** `register` now collapses duplicates and deletes the extras, but the collapse is capped at 4000 deletes per call and has only ever been run in tests. The live DB held ~39 historical rows, each with its own `apiKeyHash`, and `getByKeyHash` matches any of them — so if old rows survive, a superseded key still authenticates. Untidy on a tailnet; a hole on a public URL. **Verify against the live database before exposing anything.**
+  - **`askPolicy` is not enforced on the JSON-RPC path** (see the v2/v3 boundary item). Harmless while every policy is absent; it stops being harmless the moment there is a genuine outsider.
+  - **No rate limiting or abuse protection** (v4 item). A public endpoint without it is a different risk profile than a tailnet one.
+
+  The useful part: this list came from a consumer trying to join, not from us guessing at what remote access would need.
+
+- [ ] **Real-network failure modes** — TLS/DNS, connection dropped mid-answer, retry/idempotency, version skew between two machines, CORS from a non-localhost origin. The genuinely new surface no local test can reach. **Partially exercised 2026-09-20:** the Grok bot hit the very first one — it could not route to the host.
 - [ ] **Per-agent key generation + rotation**, deprecate shared `dev-key` and bootstrap key. Builds on v2's key *validation*: v2 closes the hole, v3 makes key management usable
 - [ ] Redeploy hub + Convex on VPS (Docker Compose, `restart: unless-stopped`); docker-compose local + VPS profiles
 - [ ] npm wrapper package (`a2a-agent` CLI) — `npx a2a-agent --hub URL --name alice`; package `src/wrapper/daemon.ts`
