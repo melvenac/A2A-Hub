@@ -1,5 +1,16 @@
 # A2A Intelligent Hub — Docker CLI Deployment Guide
 
+> ## ⚠️ HISTORICAL — do not follow this to deploy
+>
+> This documents the original VPS at `172.86.123.176`, which was **wiped in 2026-04**.
+> That host, its Convex instance and every agent registration on it are gone.
+>
+> **The current runbook is [`docs/redeploying-tcm.md`](docs/redeploying-tcm.md).**
+>
+> Kept for the Convex setup and env-var reference, which are still broadly accurate.
+> It is missing the most important rule: a redeploy is *two* deploys — the Docker
+> image **and** the Convex functions — and the functions go first.
+
 > **VPS:** ubuntu-DTX-2gb (172.86.123.176)
 > **User:** melvenac
 > **Approach:** Docker CLI — no Coolify, no orchestrators
