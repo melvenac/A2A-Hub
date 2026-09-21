@@ -236,9 +236,28 @@ async function main() {
 
   const waitOpts = WAIT ? { retry: true, until: WAIT_UNTIL } : {};
 
+  // A hub whose Express app is redeployed ahead of its Convex functions does
+  // not ignore `after` — it rejects the whole query, so every read 500s. Fall
+  // back to the unfiltered read and keep filtering locally, which takeAfter
+  // already does. Latched per process so one probe costs one request.
+  let serverTakesAfter = true;
   const fetchTurns = async (after) => {
+    if (serverTakesAfter) {
+      try {
+        const body = await api(
+          `/a2a/session/${sessionId}/messages?after=${after}`,
+          undefined,
+          waitOpts,
+        );
+        return withTurns(body.messages || []);
+      } catch (error) {
+        if (error.exitCode === 2) throw error;
+        serverTakesAfter = false;
+        console.error("[hub-talk] hub rejected ?after=, filtering client-side");
+      }
+    }
     const body = await api(
-      `/a2a/session/${sessionId}/messages?after=${after}`,
+      `/a2a/session/${sessionId}/messages`,
       undefined,
       waitOpts,
     );
