@@ -75,6 +75,10 @@ Tasks are organized by MVP version, then by priority within each version.
 - [x] Change `CLASSIFIER_MODEL` default in code — now `claude-haiku-4-5-20251001` (Session 7). NOTE: `REPO_FIXER_MODEL` default is still the 404-ing sonnet-4 id (repo-fixer unused in current loop)
 - [x] Convex health check on `/health` — shipped Session 8 as ADR-009 (`503 degraded`, not an advisory field)
 
+### v2 / v3 boundary
+
+- [ ] **askPolicy is not enforced on the JSON-RPC path** — `jsonRpcHandler` uses `UserBuilder.noAuthentication`, so `HubAgentExecutor` never sees `req.agentName`. `metadata.to` therefore routes with no asker identity. Close this BEFORE the legacy `/a2a/*` routes are retired — retiring them while the gap is open would remove the only path that enforces policy. Likely shape: a custom `UserBuilder` carrying the authenticated peer name. Not designed yet. See ADR-012.
+
 ## v3 — Remote teaching (Aaron + Brian) + chat/UX
 
 > **Goal:** Use case 2 becomes real — Brian installs a wrapper in minutes and Alice talks to Aaron's agent over the internet, with the chat UI as the daily driver for watching and steering. Gated on v2 *and* on Brian's availability, which is why it now follows cross-repo rather than leading.
