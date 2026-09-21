@@ -51,6 +51,10 @@ export default defineSchema({
     agentCard: v.any(),
     lastSeen: v.number(),
     status: v.union(v.literal("online"), v.literal("offline")),
+    // ADR-011: optional so existing rows need no migration. Absent = legacy
+    // client (hub-talk / ask-agent) — neither supersedes nor is superseded.
+    activeInstanceId: v.optional(v.string()),
+    lastHeartbeatAt: v.optional(v.number()),
   })
     .index("by_name", ["name"])
     // Auth looks agents up by key hash on every guarded request.

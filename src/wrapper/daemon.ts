@@ -31,8 +31,10 @@
  *   POLL_MS             poll interval (default 2000)
  */
 import Anthropic from "@anthropic-ai/sdk";
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { isSupersededError } from "../identity.js";
 import {
   isParticipant,
   qualifiesAsTrigger,
@@ -85,6 +87,9 @@ if (process.argv.includes("--print-persona")) {
 
 const HUB_URL = process.env.HUB_URL || "http://127.0.0.1:4000";
 const AGENT_KEY = process.env.AGENT_KEY || "dev-key";
+// Process identity for ADR-011 Layer B. Register is the takeover; heartbeat
+// renews or learns we were superseded. One clean seam: this id on both calls.
+const INSTANCE_ID = randomUUID();
 const MODEL = process.env.WRAPPER_MODEL || "claude-haiku-4-5-20251001";
 const MAX_TOKENS = parseInt(process.env.WRAPPER_MAX_TOKENS || "300");
 const POLL_MS = parseInt(process.env.POLL_MS || "2000");
@@ -237,6 +242,7 @@ async function main() {
         body: JSON.stringify({
           name: NAME,
           apiKey: AGENT_KEY,
+          instanceId: INSTANCE_ID,
           agentCard: { name: NAME, description: PERSONA.slice(0, 120) },
         }),
       });
@@ -256,10 +262,17 @@ async function main() {
 
   while (true) {
     try {
-      await hub(`/a2a/heartbeat/${NAME}`, { method: "POST", body: "{}" });
+      await hub(`/a2a/heartbeat/${NAME}`, {
+        method: "POST",
+        body: JSON.stringify({ instanceId: INSTANCE_ID }),
+      });
       await handleTasks();
       await handleSessions();
     } catch (error: any) {
+      if (isSupersededError(error)) {
+        console.error(`[${NAME}] superseded by a newer instance, exiting`);
+        process.exit(0);
+      }
       console.error(`[${NAME}] poll error: ${error.message}`);
     }
     await new Promise((r) => setTimeout(r, POLL_MS));

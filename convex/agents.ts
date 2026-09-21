@@ -1,13 +1,20 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { decideHeartbeat } from "./instanceLogic.js";
 
 export const register = mutation({
   args: {
     name: v.string(),
     apiKeyHash: v.string(),
     agentCard: v.any(),
+    instanceId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const now = Date.now();
+    const instanceFields = args.instanceId
+      ? { activeInstanceId: args.instanceId, lastHeartbeatAt: now }
+      : {};
+
     const dupes = await ctx.db
       .query("agents")
       .withIndex("by_name", (q) => q.eq("name", args.name))
@@ -15,9 +22,12 @@ export const register = mutation({
 
     if (dupes.length === 0) {
       return await ctx.db.insert("agents", {
-        ...args,
-        lastSeen: Date.now(),
+        name: args.name,
+        apiKeyHash: args.apiKeyHash,
+        agentCard: args.agentCard,
+        lastSeen: now,
         status: "online",
+        ...instanceFields,
       });
     }
 
@@ -36,8 +46,9 @@ export const register = mutation({
     await ctx.db.patch(canonical._id, {
       apiKeyHash: args.apiKeyHash,
       agentCard: args.agentCard,
-      lastSeen: Date.now(),
+      lastSeen: now,
       status: "online",
+      ...instanceFields,
     });
 
     // Convex caps mutation writes; leftover extras self-heal on the next register.
@@ -55,15 +66,50 @@ export const register = mutation({
 });
 
 export const heartbeat = mutation({
-  args: { name: v.string() },
-  handler: async (ctx, args) => {
+  args: { name: v.string(), instanceId: v.optional(v.string()) },
+  handler: async (ctx, args): Promise<{ ok: true; superseded?: true }> => {
     const agent = await ctx.db
       .query("agents")
       .withIndex("by_name", (q) => q.eq("name", args.name))
       .first();
-    if (agent) {
-      await ctx.db.patch(agent._id, { lastSeen: Date.now(), status: "online" });
+    if (!agent) return { ok: true };
+
+    const now = Date.now();
+    const decision = decideHeartbeat({
+      instanceId: args.instanceId,
+      activeInstanceId: agent.activeInstanceId,
+      lastHeartbeatAt: agent.lastHeartbeatAt,
+      now,
+    });
+
+    if (decision === "superseded") return { ok: true, superseded: true };
+
+    if (decision === "legacy") {
+      await ctx.db.patch(agent._id, { lastSeen: now, status: "online" });
+      return { ok: true };
     }
+
+    await ctx.db.patch(agent._id, {
+      lastSeen: now,
+      status: "online",
+      activeInstanceId: args.instanceId,
+      lastHeartbeatAt: now,
+    });
+    return { ok: true };
+  },
+});
+
+export const getByName = query({
+  args: { name: v.string() },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ name: string; apiKeyHash: string } | null> => {
+    const agent = await ctx.db
+      .query("agents")
+      .withIndex("by_name", (q) => q.eq("name", args.name))
+      .first();
+    return agent ? { name: agent.name, apiKeyHash: agent.apiKeyHash } : null;
   },
 });
 

@@ -11,6 +11,7 @@ import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api.js";
 import { createHash } from "crypto";
 import { requireAgentKey, authMode } from "./auth.js";
+import { evaluateNameClaim, INSTANCE_LIVENESS_MS } from "./identity.js";
 import { DefaultRequestHandler } from "@a2a-js/sdk/server";
 import { jsonRpcHandler, UserBuilder } from "@a2a-js/sdk/server/express";
 import { ConvexTaskStore } from "./task-store.js";
@@ -252,7 +253,15 @@ app.get("/a2a/queue/:agentId", async (req, res) => {
 app.post("/a2a/heartbeat/:agentId", async (req, res) => {
   try {
     const { agentId } = req.params;
-    await convex.mutation(api.agents.heartbeat, { name: agentId });
+    const instanceId =
+      typeof req.body?.instanceId === "string" ? req.body.instanceId : undefined;
+    const result = await convex.mutation(api.agents.heartbeat, {
+      name: agentId,
+      instanceId,
+    });
+    if (result?.superseded) {
+      return res.status(409).json({ error: "superseded" });
+    }
     res.json({ ok: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -266,7 +275,7 @@ app.post("/a2a/heartbeat/:agentId", async (req, res) => {
 // do not show up as joinable Cursor peers.
 app.get("/a2a/agents/live", async (req, res) => {
   try {
-    const cutoff = Date.now() - 45_000;
+    const cutoff = Date.now() - INSTANCE_LIVENESS_MS;
     const kindFilter =
       typeof req.query.kind === "string" && req.query.kind
         ? req.query.kind
@@ -318,8 +327,27 @@ app.post("/a2a/register", async (req, res) => {
 
     const apiKeyHash = createHash("sha256").update(apiKey).digest("hex");
     const card = agentCard ?? { name, description: `Agent ${name}` };
+    const instanceId =
+      typeof req.body.instanceId === "string" ? req.body.instanceId : undefined;
 
-    await convex.mutation(api.agents.register, { name, apiKeyHash, agentCard: card });
+    const existing = await convex.query(api.agents.getByName, { name });
+    const claim = evaluateNameClaim(existing?.apiKeyHash, apiKeyHash, authMode);
+    if (claim === "reject") {
+      return res.status(409).json({ error: "Name claimed by a different identity" });
+    }
+    if (claim === "warn") {
+      console.warn(
+        `[auth] WOULD REJECT name claim on ${name} ` +
+          `(AUTH_MODE=warn; set AUTH_MODE=strict to enforce)`
+      );
+    }
+
+    await convex.mutation(api.agents.register, {
+      name,
+      apiKeyHash,
+      agentCard: card,
+      instanceId,
+    });
     await convex.mutation(api.peers.register, { name, type: "agent" });
     await notifyHuman(`Agent ${name} is now online`);
     res.json({ ok: true, message: `Agent ${name} registered` });
