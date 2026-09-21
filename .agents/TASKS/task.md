@@ -1,6 +1,6 @@
 # Current Sprint
 
-> **Focus:** v2 — cross-repo agent-to-agent, proven locally. Repo-resident peers shipped in v1.6.0; the phase closes with on-demand spawn plus the three trust-domain prerequisites (PRD §8)
+> **Focus:** v2 — cross-repo agent-to-agent, proven locally. **All three trust-domain prerequisites (PRD §8) closed in Session 14** and shipped as v1.7.0. What remains in v2 is on-demand spawn; what remains before anything goes *remote* is verifying revocation against the live database.
 
 ---
 
@@ -8,14 +8,24 @@
 
 1. **Two cheap repo-peer measurements (Aaron asked for these first, Session 11 addendum)** — (a) launch the repo-peer daemon *without* `--env-file=.env` and see whether `apiKeySource` changes or auth fails; do **not** flip the default on a pass (terms question + loses `maxBudgetUsd` enforcement). (b) run one lookup question under Opus 5 vs Sonnet 5 via `REPO_AGENT_MODEL` and compare cost, latency, citation accuracy — the Opus per-turn floor measured $0.099
 2. **On-demand spawn** — hub receives a message for a repo peer with no live daemon → launches a headless agent rooted at that repo, gets the answer, lets it exit. Zero idle cost, and the piece that actually retires the file mailbox instead of out-competing it
-3. **Validate `X-Agent-Key`** (PRD §8.1) — presence-only checks mean a bogus key returns 200; `apiKeyHash` is already stored and never compared. Prerequisite, not hardening: nothing local fails without it, so no cross-repo test will ever surface it, and leaving it open means the local system proves a *different* security model than the remote one
-4. **Namespace peer identity by owner** (PRD §8.2) — bare peer names collide across machines. Cheap before two machines exist; a migration after
-5. **"Who may ask this peer what"** (PRD §8.3) — the concept, with a permissive local default, so adding policy later fills in a value instead of introducing a layer
+3. **Verify revocation against the live database** — **the gate before anything is exposed publicly**, and the one condition in the remote-agent sequence that is not yet true. `agents.register` now patches a canonical row and deletes the extras, but that has only ever run in tests. The live DB held ~39 historical rows for ~5 agents, each carrying its own `apiKeyHash`, and `getByKeyHash` matches *any* of them — so a surviving row means a **superseded key still authenticates**. The collapse is also capped at 4000 deletes per call and self-heals across subsequent registers, so a backlog clears over several calls rather than at once. Read-only investigation first: count rows per agent name, confirm whether stale hashes remain after the registers that have already happened. Do **not** improvise fixes against live data — report first
+4. ~~**Validate `X-Agent-Key`** (PRD §8.1)~~ — **DONE** Session 14, `95ca5c6`. Keys resolve against the stored hash; `AUTH_MODE=warn` logs rejections without enforcing
+5. ~~**Namespace peer identity by owner** (PRD §8.2)~~ — **DONE (partial)** Session 14, `95f2433`, ADR-011. Names are *owned* via `apiKeyHash` and daemon instances supersede. **Not** full namespacing — qualified `owner/name` addressing would change every client and waits for per-agent keys
+5a. ~~**"Who may ask this peer what"** (PRD §8.3)~~ — **DONE** Session 14, `d9dfaed`, ADR-012. Optional `askPolicy`, absent = allow-all. Gap: not enforced on the JSON-RPC path — close before retiring the legacy routes
 6. **Scoped Bash for repo peers** — `Bash(git log *)` / `Bash(git show *)` so a repo expert can answer "when did this change and why" without full shell access
 7. **Experience dedup** — `triggerHash` (sha256 of normalized trigger) + `by_triggerHash` index; patch-on-conflict in `experiences.store`
 8. **docker-compose profiles** — local (no Traefik, local Convex, :5173 client) + VPS (Traefik, prod URLs); one env-gated build. Now v3 work — deprioritized behind the v2 prerequisites
 
-## Done This Sprint (Session 11, continued)
+## Done This Sprint (Session 14, 2026-09-20/21)
+
+- [x] **Shipped v1.7.0, tagged and deployed to tcm** — all three §8 prerequisites, the spec JSON-RPC transport, a truthful agent card. Suite 40 → 84, 17 commits
+- [x] **Fixed the seat transport silently dropping turns** — a `--say` advanced the reader's cursor past unread peer turns; two real turns vanished in two rooms in one afternoon. Cursor is now a turn number that only a *print* moves. Also: `--inbox` reports without consuming, `--peer` picks the room for that pair instead of whichever was open, new rooms cap at 500 not 64
+- [x] **ADR-013 — ambiguous silence must fail closed.** Five defects in one session, found five ways by four parties, are one class: a mechanism that looks healthy while losing information
+- [x] **Recovered a split-deploy outage** and wrote `docs/redeploying-tcm.md`. A redeploy is **two** deploys and the Convex functions go first; `/health` cannot catch version skew and returned 200 throughout; tag the outgoing image or there is no rollback
+- [x] **Proved cross-vendor agent work** — a Claude Code planner and a Cursor Grok 4.6 implementer closed §8.1–8.3 together over a hub room with no human relay, the implementer correcting the planner's design twice
+- [x] **`docs/joining-the-hub.md`** — how a third-party agent registers, written from a live probe
+
+## Done Previously (Session 11, continued)
 
 - [x] **Shipped v1.6.1** — repo replies carry branch/SHA/dirty provenance, inserted before the `DONE` sentinel so convergence detection survives (mutation-verified). Suite 41/41
 - [x] **PRD v1.2** — cross-repo promoted to primary use case on Aaron's call; roadmap renumbered (v2 cross-repo → v3 remote → v4 platform); three trust-domain prerequisites named in §8
