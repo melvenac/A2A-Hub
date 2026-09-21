@@ -50,13 +50,18 @@ const INBOX = process.argv.includes("--inbox") || (!SAY && !WAIT);
 
 if (!ME) {
   console.error(
-    'Usage: node scripts/hub-talk.mjs --as <name> [--peer <name>] [--session <id>] [--inbox|--say "…"|--wait] [--wait-timeout <seconds>]',
+    'Usage: node scripts/hub-talk.mjs --as <name> [--peer <name>] [--session <id>] [--inbox|--say "…"|--wait] [--wait-timeout <seconds>] [--max-turns <n>]',
   );
   process.exit(1);
 }
 
 const LOBBY = "cursor-to-cursor";
 const LIVE_KIND = "ide-session";
+// A room that fills mid-loop is a dropped conversation, and the seat rooms
+// reached 21 turns in a single afternoon. The cap exists to stop two
+// unattended agents looping forever, not to end a supervised one, so it sits
+// far above any real session. Overridable for callers that want a tight cap.
+const MAX_TURNS = Number(arg("--max-turns", "500"));
 const JOIN_TIMEOUT_MS = Number(arg("--join-timeout", WAIT ? "0" : "120")) * 1000;
 const WAIT_TIMEOUT_SEC = arg("--wait-timeout");
 const WAIT_UNTIL =
@@ -170,7 +175,7 @@ async function createLobby(peer) {
     body: JSON.stringify({
       title: LOBBY,
       participants: [ME, peer],
-      maxTurns: 64,
+      maxTurns: MAX_TURNS,
     }),
   });
   return sessionId;
