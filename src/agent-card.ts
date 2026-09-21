@@ -4,19 +4,31 @@ export const hubAgentCard: AgentCard = {
   name: "Intelligent-Hub",
   description:
     "Persistent AI mediator for A2A agent coordination. Accumulates knowledge from every interaction and self-corrects the repo.",
-  url: process.env.HUB_URL
-    ? `${process.env.HUB_URL}/a2a`
-    : "https://sandbox.tarrantcountymakerspace.com/a2a",
-  protocolVersion: "1.0",
+  // Must describe *this* process. The old default pointed at the (wiped) sandbox
+  // VPS, so a peer resolving the card locally was handed a dead host.
+  // Points at the JSON-RPC endpoint, not the legacy /a2a/* REST routes — the
+  // card's url is where a client sends spec traffic, and those routes are not
+  // a spec binding.
+  url: `${process.env.HUB_URL ?? `http://localhost:${process.env.PORT ?? "4000"}`}/a2a/jsonrpc`,
+  // The version we actually serve, not the newest that exists. @a2a-js/sdk 0.3.13
+  // implements 0.3.x; claiming "1.0" while mounting a 0.3 handler is a fresh lie.
+  protocolVersion: "0.3",
   provider: {
     organization: "Tarrant County Makerspace",
     url: "https://tarrantcountymakerspace.com",
   },
   version: "1.0.0",
   capabilities: {
+    // True again, but earned this time: the executor publishes to the SDK's
+    // ExecutionEventBus, which is what message/stream consumes. Verified against
+    // a live message/stream call returning text/event-stream, not assumed —
+    // the previous `true` was a claim with no implementation behind it.
     streaming: true,
     pushNotifications: false,
   },
+  // Now true: jsonRpcHandler is mounted at the url above. Stated explicitly
+  // rather than relying on the spec default, so the card says what it serves.
+  preferredTransport: "JSONRPC",
   securitySchemes: {
     apiKey: {
       type: "apiKey",

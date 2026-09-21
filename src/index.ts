@@ -10,6 +10,11 @@ import { RepoFixer } from "./repo-fixer.js";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api.js";
 import { createHash } from "crypto";
+import { requireAgentKey, authMode } from "./auth.js";
+import { DefaultRequestHandler } from "@a2a-js/sdk/server";
+import { jsonRpcHandler, UserBuilder } from "@a2a-js/sdk/server/express";
+import { ConvexTaskStore } from "./task-store.js";
+import { HubAgentExecutor } from "./a2a-executor.js";
 
 const app = express();
 app.use(express.json());
@@ -86,6 +91,42 @@ const executor = new HubExecutor({
   classify: (trigger, action) => classifier.classify(trigger, action),
 });
 
+// Every /a2a route is guarded in one place rather than by a per-route check.
+// The old pattern was copy-pasted into eleven handlers and only tested for the
+// header's presence, so a bogus key returned 200; worse, a new route was
+// unguarded until someone remembered to paste the block. Guarding the prefix
+// makes the default fail-safe: a route added tomorrow is protected on arrival.
+const guardAgentKey = requireAgentKey(convex);
+app.use("/a2a", (req, res, next) => {
+  // Registration is how an agent *obtains* a key, so it cannot demand one.
+  // req.path is relative to the mount point here, hence "/register".
+  if (req.path === "/register") return next();
+  return guardAgentKey(req, res, next);
+});
+
+// The spec transport, on its own path so it cannot interfere with the legacy
+// /a2a/<name> routes below. This is additive: nothing already running has to
+// move, and the legacy routes retire once the daemons and the chat client
+// speak JSON-RPC, not before.
+//
+// Mounted with app.use, not app.post: jsonRpcHandler returns a Router that
+// registers POST "/", so it has to own its mount point. Hanging it off
+// app.post("/a2a") left the inner route unmatched and every call 404'd.
+const a2aRequestHandler = new DefaultRequestHandler(
+  hubAgentCard,
+  new ConvexTaskStore(convex),
+  new HubAgentExecutor(executor)
+);
+app.use(
+  "/a2a/jsonrpc",
+  jsonRpcHandler({
+    requestHandler: a2aRequestHandler,
+    // Authentication is already enforced by the guard above; this only tells
+    // the SDK not to build a user of its own.
+    userBuilder: UserBuilder.noAuthentication,
+  })
+);
+
 // Routes
 // Health has to reflect the whole hub, not just this process. A Convex backend
 // that dies under a live hub left this endpoint answering "ok" for days while
@@ -123,8 +164,6 @@ app.get("/.well-known/agent-card.json", (_req, res) => {
 
 // A2A message/send endpoint
 app.post("/a2a/message/send", async (req, res) => {
-  const apiKey = req.headers["x-agent-key"] as string;
-  if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
 
   const message = req.body?.params?.message?.parts?.[0]?.text;
   if (!message) return res.status(400).json({ error: "No message text found" });
@@ -161,8 +200,6 @@ app.post("/a2a/message/send", async (req, res) => {
 app.post("/a2a/task/:taskId/respond", async (req, res) => {
   try {
     const { taskId } = req.params;
-    const apiKey = req.headers["x-agent-key"] as string;
-    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
 
     const responseText = req.body?.response;
     if (!responseText) return res.status(400).json({ error: "Missing response field" });
@@ -188,8 +225,6 @@ app.post("/a2a/task/:taskId/respond", async (req, res) => {
 app.post("/a2a/task/:taskId/claim", async (req, res) => {
   try {
     const { taskId } = req.params;
-    const apiKey = req.headers["x-agent-key"] as string;
-    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
 
     const agentName = req.body?.agentName;
     if (!agentName) return res.status(400).json({ error: "Missing agentName field" });
@@ -205,8 +240,6 @@ app.post("/a2a/task/:taskId/claim", async (req, res) => {
 app.get("/a2a/queue/:agentId", async (req, res) => {
   try {
     const { agentId } = req.params;
-    const apiKey = req.headers["x-agent-key"] as string;
-    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
 
     const tasks = await queue.getTasksFor(agentId);
     res.json({ tasks });
@@ -221,6 +254,55 @@ app.post("/a2a/heartbeat/:agentId", async (req, res) => {
     const { agentId } = req.params;
     await convex.mutation(api.agents.heartbeat, { name: agentId });
     res.json({ ok: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Live agents for IDE-session discovery. lastSeen is on `agents`; chat peers
+// have no heartbeat of their own. Dedup by name. `rowCount` is how many
+// agents-table rows that name had *before* this map (1 after D2 collapse).
+// `kind` comes from agentCard.kind (hub-talk uses "ide-session") so alice/bob
+// do not show up as joinable Cursor peers.
+app.get("/a2a/agents/live", async (req, res) => {
+  try {
+    const cutoff = Date.now() - 45_000;
+    const kindFilter =
+      typeof req.query.kind === "string" && req.query.kind
+        ? req.query.kind
+        : undefined;
+    const rows = await convex.query(api.agents.listOnline, {});
+    const rowCountByName = new Map<string, number>();
+    const byName = new Map<
+      string,
+      { name: string; lastSeen: number; kind?: string; rowCount: number }
+    >();
+    for (const a of rows as {
+      name: string;
+      lastSeen: number;
+      agentCard?: { kind?: string };
+    }[]) {
+      rowCountByName.set(a.name, (rowCountByName.get(a.name) ?? 0) + 1);
+    }
+    for (const a of rows as {
+      name: string;
+      lastSeen: number;
+      agentCard?: { kind?: string };
+    }[]) {
+      const kind = a.agentCard?.kind;
+      const prev = byName.get(a.name);
+      const lastSeen = prev ? Math.max(prev.lastSeen, a.lastSeen) : a.lastSeen;
+      const mergedKind = kind ?? prev?.kind;
+      byName.set(a.name, {
+        name: a.name,
+        lastSeen,
+        kind: mergedKind,
+        rowCount: rowCountByName.get(a.name) ?? 1,
+      });
+    }
+    let agents = [...byName.values()].filter((a) => a.lastSeen >= cutoff);
+    if (kindFilter) agents = agents.filter((a) => a.kind === kindFilter);
+    res.json({ agents });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -251,8 +333,6 @@ app.post("/a2a/register", async (req, res) => {
 // Create a session between named peers (agents and/or humans).
 app.post("/a2a/session", async (req, res) => {
   try {
-    const apiKey = req.headers["x-agent-key"] as string;
-    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
 
     const { title, participants, maxTurns } = req.body;
     if (!Array.isArray(participants) || participants.length < 2) {
@@ -273,8 +353,6 @@ app.post("/a2a/session", async (req, res) => {
 // Send a message into a session as a peer. Turn cap enforced in Convex.
 app.post("/a2a/session/:sessionId/message", async (req, res) => {
   try {
-    const apiKey = req.headers["x-agent-key"] as string;
-    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
 
     const { from, content } = req.body;
     if (!from || !content) {
@@ -295,8 +373,6 @@ app.post("/a2a/session/:sessionId/message", async (req, res) => {
 // Discover active sessions for a peer — wrapper daemons poll this.
 app.get("/a2a/peer/:peerName/sessions", async (req, res) => {
   try {
-    const apiKey = req.headers["x-agent-key"] as string;
-    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
 
     const sessions = await convex.query(api.sessions.listForPeer, {
       peerName: req.params.peerName,
@@ -311,8 +387,6 @@ app.get("/a2a/peer/:peerName/sessions", async (req, res) => {
 // Full session history for the chat UI.
 app.get("/a2a/sessions", async (req, res) => {
   try {
-    const apiKey = req.headers["x-agent-key"] as string;
-    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
 
     const sessions = await convex.query(api.sessions.listAll, {});
     res.json({ sessions });
@@ -323,8 +397,6 @@ app.get("/a2a/sessions", async (req, res) => {
 
 app.post("/a2a/session/:sessionId/rename", async (req, res) => {
   try {
-    const apiKey = req.headers["x-agent-key"] as string;
-    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
 
     const title = typeof req.body?.title === "string" ? req.body.title.trim() : "";
     if (!title) return res.status(400).json({ error: "Missing required field: title" });
@@ -342,8 +414,6 @@ app.post("/a2a/session/:sessionId/rename", async (req, res) => {
 // Grant more turns to a session (reopens it if the cap closed it).
 app.post("/a2a/session/:sessionId/extend", async (req, res) => {
   try {
-    const apiKey = req.headers["x-agent-key"] as string;
-    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
 
     const addTurns = Number(req.body?.addTurns);
     if (!Number.isInteger(addTurns) || addTurns < 1) {
@@ -363,13 +433,13 @@ app.post("/a2a/session/:sessionId/extend", async (req, res) => {
 // Poll session messages (optionally only after ?since=<timestamp>).
 app.get("/a2a/session/:sessionId/messages", async (req, res) => {
   try {
-    const apiKey = req.headers["x-agent-key"] as string;
-    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
 
     const since = req.query.since ? Number(req.query.since) : undefined;
+    const after = req.query.after !== undefined ? Number(req.query.after) : undefined;
     const messages = await convex.query(api.messages.list, {
       sessionId: req.params.sessionId as any,
       since,
+      after: Number.isFinite(after!) ? after : undefined,
     });
     res.json({ messages });
   } catch (error: any) {
@@ -380,4 +450,10 @@ app.get("/a2a/session/:sessionId/messages", async (req, res) => {
 const port = parseInt(process.env.PORT || "4000");
 app.listen(port, () => {
   console.log(`Hub running on port ${port}`);
+  console.log(`Agent card: ${hubAgentCard.url} (A2A ${hubAgentCard.protocolVersion})`);
+  console.log(
+    authMode === "strict"
+      ? "Auth: STRICT — unknown X-Agent-Key returns 403"
+      : "Auth: WARN — unknown X-Agent-Key is logged and allowed. Set AUTH_MODE=strict to enforce."
+  );
 });

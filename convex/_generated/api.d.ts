@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as a2aTasks from "../a2aTasks.js";
 import type * as agents from "../agents.js";
 import type * as experiences from "../experiences.js";
 import type * as messages from "../messages.js";
@@ -23,6 +24,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  a2aTasks: typeof a2aTasks;
   agents: typeof agents;
   experiences: typeof experiences;
   messages: typeof messages;

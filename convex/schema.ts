@@ -51,7 +51,23 @@ export default defineSchema({
     agentCard: v.any(),
     lastSeen: v.number(),
     status: v.union(v.literal("online"), v.literal("offline")),
-  }).index("by_name", ["name"]),
+  })
+    .index("by_name", ["name"])
+    // Auth looks agents up by key hash on every guarded request.
+    .index("by_apiKeyHash", ["apiKeyHash"]),
+
+  // A2A protocol tasks (the spec's Task lifecycle), stored whole.
+  //
+  // Deliberately separate from the `tasks` table above, which backs the hub's
+  // own agent queue and has an unrelated shape. Keeping the spec object intact
+  // rather than shredding it into columns means TaskState and future spec
+  // fields survive without a migration — the SDK owns this shape, we don't.
+  a2aTasks: defineTable({
+    taskId: v.string(),
+    contextId: v.string(),
+    task: v.any(),
+    updatedAt: v.number(),
+  }).index("by_taskId", ["taskId"]),
 
   // --- Chat channel (ADR-005: peers/sessions/messages, replaces Telegram) ---
 
