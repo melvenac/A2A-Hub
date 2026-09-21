@@ -2,6 +2,48 @@
 
 All notable changes to the A2A Intelligent Hub.
 
+## [v1.7.0] - 2026-09-20
+
+### Added
+- **The hub speaks A2A.** `jsonRpcHandler` is mounted at `/a2a/jsonrpc` and the agent card points there. A stock `@a2a-js/sdk` client now sends a message and gets back a spec `Task` — verified end to end, having previously been unable to exchange a single message. Probe: **PASS 6 / FAIL 0 / WARN 1**, from PASS 2 / FAIL 4 / WARN 2.
+  - Additive, not a cutover. The legacy `/a2a/*` REST routes are untouched and all three daemons kept heartbeating across the switch; they retire when the daemons and chat client speak JSON-RPC, not before.
+  - Mounted with `app.use`, not `app.post`. `jsonRpcHandler` returns a Router registering `POST "/"`, so it must own its mount point — `app.post("/a2a", handler)` left the inner route unmatched and 404'd every call.
+- **`HubAgentExecutor`** (`src/a2a-executor.ts`) — expresses the existing HubExecutor in the spec's vocabulary. Behaviour is unchanged (answer from memory, delegate to a peer when memory can't); only the protocol surface is new. Delegating to a better-informed peer is what A2A calls task delegation, so the mapping is nearly literal.
+  - Publishes a full `submitted → working → completed` lifecycle rather than the SDK README's single-message shortcut. That shortcut suits an agent that answers instantly; escalation here reaches a repo peer that has taken 43s on a real question, which is precisely what a task lifecycle exists to avoid holding an HTTP request open for.
+  - **This retires the DONE sentinel on the A2A path.** Terminal state is a structured `TaskState`, so a reply that merely *ends* with the word "DONE" no longer reads as a sign-off. An empty prompt returns `rejected`, not `failed` — the caller's mistake shouldn't send them hunting a broken hub.
+- **`ConvexTaskStore`** (`src/task-store.ts`) — `TaskStore` over Convex, two methods. The SDK's `InMemoryTaskStore` loses every task on restart, and the hub restarts often enough in development that task IDs would not survive a rebuild. Round-trip verified: `message/send` → `tasks/get` → the row in Convex all agree. `a2aTasks.save` upserts, deliberately unlike `agents.register`.
+- **Streaming, earned this time.** `message/stream` returns `text/event-stream` with the real lifecycle. The previous `capabilities.streaming: true` had no implementation behind it; this was verified against a live call before the flag was set back. Note the SDK *enforced* the honest `false` in between — it refused `message/stream` with `-32004` because our own card disclaimed the capability, which is a good argument for keeping cards truthful.
+- **`scripts/a2a-compliance-probe.mjs`** — measures how far the running hub is from the A2A spec instead of arguing about it. Read-only; sends one `message/send`. Checks card discovery, required fields, card-claim honesty, JSON-RPC transport, the streaming claim, security-scheme enforcement, and whether a stock `@a2a-js/sdk` client can talk to us. Baseline on first run was PASS 2 / FAIL 4 / WARN 2 — no stock A2A client could exchange a single message with the hub.
+- **`X-Agent-Key` is validated.** `apiKeyHash` has been written at registration since v1.0 and never read, so every guarded route only checked the header's *presence* and a bogus key returned 200. Keys now resolve against the stored hash via a new `agents.getByKeyHash` query and `by_apiKeyHash` index.
+- **`AUTH_MODE` (`warn` | `strict`, default `warn`)** — validate-and-log versus validate-and-reject. This ships into a live stack with three daemons running, and a flag day would have taken them all down at once; warn mode turns "will this break something" into a log you can read. Deterministic config check, not a prompt-level hope. Measured on the live stack: 20s of alice/bob/gitnexus polling produced **zero** rejections (confirmed positively — all three had `lastSeen` under 1s, so they were hitting guarded routes and passing, not merely idle). Strict looks safe for the current daemons.
+
+### Fixed
+- **The agent card no longer lies.** It advertised `capabilities.streaming: true` with no SSE anywhere in `src/` — no `text/event-stream`, no `message/stream` — so a client that believed it waited on a 404. Now `false` until the SDK's `ExecutionEventBus` is actually wired up.
+- **The card described a machine that no longer exists.** `url` defaulted to `https://sandbox.tarrantcountymakerspace.com/a2a` — the wiped VPS — so a peer resolving the card locally got a dead host. Defaults to `http://localhost:${PORT}/a2a`; `HUB_URL` still overrides.
+- **`protocolVersion` claimed `"1.0"` while the SDK speaks 0.3.** `"1.0"` is legal per the proto (`Examples: "0.3", "1.0"`), but `@a2a-js/sdk@0.3.13` implements 0.3.x — so the claim would have become false the moment a real handler was mounted. Now `"0.3"`.
+- The 401-on-missing-key check was copy-pasted into eleven handlers; a new `/a2a` route was unguarded until someone remembered to paste it. Replaced with one prefix-mounted middleware, so the default is now fail-safe rather than fail-open. `/a2a/register` is exempt — it is how an agent *obtains* a key.
+
+#### `hub-talk` — the seat transport was dropping turns
+
+The client every agent uses to talk through the hub lost messages silently. Found in use, not in review: two turns went missing in two different seat rooms on the same afternoon, and the QA seat hit the same defect independently.
+
+- **A `--say` advanced the reader's cursor past unread peer turns.** A peer turn that arrived *before* your send was never delivered. The failure is silent and fails **open** — the room looks healthy while turns go missing, so absence of a reply was not evidence there wasn't one. The cursor is now a **turn number, not a timestamp**, and only a print moves it: `--say` never touches it. `convex/messages.ts:list` numbers turns by position (1-based, matching what `send` reports) and accepts `after` beside the legacy `since`; turns are derived rather than stored, so rooms written before this change number correctly.
+  - A reader with no cursor starts at **0** and replays the room once. Starting from its own last turn — the obvious way to avoid a backlog — reintroduces the identical skip through the fallback instead of the write. Replaying is noise; skipping is data loss.
+  - The cursor file is deliberately renamed `.after`. The old `.since` files hold millisecond timestamps, and reading one as a turn number would suppress every turn in the room.
+- **`--inbox` consumed what it reported.** The "did I miss anything" check advanced the cursor, destroying the evidence of a skip in the act of showing it — the same class of defect as the bug above. It now reads the whole room, leaves the cursor alone, and prints how many turns are unread. Only `--wait` advances.
+- **`--peer` was ignored whenever any room was already open.** `resolveSession()` consulted "newest room containing me" first, so a message aimed at one peer went to whichever conversation happened to be open — a QA kickoff landed in the developer's room. `--peer` now matches only a room whose participants are exactly `{ME, PEER}`; `--session` still wins over both.
+- **New rooms were capped at 64 turns.** Seat rooms reached 21 in a single afternoon, so a supervised conversation could hit the cap mid-flight — and a room that fills mid-loop is a dropped conversation, the same loss. New rooms are created at 500, overridable with `--max-turns`. Existing rooms keep the cap they were made with.
+- **The Docker image crashed at import.** `npx tsc` alone left `dist` without `convex/_generated`.
+
+Client-side turn derivation means the fix is correct against a hub that has not been redeployed: such a hub ignores `after` and returns the whole room, so position is the absolute turn. Verified live against the un-redeployed hub before landing.
+
+**Operational note, not a code change:** two concurrent `--wait` processes under the same name on the same room both receive the same turn — the cursor is per `(name, session)`. One listener per seat per room, re-armed only after the previous exits. Different rooms are safe.
+
+### Security
+- Auth failing **open** on a Convex outage was rejected: an unreachable database is not evidence a key is good. A lookup failure returns 503 rather than authenticating, so a database blip degrades the hub instead of silently disabling its auth.
+- **Every peer shares one key.** `.env` sets no `AGENT_KEY`, so alice, bob, and gitnexus all run with `daemon.ts`'s literal default `"dev-key"`. Validation therefore distinguishes "knows the string dev-key" from "doesn't" — real, but it establishes no *peer identity*, which is what PRD §8.2 namespacing needs. Per-peer keys are a prerequisite for that, not a follow-up to it.
+- **Revocation — the blocking bug is fixed, the guarantee is not yet proven.** This was written up as a known gap: `agents.register` inserted unconditionally, so the live DB held 39 rows for ~5 distinct agents, every historical row kept its own `apiKeyHash`, and `getByKeyHash` matched any of them — a *superseded* key still authenticated. `register` now patches a single canonical row (newest `lastSeen`, `_id` tie-break) and deletes the extras, so superseded hashes stop existing rather than lingering. Two caveats before anyone relies on it: the collapse is capped at 4000 deletes per call and self-heals across subsequent registers, so a large backlog clears over several calls rather than at once; and it has not been verified against the live 39-row database, only in tests. Still do not treat `AUTH_MODE=strict` as a revocation mechanism until that check is run.
+
 ## [v1.6.2] - 2026-07-29
 
 ### Fixed

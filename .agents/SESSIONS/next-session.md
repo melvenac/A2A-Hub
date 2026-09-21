@@ -1,6 +1,44 @@
 # Next Session Handoff
 
-> Written at end of Session 11 (2026-07-29). Relay baton, not a log.
+> Updated at end of Session 13 (2026-08-07). Relay baton, not a log.
+
+## Session 13 addendum — read first
+
+**Session 13 changed no A2A-Hub code.** It was Buzz research plus a blocked VPS deploy.
+`git status` ended byte-identical to how it started. Everything in the Session 11 handoff
+below is therefore **still unstarted and still current** — start there.
+
+Three things carried out of Session 13:
+
+1. **The VPS is unreachable until you make a call on a host key change.** `myvps`
+   (172.86.123.176) now presents **all three** host keys different from `known_hosts`:
+
+   | | stored | now |
+   |---|---|---|
+   | ED25519 | `pyTJRr+XGbkJhFB1YDpqjkBlWc6FtcEUihVhDplUdoM` | `IZGWtPpjtlwqdH7OkLy0gP6F/Fyoxn2uJ3xLfh/R/xM` |
+   | RSA | `IWVX1pAGD+sGmW0+21VT0u44qJXWWA9TRGig4n/lujM` | `c8cOD0Swjf3hM4Aw9WY886jiuwwbX4sJIY45ZtM6q/M` |
+   | ECDSA | `bBsEd0Na2VEabkM62qhjoH+LyingNAKqCxEjNPwBlOs` | `XlwRFehsuS5XvQ+QbceX4HxMiBuXJT3zZIDNZnoZ7pY` |
+
+   All three changing together points at a rebuild or IP reassignment (Aaron has several
+   neighbouring IPs from the same provider in `known_hosts`), but that is indistinguishable
+   from interception client-side. **Nothing was connected to and `known_hosts` was not
+   modified.** Confirm the fingerprint via the provider/serial console, then
+   `ssh-keygen -R 172.86.123.176` and reconnect. This blocks *any* VPS work, not just Buzz.
+
+2. **Buzz is parked** — Aaron's words: "I will look at Buzz another day." Full write-up in
+   `.agents/RESEARCH/buzz-nostr-agent-workspace.md`, including why it can't run locally on
+   Windows and the Caddy-vs-Traefik caveat for the VPS bundle. Clone is at
+   `C:\Users\melve\Projects\buzz` (outside this repo). Open Brain entry id 344.
+
+3. **`Session_12.md` is a stale stub** — dated 2026-07-30, still "In Progress", template
+   placeholders unfilled, and its `.recalled-entries.json` (session `30f8a7ae…`) is still
+   sitting in the repo root. Session 13 logged separately rather than overwrite it. Someone
+   should either fill it in from memory or mark it Abandoned. The stale
+   `.recalled-entries.json` will also mislead the next `/end`'s knowledge-feedback step.
+
+---
+
+> Session 11 handoff follows, unchanged and still current.
 
 > **Priority changed at the end of Session 11 (Aaron's call).** Cross-repo agent-to-agent is now the **primary** use case with its own roadmap phase (PRD v1.2: v2 cross-repo → v3 remote/Brian → v4 platform). Reasoning: same protocol at a shorter distance, and the only version verifiable without a second person in the loop. The catch he agreed with: one machine has one trust domain, so auth, peer identity, and authorization are invisible locally and load-bearing remotely — PRD §8 now names all three as v2 *prerequisites*, not later hardening. Items 2-4 below exist because no cross-repo test can ever fail on them.
 

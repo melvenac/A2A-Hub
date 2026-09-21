@@ -56,9 +56,14 @@ Registered wrapper agents.
 | `agentCard` | `any` | A2A protocol agent card metadata |
 | `lastSeen` | `number` | Last heartbeat timestamp |
 | `status` | `union` | One of: `online`, `offline` |
+| `activeInstanceId` | `string?` | Live daemon process id (ADR-011). Absent = legacy client |
+| `lastHeartbeatAt` | `number?` | Last instance-aware heartbeat. Absent = legacy / stale |
 
 **Indexes:**
 - `by_name` — Lookup agent by name
+- `by_apiKeyHash` — Auth lookup from a presented key hash
+
+`agents.register` upserts on `by_name`: a second register for the same name patches the existing row (`apiKeyHash`, `agentCard`, `lastSeen`, `status: "online"`) instead of inserting a duplicate. After the upsert it collapses extras for that name, keeping **max `lastSeen`** and deleting the rest (bounded per mutation). A register with `instanceId` also sets `activeInstanceId` / `lastHeartbeatAt` (takeover). Clients that omit `instanceId` leave those fields untouched. `GET /a2a/agents/live` reports `rowCount` per name (table rows before HTTP mapping).
 
 ---
 

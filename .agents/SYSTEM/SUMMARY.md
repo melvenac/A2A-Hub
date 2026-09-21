@@ -49,9 +49,11 @@
 - [x] Fix `@`-parsing over-match and the stale turn counter → v1.5.2 (Session 10)
 - [x] Repo-resident peers + `ask-agent.mjs` → v1.6.0 (Session 11, ADR-010)
 - [ ] **On-demand spawn** — hub launches a headless agent when a message arrives for a repo peer that isn't running. This is the piece that retires the file mailbox rather than out-competing it
-- [ ] **Amend PRD §1** — it lists cross-repo/local multi-agent as *secondary* and argues subagents are usually better for same-machine work. Aaron's actual primary use case is cross-repo, and the subagent argument doesn't apply (subagents share context; the value here is the target repo's agent already holding its own state). Aaron's call — not amended unilaterally
+- [x] **Amend PRD §1** — done Session 11 as PRD v1.2 on Aaron's call: cross-repo is the primary use case with its own roadmap phase (v2), ahead of the Brian/remote work; §8 names three trust-domain prerequisites
+- [ ] **Two cheap measurements Aaron asked for first** (Session 11 addendum) — (a) does the repo peer authenticate without `--env-file=.env`, i.e. does it fall back off the metered `ANTHROPIC_API_KEY`; (b) Opus 5 vs Sonnet 5 on one lookup question — cost, latency, citation accuracy. Both are measurements; neither changes a default
+- [ ] **Validate `X-Agent-Key`** (PRD §8.1) / **namespace peer identity by owner** (§8.2) / **"who may ask this peer what"** (§8.3) — the three v2 trust-domain prerequisites
 - [ ] Give repo peers git history — currently blocked on Bash being the trust boundary; a scoped `Bash(git log *)` allow rule is the likely answer
-- [ ] `scripts/register-agent.mjs` — one-command agent registration; the registration path has no automated coverage
+- [x] ~~`scripts/register-agent.mjs`~~ — largely subsumed by `ask-agent.mjs` (same register → session → send → poll flow); keep only if a separate heartbeat/queue smoke test is wanted
 - [ ] Experience dedup (triggerHash upsert — plan in forge-to-atlas.md)
 - [ ] docker-compose local + VPS profiles (one env-gated build)
 - [ ] Structured end-of-conversation flag (replace DONE sentinel); session delete/bookmarks in client
