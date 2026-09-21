@@ -58,6 +58,7 @@ Registered wrapper agents.
 | `status` | `union` | One of: `online`, `offline` |
 | `activeInstanceId` | `string?` | Live daemon process id (ADR-011). Absent = legacy client |
 | `lastHeartbeatAt` | `number?` | Last instance-aware heartbeat. Absent = legacy / stale |
+| `askPolicy` | `{ allow: string[] }?` | Who may ask this peer (ADR-012). Absent = allow all |
 
 **Indexes:**
 - `by_name` — Lookup agent by name

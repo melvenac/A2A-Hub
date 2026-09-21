@@ -55,6 +55,14 @@ export default defineSchema({
     // client (hub-talk / ask-agent) — neither supersedes nor is superseded.
     activeInstanceId: v.optional(v.string()),
     lastHeartbeatAt: v.optional(v.number()),
+    // ADR-012: absent = allow all. Present { allow } is who may ask this peer.
+    // Optional `what` can slot in later without migrating existing rows.
+    askPolicy: v.optional(
+      v.object({
+        allow: v.array(v.string()),
+        what: v.optional(v.any()),
+      })
+    ),
   })
     .index("by_name", ["name"])
     // Auth looks agents up by key hash on every guarded request.

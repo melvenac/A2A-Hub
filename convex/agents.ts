@@ -8,12 +8,20 @@ export const register = mutation({
     apiKeyHash: v.string(),
     agentCard: v.any(),
     instanceId: v.optional(v.string()),
+    askPolicy: v.optional(
+      v.object({
+        allow: v.array(v.string()),
+        what: v.optional(v.any()),
+      })
+    ),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
     const instanceFields = args.instanceId
       ? { activeInstanceId: args.instanceId, lastHeartbeatAt: now }
       : {};
+    const policyFields =
+      args.askPolicy !== undefined ? { askPolicy: args.askPolicy } : {};
 
     const dupes = await ctx.db
       .query("agents")
@@ -28,6 +36,7 @@ export const register = mutation({
         lastSeen: now,
         status: "online",
         ...instanceFields,
+        ...policyFields,
       });
     }
 
@@ -49,6 +58,7 @@ export const register = mutation({
       lastSeen: now,
       status: "online",
       ...instanceFields,
+      ...policyFields,
     });
 
     // Convex caps mutation writes; leftover extras self-heal on the next register.
@@ -104,12 +114,22 @@ export const getByName = query({
   handler: async (
     ctx,
     args
-  ): Promise<{ name: string; apiKeyHash: string } | null> => {
+  ): Promise<{
+    name: string;
+    apiKeyHash: string;
+    askPolicy?: { allow: string[] };
+  } | null> => {
     const agent = await ctx.db
       .query("agents")
       .withIndex("by_name", (q) => q.eq("name", args.name))
       .first();
-    return agent ? { name: agent.name, apiKeyHash: agent.apiKeyHash } : null;
+    return agent
+      ? {
+          name: agent.name,
+          apiKeyHash: agent.apiKeyHash,
+          askPolicy: agent.askPolicy,
+        }
+      : null;
   },
 });
 

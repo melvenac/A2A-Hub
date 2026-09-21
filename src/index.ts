@@ -12,6 +12,7 @@ import { api } from "../convex/_generated/api.js";
 import { createHash } from "crypto";
 import { requireAgentKey, authMode } from "./auth.js";
 import { evaluateNameClaim, INSTANCE_LIVENESS_MS } from "./identity.js";
+import { askDeniedReason, evaluateAsk } from "./ask-policy.js";
 import { DefaultRequestHandler } from "@a2a-js/sdk/server";
 import { jsonRpcHandler, UserBuilder } from "@a2a-js/sdk/server/express";
 import { ConvexTaskStore } from "./task-store.js";
@@ -66,6 +67,23 @@ async function notifyHuman(content: string) {
   } catch (error) {
     console.error("notifyHuman failed:", error);
   }
+}
+
+/** Returns true if the response was already sent (403). Asker is req.agentName. */
+async function denyNamedAsk(
+  req: express.Request,
+  res: express.Response,
+  targetName: string
+): Promise<boolean> {
+  const target = await convex.query(api.agents.getByName, { name: targetName });
+  if (evaluateAsk(target?.askPolicy, req.agentName) === "deny") {
+    res.status(403).json({
+      error: "askPolicy denied",
+      reason: askDeniedReason(req.agentName as string, targetName),
+    });
+    return true;
+  }
+  return false;
 }
 
 // Hub executor
@@ -171,6 +189,7 @@ app.post("/a2a/message/send", async (req, res) => {
 
   // Direct addressing: route to a named agent instead of "whoever's online".
   const to = req.body?.params?.to ?? req.body?.params?.message?.metadata?.to;
+  if (typeof to === "string" && to && (await denyNamedAsk(req, res, to))) return;
 
   const senderName = req.body?.params?.message?.role || "unknown";
   await notifyHuman(`Incoming from ${senderName}${to ? ` → ${to}` : ""}: ${message}`);
@@ -385,6 +404,14 @@ app.post("/a2a/session/:sessionId/message", async (req, res) => {
     const { from, content } = req.body;
     if (!from || !content) {
       return res.status(400).json({ error: "Missing required fields: from, content" });
+    }
+
+    const session = await convex.query(api.sessions.get, {
+      sessionId: req.params.sessionId as any,
+    });
+    for (const p of session?.participants ?? []) {
+      if (p.name === req.agentName) continue;
+      if (await denyNamedAsk(req, res, p.name)) return;
     }
 
     const result = await convex.mutation(api.messages.send, {
