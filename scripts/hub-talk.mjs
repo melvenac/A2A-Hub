@@ -28,6 +28,7 @@ import {
   withTurns,
   writeCursor,
 } from "./hub-cursor.mjs";
+import { selectLobby } from "./hub-rooms.mjs";
 
 const HUB = process.env.HUB_URL || "http://127.0.0.1:4000";
 const AGENT_KEY = process.env.AGENT_KEY || "dev-key";
@@ -71,9 +72,6 @@ async function heartbeat(name) {
   }).catch(() => {});
 }
 
-function participantNames(session) {
-  return (session.participants || []).map((p) => (typeof p === "string" ? p : p.name));
-}
 
 function isNetworkError(error) {
   const msg = String(error?.message || error || "");
@@ -155,12 +153,9 @@ function printTurns(messages) {
   }
 }
 
-async function myLobby() {
+async function myLobby(peer) {
   const { sessions } = await api(`/a2a/peer/${ME}/sessions`);
-  const open = (sessions || [])
-    .filter((s) => s.isActive && s.title === LOBBY && s.turnCount < s.maxTurns)
-    .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
-  return open[0]?._id;
+  return selectLobby(sessions, { me: ME, peer, title: LOBBY });
 }
 
 async function liveIdePeers() {
@@ -184,10 +179,13 @@ async function createLobby(peer) {
 async function resolveSession() {
   if (SESSION) return SESSION;
 
+  // --peer names who this is for, so only the {ME, PEER} room qualifies.
+  // Reusing "the newest open room containing ME" here is what put a kickoff
+  // in the wrong conversation.
+  if (PEER) return (await myLobby(PEER)) ?? (await createLobby(PEER));
+
   const existing = await myLobby();
   if (existing) return existing;
-
-  if (PEER) return createLobby(PEER);
 
   const deadline = JOIN_TIMEOUT_MS > 0 ? Date.now() + JOIN_TIMEOUT_MS : Infinity;
   for (;;) {
