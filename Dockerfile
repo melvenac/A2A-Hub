@@ -9,7 +9,7 @@ COPY tsconfig.json ./
 COPY src/ ./src/
 COPY convex/ ./convex/
 
-RUN npx tsc
+RUN npx tsc && cp -r convex/_generated dist/convex/_generated
 
 FROM node:20-alpine
 
