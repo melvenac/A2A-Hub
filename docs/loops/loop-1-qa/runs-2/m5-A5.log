@@ -1,0 +1,10 @@
+PASS A5.0: distinctive card present BEFORE the --peer call (known positive)
+      observed: {"description":"QA distinctive card for A5","kind":"qa-distinct","name":"qa-a5b-mudvwp9d"}
+FAIL A5.2: --peer (no room yet): exit 0, B's whole row + peer row + online count unchanged
+      observed: {"code":0,"changed":["agent","online"],"after":{"description":"Coding-session peer qa-a5b-mudvwp9d","kind":"ide-session","name":"qa-a5b-mudvwp9d"}}
+FAIL A5.3: --peer with the room existing: same room reused, B unchanged
+      observed: {"code":0,"room1":"k573v54erp579w9a0tgv2vykqx8ezf49","room2":"k573v54erp579w9a0tgv2vykqx8ezf49","abRooms":1}
+FAIL A5.4: --peer <unregistered>: exit 1, stderr names --as and --session, nothing created
+      observed: {"code":0,"err":"[hub-talk] sent turn 1","before":{"agents":0,"peers":0,"sessions":14,"sessionPeers":30},"after":{"agents":1,"peers":1,"sessions":15,"sessionPeers":32}}
+
+A5: 1/4 pass; failed: A5.2, A5.3, A5.4

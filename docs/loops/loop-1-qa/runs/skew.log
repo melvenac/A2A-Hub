@@ -1,0 +1,28 @@
+PASS A4.ident: hub identities by behaviour: /reads route absent on old apps, present on new apps
+      observed: {"absent":{"newnew":false,"oldApp_newCvx":true,"old":true,"newApp_oldCvx":false},"status":{"newnew":500,"oldApp_newCvx":404,"old":404,"newApp_oldCvx":500}}
+PASS A4.base: baseline sanity (old client, old hub): codes say0 wait0 inbox0 inbox0 timeout2 peer-say0 peer-wait0 usage1
+      observed: say=0 wait=0 inbox-b=0 inbox-a=0 wait-timeout=2 peer-say=0 peer-wait=0 usage=1
+PASS A4.a-bothOld: new hub-talk == old hub-talk on this hub: stdout + exit codes identical; stderr differs only by the stated receipt lines
+      observed: {"codes":"say=0 wait=0 inbox-b=0 inbox-a=0 wait-timeout=2 peer-say=0 peer-wait=0 usage=1","diffs":[],"extraLines":["wait: [hub-talk] read receipt not recorded (404: hub has no read receipts)","inbox-b: [hub-talk] read receipt not recorded (404: hub has no read receipts)","inbox-b: [hub-talk] read receipts unavailable from this hub (404: hub has no read receipts)","inbox-a: [hub-talk] read receipt not recorded (404: hub has no read receipts)","inbox-a: [hub-talk] read receipts unavailable from this hub (404: hub has no read receipts)","wait-timeout: [hub-talk] read receipts unavailable from this hub (404: hub has no read receipts)"]}
+PASS A4.b-appNew-cvxOld: new hub-talk == old hub-talk on this hub: stdout + exit codes identical; stderr differs only by the stated receipt lines
+      observed: {"codes":"say=0 wait=0 inbox-b=0 inbox-a=0 wait-timeout=2 peer-say=0 peer-wait=0 usage=1","diffs":[],"extraLines":["wait: [hub-talk] read receipt not recorded (500 [Request ID: 130bac331a2c45c2] Server Error)","inbox-b: [hub-talk] read receipt not recorded (500 [Request ID: 980eae77389b38f4] Server Error)","inbox-b: [hub-talk] read receipts unavailable from this hub (500 [Request ID: 6d88914cf23bbf72] Server Error)","inbox-a: [hub-talk] read receipt not recorded (500 [Request ID: 40a88a97f1c2841c] Server Error)","inbox-a: [hub-talk] read receipts unavailable from this hub (500 [Request ID: 86032fe74a5353e9] Server Error)","wait-timeout: [hub-talk] read receipts unavailable from this hub (500 [Request ID: 7e6f09b8a700fe09] Server Error)"]}
+PASS A4.c-appOld-cvxNew: new hub-talk == old hub-talk on this hub: stdout + exit codes identical; stderr differs only by the stated receipt lines
+      observed: {"codes":"say=0 wait=0 inbox-b=0 inbox-a=0 wait-timeout=2 peer-say=0 peer-wait=0 usage=1","diffs":[],"extraLines":["wait: [hub-talk] read receipt not recorded (404: hub has no read receipts)","inbox-b: [hub-talk] read receipt not recorded (404: hub has no read receipts)","inbox-b: [hub-talk] read receipts unavailable from this hub (404: hub has no read receipts)","inbox-a: [hub-talk] read receipt not recorded (404: hub has no read receipts)","inbox-a: [hub-talk] read receipts unavailable from this hub (404: hub has no read receipts)","wait-timeout: [hub-talk] read receipts unavailable from this hub (404: hub has no read receipts)"]}
+PASS A4.d-oldClient-newHub: old hub-talk on candidate hub == old hub-talk on old hub (stdout, stderr, codes)
+      observed: {"codes":"say=0 wait=0 inbox-b=0 inbox-a=0 wait-timeout=2 peer-say=0 peer-wait=0 usage=1","diffs":[]}
+PASS A4.d-L4: old reader who waited + inboxed shows never-read (lastRead null) on the new hub (L4)
+      observed: missing
+PASS A4.e-read-drop: stdout + codes == pass-through; stderr carries the receipt line; <= +6 s per call; a lost mark leaves B unread (never a false read)
+      observed: {"codes":"say=0 wait=0 inbox-b=0 inbox-a=0 wait-timeout=2 peer-say=0 peer-wait=0 usage=1","diffs":[],"stderrLine":true,"slowSteps":[],"bLastRead":null}
+PASS A4.e-read-404: stdout + codes == pass-through; stderr carries the receipt line; <= +6 s per call; a lost mark leaves B unread (never a false read)
+      observed: {"codes":"say=0 wait=0 inbox-b=0 inbox-a=0 wait-timeout=2 peer-say=0 peer-wait=0 usage=1","diffs":[],"stderrLine":true,"slowSteps":[],"bLastRead":null}
+PASS A4.e-read-500: stdout + codes == pass-through; stderr carries the receipt line; <= +6 s per call; a lost mark leaves B unread (never a false read)
+      observed: {"codes":"say=0 wait=0 inbox-b=0 inbox-a=0 wait-timeout=2 peer-say=0 peer-wait=0 usage=1","diffs":[],"stderrLine":true,"slowSteps":[],"bLastRead":null}
+PASS A4.e-read-delay30s: stdout + codes == pass-through; stderr carries the receipt line; <= +6 s per call; a lost mark leaves B unread (never a false read)
+      observed: {"codes":"say=0 wait=0 inbox-b=0 inbox-a=0 wait-timeout=2 peer-say=0 peer-wait=0 usage=1","diffs":[],"stderrLine":true,"slowSteps":[],"bLastRead":null}
+PASS A4.f-reads-404: stdout + codes == pass-through; stderr carries the receipt line; <= +6 s per call; a lost mark leaves B unread (never a false read)
+      observed: {"codes":"say=0 wait=0 inbox-b=0 inbox-a=0 wait-timeout=2 peer-say=0 peer-wait=0 usage=1","diffs":[],"stderrLine":true,"slowSteps":[],"bLastRead":{"at":1790153665867,"turn":1,"via":"wait"}}
+PASS A4.f-reads-500: stdout + codes == pass-through; stderr carries the receipt line; <= +6 s per call; a lost mark leaves B unread (never a false read)
+      observed: {"codes":"say=0 wait=0 inbox-b=0 inbox-a=0 wait-timeout=2 peer-say=0 peer-wait=0 usage=1","diffs":[],"stderrLine":true,"slowSteps":[],"bLastRead":{"at":1790153674017,"turn":1,"via":"wait"}}
+
+A4: 13/13 pass; failed: none

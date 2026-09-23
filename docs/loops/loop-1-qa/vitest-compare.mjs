@@ -1,0 +1,16 @@
+import fs from "node:fs";
+const S = process.argv[2];
+const load = (f) => JSON.parse(fs.readFileSync(`${S}/${f}`, "utf8"));
+const flat = (j) => j.testResults.flatMap((f) => f.assertionResults.map((a) => ({ id: f.name.replaceAll("\\", "/").replace(/.*\/tests\//, "tests/") + " :: " + a.fullName, status: a.status, ms: a.duration, msg: (a.failureMessages || []).join(" ").split("\n")[0].slice(0, 160) })));
+const c = flat(load("vitest-cand.json")), b = flat(load("vitest-base.json"));
+const cnt = (a) => a.reduce((m, t) => ((m[t.status] = (m[t.status] || 0) + 1), m), {});
+console.log("candidate", c.length, JSON.stringify(cnt(c)), "| baseline", b.length, JSON.stringify(cnt(b)));
+const cm = new Map(c.map((t) => [t.id, t.status]));
+const missing = b.filter((t) => !cm.has(t.id)).map((t) => t.id);
+const notPassing = b.filter((t) => cm.has(t.id) && cm.get(t.id) !== "passed").map((t) => `${t.id} -> ${cm.get(t.id)}`);
+console.log("baseline tests missing from candidate:", missing.length, JSON.stringify(missing));
+console.log("baseline tests not passing in candidate:", notPassing.length, JSON.stringify(notPassing));
+console.log("candidate non-passed:", JSON.stringify(c.filter((t) => t.status !== "passed").map((t) => `${t.id} ${t.status}`)));
+console.log("baseline non-passed:", JSON.stringify(b.filter((t) => t.status !== "passed").map((t) => `${t.id} ${t.status} ${t.ms}ms ${t.msg}`)));
+const skips = c.filter((t) => ["skipped", "pending", "todo"].includes(t.status)).length;
+console.log("candidate skipped/todo:", skips, "| new tests in candidate:", c.length - b.length + missing.length);

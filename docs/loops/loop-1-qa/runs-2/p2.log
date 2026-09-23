@@ -1,0 +1,20 @@
+{
+ "at": "2026-09-23T09:10:06.568Z",
+ "hub": "http://127.0.0.1:4410",
+ "convex": "http://127.0.0.1:3410",
+ "health": "200 OK",
+ "before": {
+  "agents": 0,
+  "sessions": 0,
+  "probe": null
+ },
+ "register": 200,
+ "after": {
+  "agents": [
+   "qa-probe"
+  ],
+  "probe": "qa-probe"
+ },
+ "hubSessionCount": 1
+}
+P2 PASS: http://127.0.0.1:3410 empty before; probe present there after register via http://127.0.0.1:4410
