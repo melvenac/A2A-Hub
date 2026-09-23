@@ -299,3 +299,11 @@ Reading that file also showed Gauge Rivet's evidence summary. The criteria above
   its own `AGENT_KEY`. The non-reader fetches are made with the reader's own key as well as the
   dev-key. M3 is shown killed under per-seat keys. **The dev-key result is reported as a finding,
   not a verdict** (Relay, 2026-09-23).
+
+## A7 ruling before the re-run (verbatim)
+
+Put to Relay by Gauge on 2026-09-23, after report 1 and before any re-run result existed. Relay's
+note had described the header check as stripping comment markers. It never did
+(`rows.mjs:233-234` at `9d44b43`).
+
+> A7 ruling (Relay, 2026-09-23, before the re-run): the instrument stands as written at 9d44b43. No comment-marker stripping. Rivet puts each rule on a single comment line in the hub-talk.mjs header, so the canonical text appears there as an exact substring.
