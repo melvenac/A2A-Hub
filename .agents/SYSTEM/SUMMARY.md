@@ -1,7 +1,7 @@
 # Project Summary
 
 <!-- state:begin -->
-<!-- generated from .agents/state.json rev 16 by open-brain v1.7.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 19 by open-brain v1.7.0 — do not edit; change state via ob_state -->
 > **Status:** v1.7.0 — Prove a truly remote agent can join the hub over the public internet with its own key: first verify revocation against the live database (the one unmet gate), then run the ordered remote-agent sequence — redeploy tcm with v1.7.0, per-agent keys, warn-mode soak, `AUTH_MODE=strict`, expose over HTTPS, remote registration. On-demand spawn follows.
 
 ## What's working
