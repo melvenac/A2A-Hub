@@ -1,0 +1,6 @@
+setLeftAt: 0 "jx713048j158z877dyzaabrtvx8ey9rz"
+before leave  b: {"lastRead":null,"name":"qa-q2b-mudvfwti","unread":[{"from":"qa-q2a-mudvfwti","sentAt":1790153951556,"turn":1}]}
+after leave   b (left): {"lastRead":null,"name":"qa-q2b-mudvfwti","unread":[{"from":"qa-q2a-mudvfwti","sentAt":1790153951556,"turn":1},{"from":"qa-q2a-mudvfwti","sentAt":1790153952547,"turn":2}]}
+after leave   c (present, never read): {"lastRead":null,"name":"qa-q2c-mudvfwti","unread":[{"from":"qa-q2a-mudvfwti","sentAt":1790153951556,"turn":1},{"from":"qa-q2a-mudvfwti","sentAt":1790153952547,"turn":2}]}
+left member distinguishable from present-unread member in /reads: NO (same fields, same values shape)
+markRead for left member b: 200 {"advanced":true,"ok":true,"readThroughTurn":2} -> b.lastRead now {"at":1790153952639,"turn":2,"via":"wait"}

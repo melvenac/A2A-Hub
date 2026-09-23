@@ -1,0 +1,9 @@
+PASS M3.devkey: FINDING (no verdict): under the shared dev-key, does the mutant's mark reach B?
+      observed: {"status":200,"before":null,"after":null}
+      finding: dev-key mutant SURVIVES (B unmarked; the mark went to a non-member and 404'd silently)
+PASS M3.fires: mutant fires under B's own key: B marked by a plain GET (A3 would fail -> mutant killed)
+      observed: {"status":200,"before":null,"after":{"at":1790153375756,"turn":1,"via":"wait"}}
+PASS M3.control: same GET with the reader's own key on the candidate: reader stays unmarked
+      observed: null
+
+M3: 3/3

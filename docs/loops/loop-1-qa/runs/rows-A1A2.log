@@ -1,0 +1,70 @@
+PASS A1.1a: sender's --say exits 0 and reports turn 1
+      observed: {"code":0,"err":"[hub-talk] sent turn 1"}
+PASS A1.1b: B never read: lastRead is null (not turn 0)
+      observed: null
+PASS A1.1c: B.unread has turn 1 with sentAt == createdAt from /messages
+      observed: {"unread":[{"from":"qa-a1a-muduzuch","sentAt":1790153201892,"turn":1}],"createdAt":1790153201892}
+PASS A1.1d: C likewise: null, turn 1 unread since createdAt
+      observed: {"lastRead":null,"name":"qa-a1c-muduzuch","unread":[{"from":"qa-a1a-muduzuch","sentAt":1790153201892,"turn":1}]}
+PASS A1.1e: sender A: own turn not unread; A's mark still null after --say
+      observed: {"lastRead":null,"name":"qa-a1a-muduzuch","unread":[]}
+PASS A1.2: B --wait exits 0 and prints turn 1
+      observed: {"code":0,"out":"--- qa-a1a-muduzuch ---\nA1 turn one"}
+PASS A1.3a: after B --wait: B.lastRead = {turn 1, via wait, at >= createdAt}
+      observed: {"at":1790153202375,"turn":1,"via":"wait"}
+PASS A1.3b: turn 1 gone from B.unread (was present before)
+      observed: []
+PASS A1.3c: C unchanged by B's mark
+      observed: {"lastRead":null,"name":"qa-a1c-muduzuch","unread":[{"from":"qa-a1a-muduzuch","sentAt":1790153201892,"turn":1}]}
+PASS A1.4: read-through-1 vs never-read distinguishable by value
+      observed: {"b":[1,[2]],"c":[null,[1,2]]}
+PASS A1.5a: every unread {turn, from, sentAt} matches /messages
+      observed: {"checked":7,"mismatches":[]}
+PASS A1.5b: no participant has its own turn unread
+      observed: []
+PASS A1.5c: turnCount equals number of messages
+      observed: {"turnCount":4,"messages":4}
+PASS A2.1: --inbox exits 0, prints whole room, stderr 'unread after turn 1 (cursor unchanged)'
+      observed: {"code":0,"cursor":"1","err":["[hub-talk] 3 turns, 2 unread after turn 1 (cursor unchanged)"]}
+PASS A2.2: B.lastRead = {turn 3, via inbox}
+      observed: {"at":1790153205644,"turn":3,"via":"inbox"}
+PASS A2.3a: cursor file byte-identical across --inbox
+      observed: {"before":"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b","after":"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"}
+PASS A2.4a: next --wait replays turns 2-3
+      observed: {"code":0,"out":"--- qa-a2a-muduzuch ---\nA2 t2\n--- qa-a2a-muduzuch ---\nA2 t3"}
+PASS A2.4b: mark unchanged by the replay (monotonic; still inbox, same at)
+      observed: {"before":{"at":1790153205644,"turn":3,"via":"inbox"},"after":{"at":1790153205644,"turn":3,"via":"inbox"}}
+PASS A2.3b: absent cursor stays absent across --inbox, mark still recorded
+      observed: {"before":"absent","after":"absent","mark":{"at":1790153207135,"turn":1,"via":"inbox"}}
+PASS A2.5-inbox: inbox: injected turn 2 landed after print; mark = 1, turn 2 unread
+      observed: {"code":0,"printedInjected":false,"turns":2,"mark":{"at":1790153208271,"turn":1,"via":"inbox"},"unread":[2]}
+PASS A2.5-wait: wait: injected turn 2 landed after print; mark = 1, turn 2 unread
+      observed: {"code":0,"printedInjected":false,"turns":2,"mark":{"at":1790153209531,"turn":1,"via":"wait"},"unread":[2]}
+PASS A2.6a: valid forward mark: 200 and the mark moves to 2
+      observed: {"status":200,"body":{"advanced":true,"ok":true,"readThroughTurn":2},"mark":{"at":1790153211091,"turn":2,"via":"wait"}}
+PASS A2.6-lower: lower: expected status, mark unchanged
+      observed: {"status":200,"body":{"advanced":false,"ok":true,"readThroughTurn":2},"mark":2}
+PASS A2.6-past-end: past-end: expected status, mark unchanged
+      observed: {"status":400,"body":{"error":"throughTurn 4 is past the room's last turn (3)"},"mark":2}
+PASS A2.6-zero: zero: expected status, mark unchanged
+      observed: {"status":400,"body":{"error":"throughTurn must be a positive integer"},"mark":2}
+PASS A2.6-negative: negative: expected status, mark unchanged
+      observed: {"status":400,"body":{"error":"throughTurn must be a positive integer"},"mark":2}
+PASS A2.6-non-integer: non-integer: expected status, mark unchanged
+      observed: {"status":400,"body":{"error":"throughTurn must be a positive integer"},"mark":2}
+PASS A2.6-string-num: string-num: expected status, mark unchanged
+      observed: {"status":400,"body":{"error":"throughTurn must be a positive integer"},"mark":2}
+PASS A2.6-bad-via: bad-via: expected status, mark unchanged
+      observed: {"status":400,"body":{"error":"via must be \"inbox\" or \"wait\""},"mark":2}
+PASS A2.6-no-reader: no-reader: expected status, mark unchanged
+      observed: {"status":400,"body":{"error":"Missing required field: reader"},"mark":2}
+PASS A2.6-non-member: non-member: expected status, mark unchanged
+      observed: {"status":404,"body":{"error":"qa-a2x-muduzuch is not a participant of this session"},"mark":2}
+PASS A2.6-unregistered: unregistered: expected status, mark unchanged
+      observed: {"status":404,"body":{"error":"qa-nobody-muduzuch is not a participant of this session"},"mark":2}
+FAIL A2.6-unknown-session-other-table-id: unknown-session-other-table-id: POST /read 4xx (criterion), mark unchanged
+      observed: {"post":500,"postErr":"[Request ID: 93a2fde4ea8dbeb6] Server Error","reads":500}
+FAIL A2.6-unknown-session-garbage: unknown-session-garbage: POST /read 4xx (criterion), mark unchanged
+      observed: {"post":500,"postErr":"[Request ID: 5296c69bc2eeea96] Server Error","reads":500}
+
+A1,A2: 32/34 pass; failed: A2.6-unknown-session-other-table-id, A2.6-unknown-session-garbage
