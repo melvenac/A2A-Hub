@@ -11,8 +11,10 @@
 import type * as a2aTasks from "../a2aTasks.js";
 import type * as agents from "../agents.js";
 import type * as experiences from "../experiences.js";
+import type * as instanceLogic from "../instanceLogic.js";
 import type * as messages from "../messages.js";
 import type * as peers from "../peers.js";
+import type * as readLogic from "../readLogic.js";
 import type * as repoFixes from "../repoFixes.js";
 import type * as sessions from "../sessions.js";
 import type * as tasks from "../tasks.js";
@@ -27,8 +29,10 @@ declare const fullApi: ApiFromModules<{
   a2aTasks: typeof a2aTasks;
   agents: typeof agents;
   experiences: typeof experiences;
+  instanceLogic: typeof instanceLogic;
   messages: typeof messages;
   peers: typeof peers;
+  readLogic: typeof readLogic;
   repoFixes: typeof repoFixes;
   sessions: typeof sessions;
   tasks: typeof tasks;

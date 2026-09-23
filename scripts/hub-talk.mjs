@@ -241,7 +241,10 @@ async function receiptCall(path, init) {
 }
 
 function receiptFailure(r) {
-  const detail = typeof r.body?.error === "string" ? r.body.error : "";
+  // One line: a hub whose Convex functions lag its app returns a multi-line
+  // "[Request ID: …] Server Error" that would split the report.
+  const detail =
+    typeof r.body?.error === "string" ? r.body.error.split(/\r?\n/)[0].trim() : "";
   if (r.status === 404 && !detail) return "404: hub has no read receipts";
   return r.status ? `${r.status}${detail ? ` ${detail}` : ""}` : detail;
 }

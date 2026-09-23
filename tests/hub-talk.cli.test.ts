@@ -86,7 +86,10 @@ afterEach(() => {
   for (const s of sessions.splice(0)) rmSync(cursorPath(s), { force: true });
 });
 
-describe("hub-talk cli", () => {
+// Each case spawns node and some wait out a 3s --wait-timeout: ~4.2s at
+// 2eb7928 against vitest's 5s default, which flaked under load. Sized for
+// the work, not the default.
+describe("hub-talk cli", { timeout: 20_000 }, () => {
   it("--inbox reports without consuming: the cursor is untouched", async () => {
     const session = newSession();
     room = [{ from: PEER, content: "a peer turn", createdAt: 1 }];

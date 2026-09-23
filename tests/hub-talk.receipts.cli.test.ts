@@ -78,7 +78,10 @@ beforeAll(async () => {
 
       if (req.method === "POST" && url.pathname.endsWith("/read")) {
         if (readStatus === 404) return send(404, {}); // a hub without the route
-        if (readStatus !== 200) return send(readStatus, { error: "Could not find function" });
+        // Shaped like a hub whose Convex functions lag its app: multi-line.
+        if (readStatus !== 200) {
+          return send(readStatus, { error: "[Request ID: abc123] Server Error\nUncaught Error: Could not find function" });
+        }
         return send(200, { ok: true, readThroughTurn: body?.throughTurn, advanced: true });
       }
       if (req.method === "GET" && url.pathname.endsWith("/reads")) {
@@ -131,7 +134,9 @@ afterEach(() => {
   rmSync(cursorPath(LOBBY_ID), { force: true });
 });
 
-describe("hub-talk read receipts", () => {
+// Spawns node per call and some cases wait out a 3s --wait-timeout (see the
+// timeout note in hub-talk.cli.test.ts).
+describe("hub-talk read receipts", { timeout: 20_000 }, () => {
   it("--wait marks what it printed, via wait, and only after printing it", async () => {
     const session = newSession();
     room = [
@@ -203,6 +208,10 @@ describe("hub-talk read receipts", () => {
       const inbox = await run(["--as", ME, "--session", session, "--inbox"]);
       expect(inbox.code).toBe(0);
       expect(inbox.stderr).toContain("read receipt not recorded");
+      // Each report is one whole line, closed on the line it opened on.
+      for (const line of inbox.stderr.split(/\r?\n/).filter((l) => l.includes("receipt"))) {
+        expect(line.trimEnd().endsWith(")")).toBe(true);
+      }
 
       const timedOut = await run(["--as", ME, "--session", session, "--wait", "--wait-timeout", "3"]);
       expect(timedOut.code).toBe(2);
@@ -250,7 +259,7 @@ describe("hub-talk read receipts", () => {
   });
 });
 
-describe("hub-talk --peer (T-051)", () => {
+describe("hub-talk --peer (T-051)", { timeout: 20_000 }, () => {
   it("never registers the named peer, only the caller", async () => {
     lobbyExists = true;
     const result = await run(["--as", ME, "--peer", PEER, "--say", "hi"]);
