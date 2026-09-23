@@ -8,6 +8,7 @@ landed when this was written. Any departure from them is recorded here once they
 |---|---|---|
 | QA Convex | `:3410` (site `:3411`) | `CONVEX_AGENT_MODE=anonymous node node_modules/convex/bin/main.js dev --local --local-cloud-port 3410 --local-site-port 3411 --typecheck disable --codegen disable` |
 | QA hub | `:4410` | `PORT=4410 CONVEX_URL=http://127.0.0.1:3410 node --env-file=.env --import tsx src/index.ts` |
+| Fault proxy X | `:4420` → `:4410` | `QA_PROXY_PORT=4420 QA_UPSTREAM=http://127.0.0.1:4410 node docs/loops/loop-1-qa/fault-proxy.mjs` |
 
 ## Order, and the checks between steps
 
@@ -42,3 +43,11 @@ landed when this was written. Any departure from them is recorded here once they
   entry of Gauge's: `:4200` was not in the port check.
 - **08:34Z, P2 PASS** on `:4410` → `:3410`. The hub's listener PID was confirmed as this tree's
   process first.
+- **Instruments validated, 2026-09-23, on master code (`ce2fdca`):** `selftest.mjs` passed 9/9
+  against `:4420` → `:4410` → `:3410`:
+  - `hub-talk` exits 0 on a turn and 2 on a timeout;
+  - cursor files land in `QA_TMP`, and none in the real temp dir;
+  - `--inbox` through the proxy is byte-identical to direct;
+  - `reads=500` gives 500 through the proxy while direct gives 404;
+  - `drop` destroys the socket, and `delay:2000` holds it for 2053 ms;
+  - `inject` lands exactly one new turn.
