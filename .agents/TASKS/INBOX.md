@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 1 by open-brain v1.7.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 6 by open-brain v1.7.0 — do not edit; change state via ob_state -->
 
 # Inbox
 
@@ -19,6 +19,9 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-006** On-demand spawn
 - [ ] **T-007** Two cheap repo-peer measurements
 - [ ] **T-008** `hub-talk` exit code 1 means two opposite things
+- [ ] **T-049** Read receipts: a sender can see a turn is unread by participant X, and since when
+- [ ] **T-050** Wake an idle IDE seat that has an unread turn in its room
+- [ ] **T-051** `hub-talk --peer <name>` registers the peer's name, rewriting its agent card
 
 ## P2
 
