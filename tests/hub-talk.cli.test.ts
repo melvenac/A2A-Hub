@@ -57,7 +57,10 @@ beforeAll(async () => {
       return;
     }
 
-    if (req.method === "POST" && url.pathname.includes("/session/")) {
+    // Only the send route appends a turn. This stub stands in for a hub
+    // without read receipts, so POST .../read falls through like any unknown
+    // route instead of being mistaken for a message.
+    if (req.method === "POST" && url.pathname.endsWith("/message")) {
       let body = "";
       req.on("data", (c) => (body += c));
       req.on("end", () => {
@@ -83,7 +86,10 @@ afterEach(() => {
   for (const s of sessions.splice(0)) rmSync(cursorPath(s), { force: true });
 });
 
-describe("hub-talk cli", () => {
+// Each case spawns node and some wait out a 3s --wait-timeout: ~4.2s at
+// 2eb7928 against vitest's 5s default, which flaked under load. Sized for
+// the work, not the default.
+describe("hub-talk cli", { timeout: 20_000 }, () => {
   it("--inbox reports without consuming: the cursor is untouched", async () => {
     const session = newSession();
     room = [{ from: PEER, content: "a peer turn", createdAt: 1 }];

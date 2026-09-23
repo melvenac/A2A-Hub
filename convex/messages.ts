@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { numberTurns, validateMark } from "./readLogic.js";
 
 // Send a message into a session. Enforces the turn cap so two autonomous
 // agents converge instead of looping forever. Convex mutations are
@@ -59,7 +60,7 @@ export const list = query({
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
       .collect();
 
-    const numbered = all.map((m, i) => ({ message: m, turn: i + 1 }));
+    const numbered = numberTurns(all);
     const filtered = numbered.filter(
       ({ message, turn }) =>
         (args.after === undefined || turn > args.after) &&
@@ -78,5 +79,65 @@ export const list = query({
       });
     }
     return result;
+  },
+});
+
+// Record that `reader` has been shown every turn up to `throughTurn` (T-049).
+//
+// The ONLY writer of read state. hub-talk calls it after --inbox or --wait has
+// printed turns; nothing that merely fetches (daemon, web client, a plain GET
+// of messages) calls it, and `list` above is a query, which cannot write.
+// Monotonic: an older mark never moves the stored one backwards.
+export const markRead = mutation({
+  args: {
+    // A string, not v.id("sessions"): the validator throws before the handler
+    // runs, so a bad id surfaced as a 500 instead of the 400/404 below.
+    sessionId: v.string(),
+    reader: v.string(),
+    throughTurn: v.number(),
+    via: v.union(v.literal("inbox"), v.literal("wait")),
+  },
+  handler: async (ctx, args) => {
+    const sessionId = ctx.db.normalizeId("sessions", args.sessionId);
+    if (!sessionId) {
+      return { ok: false as const, status: 400, reason: "not a session id" };
+    }
+    const session = await ctx.db.get(sessionId);
+    if (!session) {
+      return { ok: false as const, status: 404, reason: "session not found" };
+    }
+    const invalid = validateMark(args.throughTurn, session.turnCount);
+    if (invalid) return { ok: false as const, status: 400, reason: invalid };
+
+    const peer = await ctx.db
+      .query("peers")
+      .withIndex("by_name", (q) => q.eq("name", args.reader))
+      .first();
+    const membership = peer
+      ? (
+          await ctx.db
+            .query("sessionPeers")
+            .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+            .collect()
+        ).find((m) => m.peerId === peer._id)
+      : undefined;
+    if (!membership) {
+      return {
+        ok: false as const,
+        status: 404,
+        reason: `${args.reader} is not a participant of this session`,
+      };
+    }
+
+    const stored = membership.readThroughTurn;
+    if (stored !== undefined && stored >= args.throughTurn) {
+      return { ok: true as const, readThroughTurn: stored, advanced: false };
+    }
+    await ctx.db.patch(membership._id, {
+      readThroughTurn: args.throughTurn,
+      readAt: Date.now(),
+      readVia: args.via,
+    });
+    return { ok: true as const, readThroughTurn: args.throughTurn, advanced: true };
   },
 });

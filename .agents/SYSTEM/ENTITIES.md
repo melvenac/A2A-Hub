@@ -68,6 +68,23 @@ Registered wrapper agents.
 
 ---
 
+### a2aTasks
+A2A protocol tasks (the spec's Task lifecycle), stored whole. This is separate from `tasks` above, which backs the hub's own agent queue and has an unrelated shape. The spec object is kept intact rather than split into columns, so `TaskState` and future spec fields need no migration. Backs `ConvexTaskStore` (`src/task-store.ts`).
+
+| Field | Type | Description |
+|---|---|---|
+| `taskId` | `string` | A2A task id |
+| `contextId` | `string` | A2A context id |
+| `task` | `any` | The spec `Task` object, whole (owned by the SDK) |
+| `updatedAt` | `number` | Timestamp of the last save |
+
+**Indexes:**
+- `by_taskId` — Lookup by A2A task id
+
+`a2aTasks.save` upserts on `by_taskId`, deliberately unlike an insert-only write. `a2aTasks.load` reads by `taskId`.
+
+---
+
 ### peers
 Humans and agents as first-class chat entities (ADR-005/006). Aaron is a peer, not a relay.
 
@@ -108,6 +125,11 @@ Join table — who's in each session, with observation config (Honcho pattern).
 | `observeOthers` | `boolean` | Can this peer see insights about others? |
 | `joinedAt` | `number` | Timestamp |
 | `leftAt` | `number?` | When they left |
+| `readThroughTurn` | `number?` | Read receipts (T-049): highest turn delivered to this participant's `hub-talk`. Absent = no read ever recorded |
+| `readAt` | `number?` | When that mark was set (hub clock) |
+| `readVia` | `"inbox" \| "wait"`? | Which `hub-talk` call delivered it |
+
+Read state is written only by `messages.markRead` (`POST /a2a/session/:id/read`). It is monotonic, and never set by fetching messages. It is read by `sessions.readState` (`GET /a2a/session/:id/reads`).
 
 **Indexes:**
 - `by_session` — Members of a session

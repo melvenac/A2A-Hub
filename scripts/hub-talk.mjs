@@ -19,7 +19,37 @@
  *
  * --session / --peer are optional. With neither, this registers as an
  * ide-session, heartbeats, and joins the newest cursor-to-cursor lobby or
- * the other live IDE peer (no pasted ids).
+ * the other live IDE peer (no pasted ids). --peer names who to talk to; it
+ * never registers that peer. A peer that has never registered on the hub has
+ * no {me, peer} room and cannot be put in a new one, so that exits 1.
+ *
+ * Read receipts (T-049). --inbox marks the whole room read, --wait marks the
+ * turns it prints. The mark is posted after printing and only ever moves
+ * forward. --inbox also lists your own turns someone has not been shown, and
+ * so does --wait when it times out.
+ *
+ * The rule (docs/loops/loop-1-ruling-1.md):
+ * `hub-talk` marks a turn read when it prints it. Run `--inbox` or `--wait` only where its output reaches the agent. A process whose output the agent never sees must not run them.
+ * Never run `--wait` or `--inbox` just to advance past turns; every run's output must be read.
+ * A background --wait whose output goes to a file the agent reads later is
+ * within the rule; the gap before it is read is L1.
+ *
+ * Named limits:
+ *   L1  delivery, not reading: a mark means the turn was printed by a
+ *       hub-talk call, not that the model read it.
+ *   L2  identity: under the shared dev-key any seat can mark turns read as
+ *       any participant, so "unread by X" means unread by whoever uses the
+ *       name X (until per-agent keys, T-003).
+ *   L3  foreground cannot be proven: the hub cannot tell a hub-talk whose
+ *       output reaches the agent from one whose output is thrown away. The
+ *       rule above is the only guard.
+ *   L4  a reader on an older hub-talk never marks, so it shows as "never
+ *       read this room" however much it has read.
+ *   L5  a mark that fails to post (hub down, timeout, a crash after printing)
+ *       leaves a delivered turn showing unread. Reported on stderr.
+ * Receipts never change an exit code. A hub without them (older, or its app
+ * deployed ahead of its Convex functions) says so on stderr and works as
+ * before.
  */
 import {
   maxTurn,
@@ -28,6 +58,7 @@ import {
   withTurns,
   writeCursor,
 } from "./hub-cursor.mjs";
+import { unreadOwnLines } from "./hub-receipts.mjs";
 import { selectLobby } from "./hub-rooms.mjs";
 
 const HUB = process.env.HUB_URL || "http://127.0.0.1:4000";
@@ -170,15 +201,80 @@ async function liveIdePeers() {
 }
 
 async function createLobby(peer) {
-  const { sessionId } = await api("/a2a/session", {
+  try {
+    const { sessionId } = await api("/a2a/session", {
+      method: "POST",
+      body: JSON.stringify({
+        title: LOBBY,
+        participants: [ME, peer],
+        maxTurns: MAX_TURNS,
+      }),
+    });
+    return sessionId;
+  } catch (error) {
+    // --peer does not register the peer (that rewrote its agent card), so a
+    // name the hub has never seen fails here. Registering it on its behalf
+    // would claim the name with this seat's key, and a typo would open a room
+    // nobody ever reads. Fail closed and say how to fix it.
+    if (/Unknown peer/.test(String(error?.message || ""))) {
+      throw new Error(
+        `peer ${peer} is not registered on this hub — it must run hub-talk --as ${peer} once, or pass --session <id>`,
+      );
+    }
+    throw error;
+  }
+}
+
+// Receipts are off the hot path: one attempt, bounded, never thrown, never
+// allowed to change what the call returns.
+async function receiptCall(path, init) {
+  try {
+    const res = await fetch(`${HUB}${path}`, {
+      headers: hdrs,
+      signal: AbortSignal.timeout(5000),
+      ...init,
+    });
+    const text = await res.text();
+    let body = {};
+    try {
+      body = text ? JSON.parse(text) : {};
+    } catch {}
+    return { ok: res.ok, status: res.status, body };
+  } catch (error) {
+    return { ok: false, status: 0, body: { error: String(error?.message || error) } };
+  }
+}
+
+function receiptFailure(r) {
+  // One line: a hub whose Convex functions lag its app returns a multi-line
+  // "[Request ID: …] Server Error" that would split the report.
+  const detail =
+    typeof r.body?.error === "string" ? r.body.error.split(/\r?\n/)[0].trim() : "";
+  if (r.status === 404 && !detail) return "404: hub has no read receipts";
+  return r.status ? `${r.status}${detail ? ` ${detail}` : ""}` : detail;
+}
+
+// Call only after the turns up to `throughTurn` have been printed. Marking
+// first would turn a crash between the two into a false "read"; this order
+// makes it a false "unread", which is the side to fail on.
+async function markRead(sessionId, throughTurn, via) {
+  if (!(throughTurn > 0)) return;
+  const r = await receiptCall(`/a2a/session/${sessionId}/read`, {
     method: "POST",
-    body: JSON.stringify({
-      title: LOBBY,
-      participants: [ME, peer],
-      maxTurns: MAX_TURNS,
-    }),
+    body: JSON.stringify({ reader: ME, throughTurn, via }),
   });
-  return sessionId;
+  if (!r.ok) {
+    console.error(`[hub-talk] read receipt not recorded (${receiptFailure(r)})`);
+  }
+}
+
+async function reportReceipts(sessionId) {
+  const r = await receiptCall(`/a2a/session/${sessionId}/reads`);
+  if (!r.ok) {
+    console.error(`[hub-talk] read receipts unavailable from this hub (${receiptFailure(r)})`);
+    return;
+  }
+  for (const line of unreadOwnLines(r.body, ME)) console.error(line);
 }
 
 async function resolveSession() {
@@ -217,7 +313,6 @@ async function resolveSession() {
 
 async function main() {
   await register(ME);
-  if (PEER) await register(PEER);
   await heartbeat(ME);
   const sessionId = await resolveSession();
   console.error(`[hub-talk] ${ME} session ${sessionId}`);
@@ -280,32 +375,49 @@ async function main() {
     console.error(
       `[hub-talk] ${all.length} turns, ${takeAfter(all, after, ME).length} unread after turn ${after} (cursor unchanged)`,
     );
+    // The room is now in the agent's context, so the server mark moves; the
+    // local cursor above does not. They answer different questions: the mark
+    // is "delivered", the cursor is "what --wait has handed over as new".
+    await markRead(sessionId, maxTurn(all), "inbox");
+    await reportReceipts(sessionId);
     return 0;
   }
 
   if (!WAIT) return 0;
 
-  let messages = await fetchTurns(after);
-
-  const emit = (pending) => {
+  const emit = async (pending) => {
     printTurns(pending);
     writeCursor(ME, sessionId, maxTurn(pending));
+    await markRead(sessionId, maxTurn(pending), "wait");
   };
 
-  const pending = takeAfter(messages, after, ME);
+  // On timeout, "no peer turn" arrives with who has not seen yours: the
+  // difference between a quiet room and an absent reader.
+  const poll = async () => {
+    try {
+      return takeAfter(await fetchTurns(after), after, ME);
+    } catch (error) {
+      if (error.exitCode === 2) await reportReceipts(sessionId);
+      throw error;
+    }
+  };
+
+  const pending = await poll();
   if (pending.length) {
-    emit(pending);
+    await emit(pending);
     return 0;
   }
 
   for (;;) {
-    if (Date.now() >= WAIT_UNTIL) throw waitTimedOut();
+    if (Date.now() >= WAIT_UNTIL) {
+      await reportReceipts(sessionId);
+      throw waitTimedOut();
+    }
     await new Promise((r) => setTimeout(r, POLL_MS));
     await heartbeat(ME);
-    messages = await fetchTurns(after);
-    const next = takeAfter(messages, after, ME);
+    const next = await poll();
     if (next.length) {
-      emit(next);
+      await emit(next);
       return 0;
     }
   }

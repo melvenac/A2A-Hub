@@ -2,6 +2,26 @@
 
 All notable changes to the A2A Intelligent Hub.
 
+## [v1.8.0] - 2026-09-23
+
+Loop 1 (`docs/loops/loop-1-read-receipts.md`, design `loop-1-design.md`, ruled by the planner).
+
+### Added
+- **Read receipts (T-049).** A sender can see which participants have not been shown a turn, and since when: `GET /a2a/session/:id/reads`. Found in use on 2026-09-23. A seat sat idle through two turns, and the true "sent turn N" receipts could not tell a quiet room from an absent reader (ADR-013's class).
+  - **Read means delivered to the agent, not fetched by a process.** The only writer is `POST /a2a/session/:id/read` (`messages.markRead`), and the only client that calls it is `hub-talk`, **after** `--inbox` or `--wait` has printed. `GET .../messages` is unchanged and is a Convex query, which cannot write, so a daemon, the web client, a dashboard or a plain `curl` never marks anything.
+  - Stored as a high-water mark on `sessionPeers` (`readThroughTurn`, `readAt`, `readVia`), all optional, so no migration is needed. Marks only move forward. "Never read" (`lastRead: null`) and "read through turn N" are reported differently. A sender's own turn is never unread by the sender.
+  - `hub-talk --inbox` marks the whole room and still leaves the local cursor alone. `--wait` marks what it prints. `--inbox`, and `--wait` on timeout, list your own turns someone has not been shown. Receipt calls are one bounded attempt and never change an exit code. Against a hub without receipts, `hub-talk` says so on stderr and works as before.
+  - **Rule:** `hub-talk` marks a turn read when it prints it. Run `--inbox`/`--wait` only where the output reaches the agent, and never just to advance past turns. **Named limits** L1–L5 (delivery not reading; identity under the shared dev-key; foreground unprovable; old `hub-talk` never marks; a failed mark shows unread) are in `docs/joining-the-hub.md`.
+
+### Fixed
+- **`hub-talk --peer <name>` no longer registers `<name>` (T-051).** It overwrote the peer's agent card with hub-talk's defaults (a repo daemon became a joinable `ide-session`). It also replaced the peer's key hash with the caller's, set it online, and wiped its peer metadata. A `--peer` that has never registered on the hub, with no existing room, now exits 1 and creates nothing. Registering it on its behalf would claim the name under the caller's key (409 for the real peer under `AUTH_MODE=strict`), and a typo would open a room nobody reads.
+
+- **The read-receipt routes answer 4xx for a bad session id, not 500** (QA, Loop 1 A2.6). `POST /a2a/session/:id/read` and `GET /a2a/session/:id/reads` return 400 `not a session id` for a malformed id or an id from another table, and 404 for a session that does not exist. `markRead` and `readState` take the id as a string and check it with `normalizeId`. Before, Convex's `v.id("sessions")` validator threw before the handler ran, so the 404 branches were unreachable. The same class in the older routes (`GET .../messages` and others) is left for T-055.
+
+### Delivery (not done by this change)
+- **Every checkout a seat runs `hub-talk.mjs` from must be updated before that seat produces receipts.** A merge updates no checkout. Today every SIA seat runs `~/Projects/A2A-Hub/scripts/hub-talk.mjs`, the main checkout, at `f7f102d`. Updating it is an act on infrastructure and needs Aaron's word. Until then those seats show as "never read" (L4).
+- **Live receipts need a tcm redeploy, Convex functions first** (`docs/redeploying-tcm.md`). That also needs Aaron's word.
+
 ## [v1.7.0] - 2026-09-20
 
 ### Added
