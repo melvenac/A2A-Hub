@@ -1,0 +1,6 @@
+PASS A2.6-control: a live session: /reads 200, with the same shape as before (turnCount + participants, no ok field)
+      observed: {"status":200,"keys":["participants","turnCount"]}
+PASS A2.6-unknown-wellformed: well-formed sessions id absent from this DB: /reads 404 and /read 404 'session not found'
+      observed: {"reads":[404,"session not found"],"read":[404,"session not found"]}
+
+A2.6 404: 2/2

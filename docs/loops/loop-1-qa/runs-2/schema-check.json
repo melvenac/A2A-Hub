@@ -1,0 +1,31 @@
+{
+ "tablesInSchema": {
+  "experiences": 8,
+  "tasks": 6,
+  "agents": 8,
+  "a2aTasks": 4,
+  "peers": 4,
+  "sessions": 6,
+  "sessionPeers": 9,
+  "messages": 4,
+  "repoFixes": 7
+ },
+ "tablesInDoc": {
+  "experiences": 8,
+  "tasks": 6,
+  "agents": 8,
+  "a2aTasks": 4,
+  "peers": 4,
+  "sessions": 6,
+  "sessionPeers": 9,
+  "messages": 4,
+  "repoFixes": 7
+ },
+ "mismatches": [
+  {
+   "table": "sessionPeers",
+   "field": "readVia",
+   "problem": "optionality: schema optional=true, doc type `\"inbox\" \\"
+  }
+ ]
+}

@@ -1,0 +1,35 @@
+PASS A3.1: every GET route (B's key, dev-key, no key) + messages:list query: /reads byte-identical
+      observed: {"requests":33,"identical":true,"sample":["200 qa-a3b-mudvv05t-key /a2a/session/:sid/messages","200 qa-a3b-mudvv05t-key /a2a/session/:sid/messages?after=0","200 qa-a3b-mudvv05t-key /a2a/session/:sid/messages?since=0"]}
+PASS A3.2: daemon member polled >= 3 intervals: no participant's mark moved
+      observed: {"before":{"qa-a3a-mudvv05t":null,"qa-a3b-mudvv05t":null,"qa-a3d-mudvv05t":null},"after":{"qa-a3a-mudvv05t":null,"qa-a3b-mudvv05t":null,"qa-a3d-mudvv05t":null},"daemonReplied":true,"turns":2,"daemonLog":["[qa-a3d-mudvv05t] registered with hub at http://127.0.0.1:4410 (replies: fallback)","[qa-a3d-mudvv05t] replied in session k570dcrrh8fwrca3g7ezyhb5t18ezdwn (turn 2)"]}
+PASS A3.2b: daemon actually read the room (known positive: it replied, or its log shows the poll)
+      observed: {"daemonReplied":true}
+PASS A5.0: distinctive card present BEFORE the --peer call (known positive)
+      observed: {"description":"QA distinctive card for A5","kind":"qa-distinct","name":"qa-a5b-mudvv05t"}
+PASS A5.2: --peer (no room yet): exit 0, B's whole row + peer row + online count unchanged
+      observed: {"code":0,"changed":[],"after":{"description":"QA distinctive card for A5","kind":"qa-distinct","name":"qa-a5b-mudvv05t"}}
+PASS A5.3: --peer with the room existing: same room reused, B unchanged
+      observed: {"code":0,"room1":"k5731e69n32b1qqgs1mzms8ted8ezqjy","room2":"k5731e69n32b1qqgs1mzms8ted8ezqjy","abRooms":1}
+PASS A5.4: --peer <unregistered>: exit 1, stderr names --as and --session, nothing created
+      observed: {"code":1,"err":"[hub-talk] peer qa-never-registered-mudvv05t is not registered on this hub — it must run hub-talk --as qa-never-registered-mudvv05t once, or pass --session <id>","before":{"agents":0,"peers":0,"sessions":11,"sessionPeers":24},"after":{"agents":0,"peers":0,"sessions":11,"sessionPeers":24}}
+PASS A7.R1-doc: R1 verbatim in joining-the-hub.md
+      observed: true
+PASS A7.R2-doc: R2 verbatim in joining-the-hub.md
+      observed: {"exact":true,"colonVariant":false}
+PASS A7.R1-header: R1 verbatim in hub-talk.mjs header
+      observed: true
+PASS A7.R2-header: R2 verbatim in hub-talk.mjs header
+      observed: true
+      info: header matches with comment markers + backticks stripped: R1=true R2=true
+PASS A7.L1: L1 present in the doc and in the hub-talk header
+      observed: {"doc":true,"header":true}
+PASS A7.L2: L2 present in the doc and in the hub-talk header
+      observed: {"doc":true,"header":true}
+PASS A7.L3: L3 present in the doc and in the hub-talk header
+      observed: {"doc":true,"header":true}
+PASS A7.L4: L4 present in the doc and in the hub-talk header
+      observed: {"doc":true,"header":true}
+PASS A7.L5: L5 present in the doc and in the hub-talk header
+      observed: {"doc":true,"header":true}
+
+A3,A5,A7: 16/16 pass; failed: none
