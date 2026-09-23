@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { computeReadState, numberTurns } from "./readLogic.js";
 
 const DEFAULT_MAX_TURNS = 16;
 
@@ -149,5 +150,52 @@ export const close = mutation({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.sessionId, { isActive: false });
+  },
+});
+
+// Read receipts for a room (T-049): per participant, the last recorded read
+// (null if none ever) and the turns by others it has not been shown. Read-only.
+export const readState = query({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) return null;
+
+    const peerNames = new Map<string, string>();
+    const nameOf = async (peerId: any) => {
+      if (!peerNames.has(peerId)) {
+        const peer = await ctx.db.get(peerId);
+        peerNames.set(peerId, (peer as { name?: string } | null)?.name ?? "unknown");
+      }
+      return peerNames.get(peerId)!;
+    };
+
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .collect();
+    const turns = [];
+    for (const { message, turn } of numberTurns(messages)) {
+      turns.push({ turn, from: await nameOf(message.peerId), createdAt: message.createdAt });
+    }
+
+    const memberships = await ctx.db
+      .query("sessionPeers")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .collect();
+    const members = [];
+    for (const m of memberships) {
+      members.push({
+        name: await nameOf(m.peerId),
+        readThroughTurn: m.readThroughTurn,
+        readAt: m.readAt,
+        readVia: m.readVia,
+      });
+    }
+
+    return {
+      turnCount: session.turnCount,
+      participants: computeReadState(turns, members),
+    };
   },
 });

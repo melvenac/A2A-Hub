@@ -502,6 +502,45 @@ app.get("/a2a/session/:sessionId/messages", async (req, res) => {
   }
 });
 
+// Read receipts (T-049). The only route that writes read state: hub-talk
+// posts here after --inbox or --wait has printed turns, naming the reader.
+// Fetching messages never marks anything. `reader` is asserted by the client —
+// under the shared dev-key the hub cannot check it (named limit, until T-003).
+app.post("/a2a/session/:sessionId/read", async (req, res) => {
+  try {
+    const { reader, throughTurn, via } = req.body ?? {};
+    if (typeof reader !== "string" || !reader) {
+      return res.status(400).json({ error: "Missing required field: reader" });
+    }
+    if (via !== "inbox" && via !== "wait") {
+      return res.status(400).json({ error: 'via must be "inbox" or "wait"' });
+    }
+    const result = await convex.mutation(api.messages.markRead, {
+      sessionId: req.params.sessionId as any,
+      reader,
+      throughTurn: Number(throughTurn),
+      via,
+    });
+    if (!result.ok) return res.status(result.status).json({ error: result.reason });
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Who has not been shown which turns, and since when. Read-only.
+app.get("/a2a/session/:sessionId/reads", async (req, res) => {
+  try {
+    const state = await convex.query(api.sessions.readState, {
+      sessionId: req.params.sessionId as any,
+    });
+    if (!state) return res.status(404).json({ error: "session not found" });
+    res.json(state);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 const port = parseInt(process.env.PORT || "4000");
 app.listen(port, () => {
   console.log(`Hub running on port ${port}`);

@@ -57,7 +57,10 @@ beforeAll(async () => {
       return;
     }
 
-    if (req.method === "POST" && url.pathname.includes("/session/")) {
+    // Only the send route appends a turn. This stub stands in for a hub
+    // without read receipts, so POST .../read falls through like any unknown
+    // route instead of being mistaken for a message.
+    if (req.method === "POST" && url.pathname.endsWith("/message")) {
       let body = "";
       req.on("data", (c) => (body += c));
       req.on("end", () => {

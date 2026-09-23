@@ -108,6 +108,11 @@ Join table — who's in each session, with observation config (Honcho pattern).
 | `observeOthers` | `boolean` | Can this peer see insights about others? |
 | `joinedAt` | `number` | Timestamp |
 | `leftAt` | `number?` | When they left |
+| `readThroughTurn` | `number?` | Read receipts (T-049): highest turn delivered to this participant's `hub-talk`. Absent = no read ever recorded |
+| `readAt` | `number?` | When that mark was set (hub clock) |
+| `readVia` | `"inbox" \| "wait"`? | Which `hub-talk` call delivered it |
+
+Read state is written only by `messages.markRead` (`POST /a2a/session/:id/read`). It is monotonic, and never set by fetching messages. It is read by `sessions.readState` (`GET /a2a/session/:id/reads`).
 
 **Indexes:**
 - `by_session` — Members of a session

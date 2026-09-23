@@ -109,6 +109,12 @@ export default defineSchema({
     observeOthers: v.boolean(),
     joinedAt: v.number(),
     leftAt: v.optional(v.number()),
+    // T-049 read receipts: highest turn delivered to this participant's
+    // hub-talk (--inbox or --wait). Optional so existing rows need no
+    // migration; absent means no read has ever been recorded.
+    readThroughTurn: v.optional(v.number()),
+    readAt: v.optional(v.number()),
+    readVia: v.optional(v.union(v.literal("inbox"), v.literal("wait"))),
   })
     .index("by_session", ["sessionId"])
     .index("by_peer", ["peerId"]),
