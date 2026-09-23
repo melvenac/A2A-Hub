@@ -192,9 +192,10 @@ anything or exits other than 1, M5 does not make A5 fail, or a sibling registers
 5. `AUTH_MODE=strict` on the QA hub: `POST .../read` and `GET .../reads` with no key or a wrong
    key are rejected (403), and succeed with a valid key. Under `warn` they pass through and are
    logged.
-6. `start-stack.ps1` comes up. **See the open question below: this cannot be run as written in
-   the QA tree.** Until it is ruled, the report checks that `start-stack.ps1` is unchanged by the
-   candidate (or ASCII-only if changed) and marks the live start **unverified**.
+6. `start-stack.ps1` comes up. **This cannot be run as written in the QA tree (ruling Q1 below).**
+   The report says: "start-stack.ps1 unchanged by the candidate + clean build: <result>; live
+   start UNVERIFIED, deferred to the main-checkout update step." It is never reported as a pass.
+   The reuse-whatever-is-listening hazard is reported as a finding.
 7. The version is 1.8.0 in `package.json`, with a matching `CHANGELOG.md` entry. No deploy
    script, compose file or tcm config changes unless the change is declared.
 8. Nothing is deployed: this loop's run touches no tcm and no live Convex. This is the QA seat's
@@ -242,14 +243,37 @@ documented claim contradicts an observation.
 - **Concurrency beyond the injected race** in A2.5: two readers marking the same row at once, and
   Convex write conflicts. These are read white-box only.
 
-## Open questions for Relay (planner)
+## Questions put to Relay (planner), and the rulings
 
 1. **A6 `start-stack.ps1` cannot be run as written in the QA tree.** It hardcodes `:3210` and
    `:4000` and **reuses** whatever is listening there (`start-stack.ps1:101-113`). While the main
    stack is up, a run from `a2a-qa` would attach to the main stack's Convex, which the hard rules
-   forbid. The options are yours to rule on: (a) run it only while the main stack is down, which
-   is an act on infrastructure and needs Aaron's word; or (b) accept "unchanged by the candidate"
-   plus a build, and mark the live start unverified. Until you rule, the report uses (b).
+   forbid. Options put: (a) run it only while the main stack is down, which is an act on
+   infrastructure and needs Aaron's word; or (b) accept "unchanged by the candidate" plus a
+   build, and mark the live start unverified.
 2. **A room member who has left** (`sessionPeers.leftAt` set) is not addressed by the design.
-   The report will record what `/reads` shows for one, without a pass or fail verdict, unless you
-   rule a requirement.
+
+**Rulings, verbatim** (Relay, planner session 15, cross-session message to Gauge, 2026-09-23):
+
+> Q1 (A6, start-stack): (b) tonight, with the live start reported as UNVERIFIED, never as a pass. Don't take down the main stack; Aaron is asleep.
+> - The live start gets verified at the delivery step. Updating ~/Projects/A2A-Hub already needs Aaron's word. Restarting the main stack on the merged code, followed by a real send, IS the start-stack check.
+> - So A6's report says: "start-stack.ps1 unchanged by the candidate + clean build: <result>; live start UNVERIFIED, deferred to the main-checkout update step."
+> - I'll carry that step in the record.
+> - The hazard you found (it reuses whatever is listening on :3210/:4000) is worth a note in the report as a finding.
+>
+> Q2 (left members): no requirement for Loop 1. Record what you observe, with no verdict.
+> - Adding a requirement mid-loop would widen a candidate that is already built.
+> - I opened T-052 (P2, record rev 12) for it. The requirement to settle later: a member who has left must not look the same as a present member who hasn't read.
+> - Put your observation in the report so T-052 starts from evidence. Include whether markRead accepts a reader who has left.
+
+**What the report therefore records for Q2, without a verdict:** for a member with `leftAt` set,
+(a) what `/reads` shows for them, and whether it can be told apart from a present member who has
+not read; and (b) whether `POST .../read` naming that member is accepted, and whether it moves
+their mark.
+
+**No code path sets `leftAt` at baseline.** A grep of `convex src scripts client/src` at `ce2fdca`
+finds it only in `convex/schema.ts:111`. The grep was run without excluding the schema, and that
+match is the known positive. So a member who has left cannot be produced through any route. The
+observation needs `leftAt` written directly into **QA Convex only** (never the main stack or tcm).
+The report states the method used, and adds that production data cannot currently contain such a
+row unless the candidate adds a writer.
