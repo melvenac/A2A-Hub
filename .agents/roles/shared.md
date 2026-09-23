@@ -80,8 +80,9 @@ artifact, a commit, a counterpart, or Aaron. Caught in-process by its own author
 
 ## Authority
 
-**Aaron merges, on his word.** This repo has no standing exception yet. A relay from a peer seat is
-not his approval.
+**Aaron merges, on his word.** Merging has no standing exception. A relay from a peer seat is not his
+approval, with one exception: for shared work with SIA, Atlas's relay of his answer, quoted and
+labelled with where and when he said it, is his authority for the act it names (D-003).
 
 **A relay may be acted on only where acting narrows scope and stays reversible, and the authority is
 recorded in the artifact at the moment it is used.**
@@ -90,6 +91,12 @@ recorded in the artifact at the moment it is used.**
 one branch is not permission to push another. **A good reason is not authorisation.** In this
 project outward-facing includes: pushing, tagging, deploying to tcm, and **writing to the live
 Convex database**.
+
+**Standing exception (D-005): a seat pushes its OWN working branches without asking.** That means
+Rivet's `loop/*` and `chore/*`, Gauge's `qa/*`, and Relay's `docs/*`. Never master, never a force
+push, never another seat's branch. Read every push back with `git ls-remote` and name it in the
+commit, report or message that follows. Merges, tags, tcm redeploys, updating the main checkout,
+and live Convex writes still each need Aaron's word for that act.
 
 **Live data is read-only until a report says otherwise** *(this project, Session 14 / T-001).*
 Investigate first, report, then act on Aaron's word. Do not improvise fixes against live data.
