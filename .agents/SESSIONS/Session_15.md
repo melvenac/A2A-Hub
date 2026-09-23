@@ -74,3 +74,12 @@
 <!-- What should the next session focus on? -->
 
 -
+
+## Error entries (Relay, session 15)
+
+1. **Asserted the ruling's R1/R2 had no backticks** (to Rivet, fix list for cb7cda7). They do (loop-1-ruling-1.md:48-49, 66). Caught by Relay on re-reading before Rivet built on it; corrected to both seats. Reached a counterpart, so it is an error, not a near-miss.
+2. **Described Gauge's A7 instrument as stripping comment markers** (to Gauge and Rivet) without reading `rows.mjs`. It does not. Caught by Gauge before the re-run; ruled (a), instrument unchanged.
+
+Same shape both times: asserting a fact about an artifact that was one read away. The containment is to read it first (planner.md, "It asserts where it could derive").
+
+Near-miss: tried to open T-040 without checking the highest task id (ob_state refused; done tasks hold T-040..T-048).

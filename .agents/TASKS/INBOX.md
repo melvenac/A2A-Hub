@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 11 by open-brain v1.7.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 19 by open-brain v1.7.0 — do not edit; change state via ob_state -->
 
 # Inbox
 
@@ -44,6 +44,9 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-025** Request validation middleware
 - [ ] **T-026** A2A spec alignment
 - [ ] **T-027** Repo-fix approval flow through the chat channel
+- [ ] **T-052** Read receipts for a member who has left the room
+- [ ] **T-053** Hub reports "running" and exits 0 when its port is taken
+- [ ] **T-055** Malformed or unknown session id returns 500, not 4xx
 
 ## P3
 
@@ -59,6 +62,7 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-037** Decide whether `scripts/register-agent.mjs` is still wanted
 - [ ] **T-038** Resolve the stale Session 12 stub
 - [ ] **T-039** Buzz is parked
+- [ ] **T-054** Committed convex/_generated is stale (no instanceLogic); `convex dev` dirties the tree
 
 ## Done (last 3 sessions)
 
