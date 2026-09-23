@@ -277,3 +277,25 @@ match is the known positive. So a member who has left cannot be produced through
 observation needs `leftAt` written directly into **QA Convex only** (never the main stack or tcm).
 The report states the method used, and adds that production data cannot currently contain such a
 row unless the candidate adds a writer.
+
+## Amendments after freeze (instruments only, no criterion widened or narrowed)
+
+Made 2026-09-23 after Relay froze `cb7cda7`. The source is Rivet's instrument hazards
+(`docs/loops/loop-1-live-setup.md` §4 at `cb7cda7`, and Rivet's cross-session message).
+Reading that file also showed Gauge Rivet's evidence summary. The criteria above were pushed at
+`9613c00`, before that. Rivet's evidence is not cited as a pass anywhere in the report.
+
+- **A5 snapshot instrument.** `agents:getByName` returns only `{name, apiKeyHash, askPolicy}`.
+  Gauge's own probe output showed the same projection at 08:3xZ. It cannot see `agentCard`,
+  `status` or `lastSeen`, so a check built on it passes against M5. **Replaced by whole rows:**
+  `node node_modules/convex/bin/main.js data agents --format jsonLines` (and `peers`,
+  `sessionPeers`, `sessions`, `messages`), run with an args array and no shell, against QA
+  Convex. The rows are parsed as JSON, and the check requires exactly one row per name. This was
+  validated against a known positive: the `qa-probe` row showed `agentCard.kind: "qa-probe"`. The
+  distinctive card is asserted present **before** the `--peer` call.
+- **A3 identities.** Under the shared dev-key, `req.agentName` resolves to an arbitrary agent row,
+  so the realistic M3 ("mark the caller") 404s silently and survives. **A3 runs with per-seat
+  keys:** each `qa-` seat registers with its own `apiKey`, and each seat's `hub-talk` runs with
+  its own `AGENT_KEY`. The non-reader fetches are made with the reader's own key as well as the
+  dev-key. M3 is shown killed under per-seat keys. **The dev-key result is reported as a finding,
+  not a verdict** (Relay, 2026-09-23).
