@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 21,
+  "revision": 22,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -27,7 +27,7 @@
       "opened_session": 14,
       "closed_session": null,
       "supersedes": null,
-      "note": "**the ordered sequence** a Grok bot on its own Linux host could not join on 2026-09-20 because the hub lives on a Tailscale address. Putting its host on the tailnet was rejected deliberately: Brian will never be on Aaron's tailnet, and a tailnet key grants far more than the hub. Order, because several steps disconnect every agent if done early: (1) redeploy tcm with v1.7.0 — `54d35e1` must travel or the image crashes at import; best done when Aaron rolls the seats; (2) provision per-agent keys at that same roll and remove the `dev-key` fallback in `daemon.ts`; (3) leave `AUTH_MODE=warn` and read the logs until quiet; (4) flip `AUTH_MODE=strict`; (5) expose the hub (`tailscale funnel 4000` on tcm); (6) the remote agent registers with its own key over the public URL — that is the test. Before step 5: revocation verified (P0), `askPolicy` enforced on JSON-RPC, rate limiting in place (Session 14; roadmap v3)"
+      "note": "**the ordered sequence** a Grok bot on its own Linux host could not join on 2026-09-20 because the hub lives on a Tailscale address. Putting its host on the tailnet was rejected deliberately: Brian will never be on Aaron's tailnet, and a tailnet key grants far more than the hub. Order, because several steps disconnect every agent if done early: (1) redeploy tcm with v1.7.0 [DONE: tcm was already on fd23eac (v1.7.0 plus follow-ups), and on 2026-09-23 it was redeployed to v1.8.0 (V-001)]; (2) provision per-agent keys at the same roll and remove the `dev-key` fallback in `daemon.ts`; (3) leave `AUTH_MODE=warn` and read the logs until quiet; (4) flip `AUTH_MODE=strict`; (5) expose the hub (`tailscale funnel 4000` on tcm); (6) the remote agent registers with its own key over the public URL, which is the test. Before step 5: revocation verified (P0), `askPolicy` enforced on JSON-RPC, rate limiting in place (Session 14; roadmap v3)"
     },
     {
       "id": "T-003",
@@ -560,7 +560,31 @@
       "note": "Found by Gauge in Loop 1 QA at cb7cda7 (row A2.6): POST /a2a/session/:id/read and GET /reads return 500 'Server Error' for an unknown or malformed session id, because Convex's v.id(\"sessions\") argument validator throws before the handler's own 404 branch can run. The new routes are fixed in Loop 1. The same class exists in the baseline GET /a2a/session/:id/messages and probably in every route that passes :sessionId straight into a v.id validator. Sweep them all. A 500 tells a client to retry; a malformed id should get a 4xx that says so."
     }
   ],
-  "verified": [],
+  "verified": [
+    {
+      "id": "V-001",
+      "claim": "tcm serves A2A-Hub v1.8.0 with read receipts live, and ~/Projects/A2A-Hub (every SIA seat's hub-talk) is at 003f57d / v1.8.0",
+      "evidence": [
+        {
+          "type": "deploy",
+          "path": "tcm:~/projects/a2a-hub (git archive of tag v1.8.0 = 34ac98b)",
+          "observation": "2026-09-23 ~20:30Z, by Relay, each command approved by Aaron in manual mode. Authority: Aaron to Atlas in the SIA planner session (SIA record session 81), 2026-09-23, verbatim \"redeploy the tcm hub and then update ~/Projects/A2A-Hub now\", relayed Atlas to Relay the same day under SIA D-039 / A2A D-003 with SIA's all-clear on hub traffic; then Aaron directly in this session, \"I have manual mode on, try again\". tcm's previous source was fd23eac, checked against git by checksum (the one mismatch was line endings only). Convex functions deployed first ('No indexes are deleted', 'Schema validation complete', rc 0). Rollback image a2a-hub:prev = de11bebd8f93; new a2a-hub:latest = 13aeef206f7b; only the a2a-hub container recreated. Source rollback at ~/projects/a2a-hub.old (fd23eac); the older tree was renamed a2a-hub.old-pre-fd23eac, not deleted. AUTH_MODE=warn unchanged."
+        },
+        {
+          "type": "live-check",
+          "path": "http://100.124.212.87:4000",
+          "observation": "20:36Z: hub-talk --as relay --peer atlas --say -> room k571j07exa0rdpjxjjdfc3d7v98ey1wh, turn 1, rc 0 (this registered a `relay` agent row). GET /reads 200: atlas lastRead null with turn 1 unread since 1790195761187; relay has nothing unread. GET /messages?after=0 200 with the turn field. GET /a2a/session/not-a-session-id/reads 400 'not a session id'. docker logs a2a-hub: 0 error/500 lines since the deploy."
+        },
+        {
+          "type": "checkout",
+          "path": "~/Projects/A2A-Hub",
+          "observation": "Fast-forwarded f7f102d -> 003f57d (v1.8.0), clean. Its hub-talk --inbox against tcm printed '[hub-talk] turn 1 (yours): unread by atlas since 2026-09-23T20:36:01Z — never read this room'. The local main stack (3210/4000) was NOT started, so A6's live start-stack check is still UNVERIFIED."
+        }
+      ],
+      "since_session": 15,
+      "status": "verified"
+    }
+  ],
   "gaps": [],
   "decisions": [
     {
@@ -689,22 +713,21 @@
     },
     {
       "seat": "planner",
-      "pick_up": "Loop 1 is DONE in git: PRs #3-#7 merged (master 003f57d) on Aaron's direct word \"merge all five\"; v1.8.0 tagged at 34ac98b (the PR #3 merge; code byte-identical to the accepted e886b6b) on his direct word \"tag the release as v1.8.0 and push the tag\"; T-049 and T-051 closed. NOT LIVE YET. Next, when Atlas says SIA hub traffic is quiet, each step on Aaron's word and SERVER FIRST: (1) redeploy tcm: `npx convex deploy`, then the image, then a real send (docs/redeploying-tcm.md; tag the outgoing image for rollback); (2) update ~/Projects/A2A-Hub (still at f7f102d; every SIA seat's hub-talk), restart the main stack and do a real send, which closes A6's deferred live start. Then Loop 2 = T-001. Follow-up candidates: T-053, T-054, T-055; T-050 needs a live Cursor-hook trial; T-052 comes from Gauge's observations.",
+      "pick_up": "Loop 1 is DONE AND LIVE. Merged (PRs #3-#7, 003f57d), tagged v1.8.0 (34ac98b), deployed to tcm server-first, and ~/Projects/A2A-Hub updated to 003f57d (V-001). Atlas was sent the evidence and is testing receipts from SIA's side; a relay<->atlas room k571j07exa0rdpjxjjdfc3d7v98ey1wh has turn 1 waiting. Only remaining Loop 1 item: A6's live start-stack.ps1 check. The local main stack (3210/4000) is down; starting it needs Aaron's word. Next: Loop 2 = T-001 (read-only check of revocation on tcm's live DB; SSH as melvenac@tcm works with Aaron approving commands), possibly paired with T-003. Follow-ups: T-050 live Cursor-hook trial, T-052, T-053, T-054, T-055.",
       "watch_out": [
-        "Shared work with SIA (T-050 and delivery of T-049/T-051) runs under D-003: questions for Aaron go through Atlas (SIA planner), quoted both ways; outward acts need Aaron's word for that act. Aaron may also give it directly in this repo's session. Check relayed claims against source before recording them.",
+        "Shared work with SIA runs under D-003: questions for Aaron go through Atlas, quoted both ways; outward acts need Aaron's word for that act. Aaron may also give it directly in this repo's session. Check relayed claims against source before recording them.",
         "D-005: seats push their OWN working branches without asking (Rivet loop/* chore/*, Gauge qa/*, Relay docs/*); never master, never force, never another seat's branch; read back with ls-remote. Merges, tags, redeploys, main-checkout updates and live Convex writes still need Aaron's word for that act.",
-        "SIA holds: Atlas calls them before SIA full-suite runs (another was due on 2026-09-23 for sia-qa-76 scoring A3). During a hold: no builds or test runs from any A2A-Hub seat, and stay idle. Document pushes are not covered.",
-        "No tcm redeploy while SIA hub traffic is live; ask Atlas first. Receipts reach SIA only after BOTH the tcm redeploy (SIA's room lives on tcm) AND the main-checkout update (for hub-talk).",
-        "One writer for the record while the planner holds the loop: other seats send handoff text to Relay rather than running ob_state from a tree behind the live revision.",
-        "ob_state's `session` parameter stamps EVERY set_handoff in the call. Record another seat's handoff in its own call with that seat's session number.",
-        "Three seats share one session counter: Rivet and Gauge both used 16 (logs renamed Session_16_developer.md / Session_16_qa.md).",
-        "The main stack (3210/4000) was DOWN on the night of 2026-09-23. start-stack.ps1 reuses anything already listening on 3210/4000, so never run it from a seat worktree.",
-        "Seat test stacks: Rivet 3310/4100 (and others), Gauge 3410/4410/4420. Check a port is free and the listener PID is your own before trusting it (T-053).",
+        "tcm access: `ssh melvenac@tcm` (the bare alias `tcm` logs in as the Windows user and is refused). In auto mode the classifier blocks even production reads; Aaron switched to manual mode to approve each command for the 2026-09-23 deploy. The planner role file says the planner does not deploy. This deploy was done by Relay on Aaron's explicit word because Rivet had ended; say so if it happens again.",
+        "tcm rollback levers: image a2a-hub:prev (de11bebd8f93, v1.7.0/fd23eac), source ~/projects/a2a-hub.old (fd23eac), older tree ~/projects/a2a-hub.old-pre-fd23eac. The next deploy must rotate these first: a bare `mv a2a-hub a2a-hub.old` would nest into the existing folder.",
+        "tcm's source dir is a tar of selected paths (convex, Dockerfile, .dockerignore, package*.json, scripts, src, tsconfig.json) plus node_modules. It is not a git tree: verify it against git by checksum, allowing for line endings.",
+        "SIA holds: Atlas calls them before SIA full-suite runs. During a hold: no builds or test runs from any A2A-Hub seat, and stay idle.",
+        "One writer for the record while the planner holds the loop; other seats send handoff text to Relay. ob_state's `session` parameter stamps EVERY set_handoff in a call.",
+        "Three seats share one session counter: Rivet and Gauge both used 16.",
+        "start-stack.ps1 reuses anything already listening on 3210/4000, so never run it from a seat worktree.",
         "A3-type checks need per-seat keys: under the shared dev-key, a GET-marks-caller regression survives (T-003 note).",
-        "Relay's error shape in session 15, twice: asserting a fact about an artifact (the ruling's backticks, Gauge's instrument) without reading it. Read first. The entries are in Session_15.md.",
-        "Decisions are append-only in ob_state (no op amends one); a correction is a new decision pointing at the old, as D-004 does for D-003.",
+        "Relay's error shape in session 15, twice: asserting a fact about an artifact without reading it. Read first.",
+        "Decisions are append-only in ob_state; a correction is a new decision pointing at the old.",
         "Check the highest task id before opening a task.",
-        "The main checkout's .claude/settings.local.json does not carry over to the worktrees, so each seat starts with fresh permission prompts.",
         "SIA's seats run load-sensitive test suites on this machine. Aaron's standing ruling: work normally; pause only when a SIA seat asks for a controlled rerun."
       ],
       "open_questions": [
@@ -712,13 +735,18 @@
       ],
       "session": 15,
       "loop_state": {
-        "open_prs": [],
+        "open_prs": [
+          {
+            "ref": "#8 docs/session-15-closeout @ eb7c85d",
+            "qa_status": "not_required",
+            "note": "The record at rev 21. Superseded by this revision (22+), which rides on a later docs push."
+          }
+        ],
         "frozen_sha": null,
         "questions_for_aaron": [],
         "rulings": [
-          "Session 15: Loop 1 = T-049 + T-051; T-001 moves to Loop 2.",
-          "Accepted on e886b6b (Gauge report 2, all rows PASS); merged in PRs #3-#7 at 003f57d on Aaron's direct word \"merge all five\"; tagged v1.8.0 at 34ac98b on his direct word \"tag the release as v1.8.0 and push the tag\".",
-          "Delivery order: server first (tcm redeploy), then the main checkout. Atlas's preference, agreed by Relay."
+          "Loop 1: accepted on e886b6b; merged #3-#7 at 003f57d (\"merge all five\"); tagged v1.8.0 at 34ac98b (\"tag the release as v1.8.0 and push the tag\").",
+          "Delivered 2026-09-23: tcm redeploy then main-checkout update, server first. Aaron via Atlas: \"redeploy the tcm hub and then update ~/Projects/A2A-Hub now\"; Aaron direct: \"I have manual mode on, try again\". Evidence in V-001."
         ]
       }
     },

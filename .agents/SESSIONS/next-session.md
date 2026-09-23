@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 21 by open-brain v1.7.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 22 by open-brain v1.8.0 — do not edit; change state via ob_state -->
 
 # Next Session Handoff
 
@@ -6,24 +6,23 @@
 
 ### Pick up here
 
-Loop 1 is DONE in git: PRs #3-#7 merged (master 003f57d) on Aaron's direct word "merge all five"; v1.8.0 tagged at 34ac98b (the PR #3 merge; code byte-identical to the accepted e886b6b) on his direct word "tag the release as v1.8.0 and push the tag"; T-049 and T-051 closed. NOT LIVE YET. Next, when Atlas says SIA hub traffic is quiet, each step on Aaron's word and SERVER FIRST: (1) redeploy tcm: `npx convex deploy`, then the image, then a real send (docs/redeploying-tcm.md; tag the outgoing image for rollback); (2) update ~/Projects/A2A-Hub (still at f7f102d; every SIA seat's hub-talk), restart the main stack and do a real send, which closes A6's deferred live start. Then Loop 2 = T-001. Follow-up candidates: T-053, T-054, T-055; T-050 needs a live Cursor-hook trial; T-052 comes from Gauge's observations.
+Loop 1 is DONE AND LIVE. Merged (PRs #3-#7, 003f57d), tagged v1.8.0 (34ac98b), deployed to tcm server-first, and ~/Projects/A2A-Hub updated to 003f57d (V-001). Atlas was sent the evidence and is testing receipts from SIA's side; a relay<->atlas room k571j07exa0rdpjxjjdfc3d7v98ey1wh has turn 1 waiting. Only remaining Loop 1 item: A6's live start-stack.ps1 check. The local main stack (3210/4000) is down; starting it needs Aaron's word. Next: Loop 2 = T-001 (read-only check of revocation on tcm's live DB; SSH as melvenac@tcm works with Aaron approving commands), possibly paired with T-003. Follow-ups: T-050 live Cursor-hook trial, T-052, T-053, T-054, T-055.
 
 ### Watch out
 
-- Shared work with SIA (T-050 and delivery of T-049/T-051) runs under D-003: questions for Aaron go through Atlas (SIA planner), quoted both ways; outward acts need Aaron's word for that act. Aaron may also give it directly in this repo's session. Check relayed claims against source before recording them.
+- Shared work with SIA runs under D-003: questions for Aaron go through Atlas, quoted both ways; outward acts need Aaron's word for that act. Aaron may also give it directly in this repo's session. Check relayed claims against source before recording them.
 - D-005: seats push their OWN working branches without asking (Rivet loop/* chore/*, Gauge qa/*, Relay docs/*); never master, never force, never another seat's branch; read back with ls-remote. Merges, tags, redeploys, main-checkout updates and live Convex writes still need Aaron's word for that act.
-- SIA holds: Atlas calls them before SIA full-suite runs (another was due on 2026-09-23 for sia-qa-76 scoring A3). During a hold: no builds or test runs from any A2A-Hub seat, and stay idle. Document pushes are not covered.
-- No tcm redeploy while SIA hub traffic is live; ask Atlas first. Receipts reach SIA only after BOTH the tcm redeploy (SIA's room lives on tcm) AND the main-checkout update (for hub-talk).
-- One writer for the record while the planner holds the loop: other seats send handoff text to Relay rather than running ob_state from a tree behind the live revision.
-- ob_state's `session` parameter stamps EVERY set_handoff in the call. Record another seat's handoff in its own call with that seat's session number.
-- Three seats share one session counter: Rivet and Gauge both used 16 (logs renamed Session_16_developer.md / Session_16_qa.md).
-- The main stack (3210/4000) was DOWN on the night of 2026-09-23. start-stack.ps1 reuses anything already listening on 3210/4000, so never run it from a seat worktree.
-- Seat test stacks: Rivet 3310/4100 (and others), Gauge 3410/4410/4420. Check a port is free and the listener PID is your own before trusting it (T-053).
+- tcm access: `ssh melvenac@tcm` (the bare alias `tcm` logs in as the Windows user and is refused). In auto mode the classifier blocks even production reads; Aaron switched to manual mode to approve each command for the 2026-09-23 deploy. The planner role file says the planner does not deploy. This deploy was done by Relay on Aaron's explicit word because Rivet had ended; say so if it happens again.
+- tcm rollback levers: image a2a-hub:prev (de11bebd8f93, v1.7.0/fd23eac), source ~/projects/a2a-hub.old (fd23eac), older tree ~/projects/a2a-hub.old-pre-fd23eac. The next deploy must rotate these first: a bare `mv a2a-hub a2a-hub.old` would nest into the existing folder.
+- tcm's source dir is a tar of selected paths (convex, Dockerfile, .dockerignore, package*.json, scripts, src, tsconfig.json) plus node_modules. It is not a git tree: verify it against git by checksum, allowing for line endings.
+- SIA holds: Atlas calls them before SIA full-suite runs. During a hold: no builds or test runs from any A2A-Hub seat, and stay idle.
+- One writer for the record while the planner holds the loop; other seats send handoff text to Relay. ob_state's `session` parameter stamps EVERY set_handoff in a call.
+- Three seats share one session counter: Rivet and Gauge both used 16.
+- start-stack.ps1 reuses anything already listening on 3210/4000, so never run it from a seat worktree.
 - A3-type checks need per-seat keys: under the shared dev-key, a GET-marks-caller regression survives (T-003 note).
-- Relay's error shape in session 15, twice: asserting a fact about an artifact (the ruling's backticks, Gauge's instrument) without reading it. Read first. The entries are in Session_15.md.
-- Decisions are append-only in ob_state (no op amends one); a correction is a new decision pointing at the old, as D-004 does for D-003.
+- Relay's error shape in session 15, twice: asserting a fact about an artifact without reading it. Read first.
+- Decisions are append-only in ob_state; a correction is a new decision pointing at the old.
 - Check the highest task id before opening a task.
-- The main checkout's .claude/settings.local.json does not carry over to the worktrees, so each seat starts with fresh permission prompts.
 - SIA's seats run load-sensitive test suites on this machine. Aaron's standing ruling: work normally; pause only when a SIA seat asks for a controlled rerun.
 
 ### Open questions
@@ -32,16 +31,16 @@ Loop 1 is DONE in git: PRs #3-#7 merged (master 003f57d) on Aaron's direct word 
 
 ### Loop state
 
-**Open PRs:** _None._
+**Open PRs:** 
+- #8 docs/session-15-closeout @ eb7c85d — QA: not_required — The record at rev 21. Superseded by this revision (22+), which rides on a later docs push.
 
 **SHA frozen for QA:** _None._
 
 **Questions pending for Aaron:** _None._
 
 **Rulings made mid-loop:** 
-- Session 15: Loop 1 = T-049 + T-051; T-001 moves to Loop 2.
-- Accepted on e886b6b (Gauge report 2, all rows PASS); merged in PRs #3-#7 at 003f57d on Aaron's direct word "merge all five"; tagged v1.8.0 at 34ac98b on his direct word "tag the release as v1.8.0 and push the tag".
-- Delivery order: server first (tcm redeploy), then the main checkout. Atlas's preference, agreed by Relay.
+- Loop 1: accepted on e886b6b; merged #3-#7 at 003f57d ("merge all five"); tagged v1.8.0 at 34ac98b ("tag the release as v1.8.0 and push the tag").
+- Delivered 2026-09-23: tcm redeploy then main-checkout update, server first. Aaron via Atlas: "redeploy the tcm hub and then update ~/Projects/A2A-Hub now"; Aaron direct: "I have manual mode on, try again". Evidence in V-001.
 
 ## developer _(written session 16)_
 
