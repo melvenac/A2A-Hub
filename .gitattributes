@@ -1,0 +1,2 @@
+# The SIA record and its rendered views are written LF by open-brain; keep them byte-exact in every checkout.
+.agents/** text eol=lf
