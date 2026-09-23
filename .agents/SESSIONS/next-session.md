@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 1 by open-brain v1.7.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 6 by open-brain v1.7.0 — do not edit; change state via ob_state -->
 
 # Next Session Handoff
 
@@ -6,10 +6,15 @@
 
 ### Pick up here
 
-Write the first loop brief, for T-001: verify revocation against the live database. It is the one unmet gate before anything is exposed publicly. The brief is a read-only investigation: count agent rows per name, and check whether superseded apiKeyHash values still authenticate. It must name what has to keep working afterwards (every seat still registers and talks through hub-talk). Brief goes in docs/loops/. Gauge accepts; Rivet builds.
+Loop 1 is briefed: docs/loops/loop-1-read-receipts.md (T-049 read receipts + T-051 --peer repair). Next: when Atlas lifts the SIA QA pause, hand the brief to Rivet to propose a design, then rule on it; Gauge accepts against rows A1-A7. T-001 is Loop 2 (Relay's ruling, session 15; Aaron may overrule through Atlas). T-050 waits on a live Cursor-hook trial after the pause.
 
 ### Watch out
 
+- Shared work with SIA (T-049/T-050/T-051) runs under D-003: questions for Aaron go through Atlas (SIA planner), quoted both ways; outward acts need Aaron's word for that act. Check relayed claims against source before recording them.
+- While SIA QA runs, Atlas can call a pause: no builds or test runs from Rivet or Gauge until Atlas says done. Git pushes of documents are not covered by the pause (Atlas, 2026-09-23).
+- No tcm redeploy while SIA hub traffic is live; ask Atlas first. A redeploy is image plus `npx convex deploy`, verified with a real send.
+- Decisions are append-only in ob_state (no op amends one); a correction is a new decision pointing at the old, as D-004 does for D-003.
+- Done tasks occupy T-040..T-048; check the highest id before opening a task (session 15 near-miss).
 - The developer handoff in the record is Session 14's and predates the seats. It was written for a single agent, not for Rivet.
 - a2a-rivet and a2a-qa have node_modules (npm ci; vitest 84/84 in a2a-rivet at 5bb0777) but no .env. The live stack and repo peers need Aaron's .env, which is his to copy.
 - The main checkout's .claude/settings.local.json does not carry over to the worktrees, so each seat starts with fresh permission prompts.
@@ -25,9 +30,11 @@ Write the first loop brief, for T-001: verify revocation against the live databa
 
 **SHA frozen for QA:** _None._
 
-**Questions pending for Aaron:** _None._
+**Questions pending for Aaron:** 
+- Via Atlas, 2026-09-23: may Relay push branch docs/loop-1-read-receipts and open a PR to master (brief + record rev 1->6 + rendered views + session log; no code, no deploy)?
 
-**Rulings made mid-loop:** _None._
+**Rulings made mid-loop:** 
+- Session 15: Loop 1 = T-049 + T-051; T-001 moves to Loop 2; T-050 stays in investigation (Relay).
 
 ## developer _(written session 14)_
 

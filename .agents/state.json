@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 1,
+  "revision": 6,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -488,6 +488,36 @@
       "closed_session": 14,
       "supersedes": null,
       "note": "how a third-party agent registers, from a live probe (Session 14)"
+    },
+    {
+      "id": "T-049",
+      "title": "Read receipts: a sender can see a turn is unread by participant X, and since when",
+      "priority": "P1",
+      "status": "open",
+      "opened_session": 15,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "SIA requirement R-a (SIA T-160, evidence at SIA 4e334d8). On 2026-09-23 Atlas sent turns 6 and 7 into room k579hndqdr1mxnahy0px1dy8ks8eyef3; Grok 4.7 in Cursor, holding SIA's developer seat, was idle and never read them. The send receipts were true and said nothing about reading, so neither side could tell; Aaron found it by looking at the Cursor window. Today the only read cursor is client-side (scripts/hub-cursor.mjs, a local file written only by --wait); the server holds no read state, checked at f7f102d. Requirement: visible to the sender with no client-side change needed to see it. ADR-013's class: silence that cannot tell 'no messages' from 'no listener'. WHAT MARKS A TURN READ (SIA's requirement, from Atlas as customer, 2026-09-23): read means delivered into the AGENT'S context, not fetched by a process. A background listener or daemon that consumes turns for a seat whose model never sees them would make receipts lie in exactly the Grok case. The honest reader is the seat's own foreground hub-talk (--inbox or --wait) whose output the agent reads. If a design cannot tell these apart, the row states it as a named limit. How it is met is this repo's call. IDENTITY LIMIT, accepted by SIA as customer (Atlas, 2026-09-23): under the shared dev-key any seat can mark turns read as any participant, so 'unread by X' means unread by whoever uses the name X. SIA accepts this for local trusted seats until T-003, because it needs to tell silence from absence, not to authenticate. This is SIA's acceptance with its limit, not a property of the feature. Live use needs a tcm redeploy (D-003 coordination)."
+    },
+    {
+      "id": "T-050",
+      "title": "Wake an idle IDE seat that has an unread turn in its room",
+      "priority": "P1",
+      "status": "open",
+      "opened_session": 15,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "SIA requirement R-b (SIA T-160). An idle IDE seat either cannot go idle while its room holds an unread turn, or is woken with it. A Cursor agent sees hub messages only when it runs hub-talk itself. Joint acceptance with T-049 (SIA's words): a turn sent to an idle Cursor seat is either acted on without Aaron touching that window, or the sender is told it is unread by that seat, with the time. Depends on server-side read state (T-049) to know what is unread. FIRST UNKNOWN, ANSWERED FROM DOCUMENTATION ONLY (Relay, session 15, cursor.com/docs/agent/hooks read 2026-09-23; not tested on the installed Cursor, whose version is unrecorded): Cursor has a `stop` hook, called when the agent loop ends, input {status: completed|aborted|error, loop_count}. It may return {followup_message}, which Cursor auto-submits as the next USER message, so the turn lands in the agent's context (T-049's definition of read). Per-script `loop_limit` defaults to 5 auto follow-ups per conversation (null removes the cap); `timeout` is per-script in seconds with an unstated platform default; `failClosed` exists. Config in <project>/.cursor/hooks.json (checked in) or ~/.cursor/hooks.json; for followup_message the last response wins across sources. `stop` also runs in Cursor cloud agents. What this gives: a wake AT THE MOMENT THE AGENT STOPS, not after. The hook can check for unread turns, or block on a long-poll up to its timeout, and feed a turn back. What it does not give: once the hook returns empty, the seat is idle and nothing in Cursor wakes it for a turn that arrives later. The requirement's first branch ('cannot go idle') holds only for as long as the hook blocks; past that the second branch (sender told unread-since-T, T-049) carries the acceptance. LOOP CAP (SIA's requirement, Atlas as customer, 2026-09-23): the default 5 follow-ups is below SIA's real traffic (7 planner turns in one room on 2026-09-23; a full candidate round runs more), and past the cap the next wake silently does not happen. Whatever ships must either set loop_limit deliberately, stating the value and why, or make reaching the cap visible to the sender (T-049's unread-since-T is that route). Unknowns still open: the default and maximum timeout; whether followup_message is honoured when status is aborted (the user pressed stop; it should not be); whether the Grok Bot surface runs hooks at all. These need a live trial in a Cursor window, which is Aaron's machine and falls under the SIA pause."
+    },
+    {
+      "id": "T-051",
+      "title": "`hub-talk --peer <name>` registers the peer's name, rewriting its agent card",
+      "priority": "P1",
+      "status": "open",
+      "opened_session": 15,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "Found 2026-09-23 by Grok (SIA rulings-8), confirmed at scripts/hub-talk.mjs:220 on f7f102d: `if (PEER) await register(PEER)`. Naming a peer overwrites that peer's registration with hub-talk's defaults. Seats use --session only as a workaround. hub-talk.mjs is load-bearing for every agent; removing the call changes what --peer does for a peer that is not yet registered, so the fix states that case."
     }
   ],
   "verified": [],
@@ -582,6 +612,18 @@
       "title": "Three seats in the SIA arrangement: Relay (planner), Rivet (developer), Gauge (QA)",
       "date": "2026-09-22",
       "note": "Names ruled by Aaron. Relay is also Tarrant-County-Makerspace's agent name; that collision was shown and he chose it. Forge/Atlas, this repo's old names, belong to SIA's seats. Worktrees ~/Worktrees/a2a-planner, a2a-rivet, a2a-qa, detached at rest; each names its seat in gitignored .agents/AGENT.local.md, and tracked .agents/AGENT.md declares Rivet the default. The main checkout is not a seat: it runs the stack. Role knowledge is tracked in .agents/roles/ (adapted from SIA's roles at 0d73fbe). The four .claude/commands stubs that pointed at the deleted .agents/workflows/ were removed, so the global /start, /end, /task and /test apply. Commit 5bb0777."
+    },
+    {
+      "id": "D-003",
+      "title": "Mirror of SIA D-039: for hub work SIA depends on (T-160), this planner routes its questions for Aaron through the SIA planner (Atlas), who relays and does not plan A2A-Hub",
+      "date": "2026-09-23",
+      "note": "Ruled by Aaron in the SIA planner session (SIA record session 81), 2026-09-23, recorded as SIA D-039 at SIA commit 2055c65 (branch chore/session-81-d039, not yet on SIA master when this was written). Verbatim as recorded there: 'route through you would give you some context about a2a hub, the projects are seperate but use each other so I think running the other planner through you is a good idea. Push back if there's a strong reason for me to talk directly to a2a planner agent. If I'm only working on a2a hub then I would talk to that planner agent only, but in this case I think through you could be helpful.' Relay checked the quote against SIA's record rather than the relay's message. SCOPE: shared work only (T-049, T-050, T-051 and anything else opened under SIA T-160); A2A-Hub-only work goes to Aaron directly. BOUNDARIES: (1) Atlas relays and does not plan A2A-Hub; its standing here is as the customer, and a view of its own is labelled as its own. Design and rulings in A2A-Hub stay with this repo's seats. (2) Quotes both ways: the question verbatim with its source, the answer verbatim with where and when it was said. (3) Outward-facing acts in A2A-Hub (push, merge, tag, tcm redeploy, live Convex writes) need Aaron's word for THAT act, relayed quoted. A relayed answer is authority only as far as its quote goes. COORDINATION, binding while the shared work runs: (a) when Atlas asks, every A2A-Hub seat pauses builds and test runs until Atlas says done (SIA QA full suite fails under machine load, SIA G-042); (b) no tcm redeploy while SIA hub traffic is live, ask Atlas first; a redeploy is image plus `npx convex deploy`, verified with a real send, never /health. SIA's D-038 does not govern this repo."
+    },
+    {
+      "id": "D-004",
+      "title": "Correction to D-003: SIA D-039 is on SIA master (PR #123, merge 7a717ae)",
+      "date": "2026-09-23",
+      "note": "D-003 says D-039 was 'not yet on SIA master when this was written'. That was true when observed (SIA origin/master was 4e334d8), but PR #123 merged afterwards at 7a717ae. Relay re-checked after Atlas reported it: 2055c65 is an ancestor of SIA origin/master at 7a717ae (git merge-base --is-ancestor, fetched 2026-09-23). Written as a new decision because ob_state has no op to amend one; D-003 stands in every other respect."
     }
   ],
   "handoffs": [
@@ -624,8 +666,13 @@
     },
     {
       "seat": "planner",
-      "pick_up": "Write the first loop brief, for T-001: verify revocation against the live database. It is the one unmet gate before anything is exposed publicly. The brief is a read-only investigation: count agent rows per name, and check whether superseded apiKeyHash values still authenticate. It must name what has to keep working afterwards (every seat still registers and talks through hub-talk). Brief goes in docs/loops/. Gauge accepts; Rivet builds.",
+      "pick_up": "Loop 1 is briefed: docs/loops/loop-1-read-receipts.md (T-049 read receipts + T-051 --peer repair). Next: when Atlas lifts the SIA QA pause, hand the brief to Rivet to propose a design, then rule on it; Gauge accepts against rows A1-A7. T-001 is Loop 2 (Relay's ruling, session 15; Aaron may overrule through Atlas). T-050 waits on a live Cursor-hook trial after the pause.",
       "watch_out": [
+        "Shared work with SIA (T-049/T-050/T-051) runs under D-003: questions for Aaron go through Atlas (SIA planner), quoted both ways; outward acts need Aaron's word for that act. Check relayed claims against source before recording them.",
+        "While SIA QA runs, Atlas can call a pause: no builds or test runs from Rivet or Gauge until Atlas says done. Git pushes of documents are not covered by the pause (Atlas, 2026-09-23).",
+        "No tcm redeploy while SIA hub traffic is live; ask Atlas first. A redeploy is image plus `npx convex deploy`, verified with a real send.",
+        "Decisions are append-only in ob_state (no op amends one); a correction is a new decision pointing at the old, as D-004 does for D-003.",
+        "Done tasks occupy T-040..T-048; check the highest id before opening a task (session 15 near-miss).",
         "The developer handoff in the record is Session 14's and predates the seats. It was written for a single agent, not for Rivet.",
         "a2a-rivet and a2a-qa have node_modules (npm ci; vitest 84/84 in a2a-rivet at 5bb0777) but no .env. The live stack and repo peers need Aaron's .env, which is his to copy.",
         "The main checkout's .claude/settings.local.json does not carry over to the worktrees, so each seat starts with fresh permission prompts.",
@@ -638,8 +685,12 @@
       "loop_state": {
         "open_prs": [],
         "frozen_sha": null,
-        "questions_for_aaron": [],
-        "rulings": []
+        "questions_for_aaron": [
+          "Via Atlas, 2026-09-23: may Relay push branch docs/loop-1-read-receipts and open a PR to master (brief + record rev 1->6 + rendered views + session log; no code, no deploy)?"
+        ],
+        "rulings": [
+          "Session 15: Loop 1 = T-049 + T-051; T-001 moves to Loop 2; T-050 stays in investigation (Relay)."
+        ]
       }
     }
   ],

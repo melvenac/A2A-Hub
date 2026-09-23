@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 1 by open-brain v1.7.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 6 by open-brain v1.7.0 — do not edit; change state via ob_state -->
 
 # Current Focus
 
