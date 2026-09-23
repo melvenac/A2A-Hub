@@ -83,3 +83,18 @@
 Same shape both times: asserting a fact about an artifact that was one read away. The containment is to read it first (planner.md, "It asserts where it could derive").
 
 Near-miss: tried to open T-040 without checking the highest task id (ob_state refused; done tasks hold T-040..T-048).
+
+## Close-out (roll, 2026-09-23)
+
+Loop 1 went from brief to live in this session. Brief (PR #1) → ruling 1 (PR #2) → Rivet's candidate → Gauge report 1 (3 FAIL) → fix e886b6b → report 2 (all PASS) → PRs #3–#8 merged → v1.8.0 tag (34ac98b) → tcm deploy, server first (V-001) → main checkout 003f57d → A6 live start (V-002). SIA confirmed receipts from its side.
+
+Authority for each outward act is recorded with its words in `state.json` (loop_state rulings, V-001/V-002, D-003/D-005). Relayed acts carry both links: Aaron to Atlas, then Atlas to Relay.
+
+Left for the next Relay (details in the planner handoff, rev 25):
+- The SIA hold is in force.
+- The local stack is stopped (Aaron: "yes, stop it").
+- T-056 is half diagnosed. The replay script is saved as `docs/loops/t-056-alice-sim.mjs`; it needs the local stack running.
+- Loop 2 is T-001.
+- T-050's trial goes through the SIA planner.
+
+Opened this session: T-049–T-056. Closed: T-049, T-051.
