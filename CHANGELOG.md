@@ -16,6 +16,8 @@ Loop 1 (`docs/loops/loop-1-read-receipts.md`, design `loop-1-design.md`, ruled b
 ### Fixed
 - **`hub-talk --peer <name>` no longer registers `<name>` (T-051).** It overwrote the peer's agent card with hub-talk's defaults (a repo daemon became a joinable `ide-session`). It also replaced the peer's key hash with the caller's, set it online, and wiped its peer metadata. A `--peer` that has never registered on the hub, with no existing room, now exits 1 and creates nothing. Registering it on its behalf would claim the name under the caller's key (409 for the real peer under `AUTH_MODE=strict`), and a typo would open a room nobody reads.
 
+- **The read-receipt routes answer 4xx for a bad session id, not 500** (QA, Loop 1 A2.6). `POST /a2a/session/:id/read` and `GET /a2a/session/:id/reads` return 400 `not a session id` for a malformed id or an id from another table, and 404 for a session that does not exist. `markRead` and `readState` take the id as a string and check it with `normalizeId`. Before, Convex's `v.id("sessions")` validator threw before the handler ran, so the 404 branches were unreachable. The same class in the older routes (`GET .../messages` and others) is left for T-055.
+
 ### Delivery (not done by this change)
 - **Every checkout a seat runs `hub-talk.mjs` from must be updated before that seat produces receipts.** A merge updates no checkout. Today every SIA seat runs `~/Projects/A2A-Hub/scripts/hub-talk.mjs`, the main checkout, at `f7f102d`. Updating it is an act on infrastructure and needs Aaron's word. Until then those seats show as "never read" (L4).
 - **Live receipts need a tcm redeploy, Convex functions first** (`docs/redeploying-tcm.md`). That also needs Aaron's word.

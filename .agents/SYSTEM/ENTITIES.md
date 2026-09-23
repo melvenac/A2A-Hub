@@ -68,6 +68,23 @@ Registered wrapper agents.
 
 ---
 
+### a2aTasks
+A2A protocol tasks (the spec's Task lifecycle), stored whole. This is separate from `tasks` above, which backs the hub's own agent queue and has an unrelated shape. The spec object is kept intact rather than split into columns, so `TaskState` and future spec fields need no migration. Backs `ConvexTaskStore` (`src/task-store.ts`).
+
+| Field | Type | Description |
+|---|---|---|
+| `taskId` | `string` | A2A task id |
+| `contextId` | `string` | A2A context id |
+| `task` | `any` | The spec `Task` object, whole (owned by the SDK) |
+| `updatedAt` | `number` | Timestamp of the last save |
+
+**Indexes:**
+- `by_taskId` — Lookup by A2A task id
+
+`a2aTasks.save` upserts on `by_taskId`, deliberately unlike an insert-only write. `a2aTasks.load` reads by `taskId`.
+
+---
+
 ### peers
 Humans and agents as first-class chat entities (ADR-005/006). Aaron is a peer, not a relay.
 

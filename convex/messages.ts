@@ -90,13 +90,19 @@ export const list = query({
 // Monotonic: an older mark never moves the stored one backwards.
 export const markRead = mutation({
   args: {
-    sessionId: v.id("sessions"),
+    // A string, not v.id("sessions"): the validator throws before the handler
+    // runs, so a bad id surfaced as a 500 instead of the 400/404 below.
+    sessionId: v.string(),
     reader: v.string(),
     throughTurn: v.number(),
     via: v.union(v.literal("inbox"), v.literal("wait")),
   },
   handler: async (ctx, args) => {
-    const session = await ctx.db.get(args.sessionId);
+    const sessionId = ctx.db.normalizeId("sessions", args.sessionId);
+    if (!sessionId) {
+      return { ok: false as const, status: 400, reason: "not a session id" };
+    }
+    const session = await ctx.db.get(sessionId);
     if (!session) {
       return { ok: false as const, status: 404, reason: "session not found" };
     }
@@ -111,7 +117,7 @@ export const markRead = mutation({
       ? (
           await ctx.db
             .query("sessionPeers")
-            .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+            .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
             .collect()
         ).find((m) => m.peerId === peer._id)
       : undefined;

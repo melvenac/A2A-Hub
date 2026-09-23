@@ -516,7 +516,7 @@ app.post("/a2a/session/:sessionId/read", async (req, res) => {
       return res.status(400).json({ error: 'via must be "inbox" or "wait"' });
     }
     const result = await convex.mutation(api.messages.markRead, {
-      sessionId: req.params.sessionId as any,
+      sessionId: req.params.sessionId,
       reader,
       throughTurn: Number(throughTurn),
       via,
@@ -531,10 +531,12 @@ app.post("/a2a/session/:sessionId/read", async (req, res) => {
 // Who has not been shown which turns, and since when. Read-only.
 app.get("/a2a/session/:sessionId/reads", async (req, res) => {
   try {
-    const state = await convex.query(api.sessions.readState, {
-      sessionId: req.params.sessionId as any,
+    const result = await convex.query(api.sessions.readState, {
+      sessionId: req.params.sessionId,
     });
-    if (!state) return res.status(404).json({ error: "session not found" });
+    // 400 malformed id, 404 unknown session: never a 500 for the caller's input.
+    if (!result.ok) return res.status(result.status).json({ error: result.reason });
+    const { ok, ...state } = result;
     res.json(state);
   } catch (error: any) {
     res.status(500).json({ error: error.message });

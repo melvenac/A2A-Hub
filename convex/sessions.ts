@@ -156,10 +156,18 @@ export const close = mutation({
 // Read receipts for a room (T-049): per participant, the last recorded read
 // (null if none ever) and the turns by others it has not been shown. Read-only.
 export const readState = query({
-  args: { sessionId: v.id("sessions") },
+  // A string, not v.id("sessions"): the validator throws before the handler
+  // runs, so a bad id surfaced as a 500 instead of a 400/404.
+  args: { sessionId: v.string() },
   handler: async (ctx, args) => {
-    const session = await ctx.db.get(args.sessionId);
-    if (!session) return null;
+    const sessionId = ctx.db.normalizeId("sessions", args.sessionId);
+    if (!sessionId) {
+      return { ok: false as const, status: 400, reason: "not a session id" };
+    }
+    const session = await ctx.db.get(sessionId);
+    if (!session) {
+      return { ok: false as const, status: 404, reason: "session not found" };
+    }
 
     const peerNames = new Map<string, string>();
     const nameOf = async (peerId: any) => {
@@ -172,7 +180,7 @@ export const readState = query({
 
     const messages = await ctx.db
       .query("messages")
-      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
       .collect();
     const turns = [];
     for (const { message, turn } of numberTurns(messages)) {
@@ -181,7 +189,7 @@ export const readState = query({
 
     const memberships = await ctx.db
       .query("sessionPeers")
-      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
       .collect();
     const members = [];
     for (const m of memberships) {
@@ -194,6 +202,7 @@ export const readState = query({
     }
 
     return {
+      ok: true as const,
       turnCount: session.turnCount,
       participants: computeReadState(turns, members),
     };

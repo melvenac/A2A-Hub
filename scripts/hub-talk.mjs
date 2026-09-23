@@ -23,21 +23,26 @@
  * never registers that peer. A peer that has never registered on the hub has
  * no {me, peer} room and cannot be put in a new one, so that exits 1.
  *
- * Read receipts (T-049). hub-talk marks a turn read when it prints it:
- * --inbox marks the whole room, --wait marks the turns it prints. The mark is
- * posted after printing and only ever moves forward. --inbox also lists your
- * own turns someone has not been shown, and so does --wait when it times out.
- *   RULE: run --inbox or --wait only where its output reaches the agent. A
- *   process whose output the agent never sees must not run them. Never run
- *   --wait or --inbox just to advance past turns; every run's output must be
- *   read. (A background --wait whose output goes to a file the agent reads
- *   later is within the rule; the gap before it is read is L1.)
+ * Read receipts (T-049). --inbox marks the whole room read, --wait marks the
+ * turns it prints. The mark is posted after printing and only ever moves
+ * forward. --inbox also lists your own turns someone has not been shown, and
+ * so does --wait when it times out.
+ *
+ * The rule (docs/loops/loop-1-ruling-1.md):
+ * `hub-talk` marks a turn read when it prints it. Run `--inbox` or `--wait` only where its output reaches the agent. A process whose output the agent never sees must not run them.
+ * Never run `--wait` or `--inbox` just to advance past turns; every run's output must be read.
+ * A background --wait whose output goes to a file the agent reads later is
+ * within the rule; the gap before it is read is L1.
+ *
  * Named limits:
  *   L1  delivery, not reading: a mark means the turn was printed by a
  *       hub-talk call, not that the model read it.
  *   L2  identity: under the shared dev-key any seat can mark turns read as
  *       any participant, so "unread by X" means unread by whoever uses the
  *       name X (until per-agent keys, T-003).
+ *   L3  foreground cannot be proven: the hub cannot tell a hub-talk whose
+ *       output reaches the agent from one whose output is thrown away. The
+ *       rule above is the only guard.
  *   L4  a reader on an older hub-talk never marks, so it shows as "never
  *       read this room" however much it has read.
  *   L5  a mark that fails to post (hub down, timeout, a crash after printing)
