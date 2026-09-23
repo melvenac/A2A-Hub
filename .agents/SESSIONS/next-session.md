@@ -1,6 +1,33 @@
-<!-- generated from .agents/state.json rev 0 by open-brain v1.7.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 1 by open-brain v1.7.0 — do not edit; change state via ob_state -->
 
 # Next Session Handoff
+
+## planner _(written session 15)_
+
+### Pick up here
+
+Write the first loop brief, for T-001: verify revocation against the live database. It is the one unmet gate before anything is exposed publicly. The brief is a read-only investigation: count agent rows per name, and check whether superseded apiKeyHash values still authenticate. It must name what has to keep working afterwards (every seat still registers and talks through hub-talk). Brief goes in docs/loops/. Gauge accepts; Rivet builds.
+
+### Watch out
+
+- The developer handoff in the record is Session 14's and predates the seats. It was written for a single agent, not for Rivet.
+- a2a-rivet and a2a-qa have node_modules (npm ci; vitest 84/84 in a2a-rivet at 5bb0777) but no .env. The live stack and repo peers need Aaron's .env, which is his to copy.
+- The main checkout's .claude/settings.local.json does not carry over to the worktrees, so each seat starts with fresh permission prompts.
+- SIA's seats run load-sensitive test suites on this machine. Aaron's standing ruling: work normally; pause only when a SIA seat asks for a controlled rerun.
+
+### Open questions
+
+- Seat transport: Claude Code cross-session messages or a hub room via scripts/hub-talk.mjs? AGENT.md allows both. Dogfooding the hub would exercise T-008 and T-017, but it makes the seats depend on the thing they are changing.
+
+### Loop state
+
+**Open PRs:** _None._
+
+**SHA frozen for QA:** _None._
+
+**Questions pending for Aaron:** _None._
+
+**Rulings made mid-loop:** _None._
 
 ## developer _(written session 14)_
 
@@ -46,4 +73,4 @@
 
 ## Last session
 
-Session 14 — 2026-09-20
+Session 15 — 2026-09-22 — planner — `f11f4c14-93fb-4b0f-8ba2-a716a1187e70`

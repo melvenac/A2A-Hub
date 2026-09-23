@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 0,
+  "revision": 1,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -488,266 +488,6 @@
       "closed_session": 14,
       "supersedes": null,
       "note": "how a third-party agent registers, from a live probe (Session 14)"
-    },
-    {
-      "id": "T-049",
-      "title": "Repo-resident peers + `ask-agent.mjs`",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 11,
-      "closed_session": 11,
-      "supersedes": null,
-      "note": "v1.6.0, ADR-010, verified live cross-repo with four verbatim-checked citations (Session 11)"
-    },
-    {
-      "id": "T-050",
-      "title": "PRD §1 use-case priority amended",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 11,
-      "closed_session": 11,
-      "supersedes": null,
-      "note": "PRD v1.2, cross-repo is the primary use case (Session 11)"
-    },
-    {
-      "id": "T-051",
-      "title": "`@`-parsing over-match fixed",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 10,
-      "closed_session": 10,
-      "supersedes": null,
-      "note": "v1.5.2, `src/wrapper/mentions.ts` (Session 10)"
-    },
-    {
-      "id": "T-052",
-      "title": "Stale turn counter fixed",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 10,
-      "closed_session": 10,
-      "supersedes": null,
-      "note": "v1.5.2 (Session 10)"
-    },
-    {
-      "id": "T-053",
-      "title": "Push v1.5.0 + v1.5.1 + v1.5.2",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 10,
-      "closed_session": 10,
-      "supersedes": null,
-      "note": "(Session 10)"
-    },
-    {
-      "id": "T-054",
-      "title": "GitNexus re-index unblocked",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 10,
-      "closed_session": 10,
-      "supersedes": null,
-      "note": "(Session 10)"
-    },
-    {
-      "id": "T-055",
-      "title": "`/health` probes Convex",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 8,
-      "closed_session": 8,
-      "supersedes": null,
-      "note": "ADR-009, `503 degraded` (Session 8)"
-    },
-    {
-      "id": "T-056",
-      "title": "`REPO_FIXER_MODEL` 404 fixed",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 8,
-      "closed_session": 8,
-      "supersedes": null,
-      "note": "v1.5.1 (Session 8)"
-    },
-    {
-      "id": "T-057",
-      "title": "Live verification of Session 7 work",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 8,
-      "closed_session": 8,
-      "supersedes": null,
-      "note": "shipped as v1.5.0 (Session 8)"
-    },
-    {
-      "id": "T-058",
-      "title": "Per-agent personas with real roles",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 7,
-      "closed_session": 7,
-      "supersedes": null,
-      "note": "(Session 7)"
-    },
-    {
-      "id": "T-059",
-      "title": "`start-stack.ps1`",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 7,
-      "closed_session": 7,
-      "supersedes": null,
-      "note": "one-click stack (Session 7)"
-    },
-    {
-      "id": "T-060",
-      "title": "`CLASSIFIER_MODEL` default changed to Haiku 4.5",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 7,
-      "closed_session": 7,
-      "supersedes": null,
-      "note": "(Session 7)"
-    },
-    {
-      "id": "T-061",
-      "title": "Grow Svelte client into chat UI",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 6,
-      "closed_session": 6,
-      "supersedes": null,
-      "note": "v1.4.0 (Session 6)"
-    },
-    {
-      "id": "T-062",
-      "title": "Session extend/reopen + @mention reply routing",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 6,
-      "closed_session": 6,
-      "supersedes": null,
-      "note": "v1.4.0, ADR-007 (Session 6)"
-    },
-    {
-      "id": "T-063",
-      "title": "Real-LLM gate PASSED",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 6,
-      "closed_session": 6,
-      "supersedes": null,
-      "note": "v1.4.0; v1 milestone complete (Session 6)"
-    },
-    {
-      "id": "T-064",
-      "title": "Svelte test client",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 11,
-      "closed_session": 11,
-      "supersedes": null,
-      "note": "v1.3.0"
-    },
-    {
-      "id": "T-065",
-      "title": "Autonomous 2-agent loop gate PASSED",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 11,
-      "closed_session": 11,
-      "supersedes": null,
-      "note": "v1.2.0"
-    },
-    {
-      "id": "T-066",
-      "title": "Wrapper daemon",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 11,
-      "closed_session": 11,
-      "supersedes": null,
-      "note": "v1.2.0"
-    },
-    {
-      "id": "T-067",
-      "title": "Protocol spine",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 11,
-      "closed_session": 11,
-      "supersedes": null,
-      "note": "`to:` addressing, chat channel, atomic `tasks.claim`, turn caps (v1.1.0, ADR-006)"
-    },
-    {
-      "id": "T-068",
-      "title": "Delete Telegram entirely",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 11,
-      "closed_session": 11,
-      "supersedes": null,
-      "note": "v1.1.0"
-    },
-    {
-      "id": "T-069",
-      "title": "Core modules",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 11,
-      "closed_session": 11,
-      "supersedes": null,
-      "note": "classifier, memory, executor, escalation, queue, repo-fixer, agent-card"
-    },
-    {
-      "id": "T-070",
-      "title": "Convex schema + deploy; Docker/Compose config; VPS deploy (later wiped)",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 11,
-      "closed_session": 11,
-      "supersedes": null,
-      "note": ""
-    },
-    {
-      "id": "T-071",
-      "title": "Vitest suite",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 11,
-      "closed_session": 11,
-      "supersedes": null,
-      "note": "classifier, executor, queue, integration"
-    },
-    {
-      "id": "T-072",
-      "title": "CHANGELOG.md + tagged releases",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 11,
-      "closed_session": 11,
-      "supersedes": null,
-      "note": "v1.1.0, v1.2.0"
-    },
-    {
-      "id": "T-073",
-      "title": "Per-task configurable LLM models",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 11,
-      "closed_session": 11,
-      "supersedes": null,
-      "note": "ADR-004"
-    },
-    {
-      "id": "T-074",
-      "title": "README with wrapper quickstart",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 11,
-      "closed_session": 11,
-      "supersedes": null,
-      "note": ""
     }
   ],
   "verified": [],
@@ -830,6 +570,18 @@
       "title": "Ambiguous Silence Must Fail Closed",
       "date": "2026-09-21",
       "note": ""
+    },
+    {
+      "id": "D-001",
+      "title": "Adopt the Self-Improving-Agent record: .agents/state.json (schema 2), written only through ob_state",
+      "date": "2026-09-22",
+      "note": "One-shot open-brain state import, committed by Aaron (G-007: the auto-mode classifier denies --commit in an agent session). Before import: INBOX regrouped into P0-P3 (the importer reads priority sections only; roadmap version kept per task as '(roadmap vN)'), task.md given a Current Objective, next-session.md brought up to Session 14, and SIA's hardcoded seeds (V-001..V-005, G-001..G-006) removed from the draft by parser on Atlas's advice. INBOX, task.md, next-session.md and SUMMARY.md's marked region are now rendered views. .agents/** is LF via .gitattributes; the pre-migration snapshot stays local in .agents/archive/. Account: docs/loops/sia-migration-assessment.md. Commits 3beac7c, 9fa2bcb."
+    },
+    {
+      "id": "D-002",
+      "title": "Three seats in the SIA arrangement: Relay (planner), Rivet (developer), Gauge (QA)",
+      "date": "2026-09-22",
+      "note": "Names ruled by Aaron. Relay is also Tarrant-County-Makerspace's agent name; that collision was shown and he chose it. Forge/Atlas, this repo's old names, belong to SIA's seats. Worktrees ~/Worktrees/a2a-planner, a2a-rivet, a2a-qa, detached at rest; each names its seat in gitignored .agents/AGENT.local.md, and tracked .agents/AGENT.md declares Rivet the default. The main checkout is not a seat: it runs the stack. Role knowledge is tracked in .agents/roles/ (adapted from SIA's roles at 0d73fbe). The four .claude/commands stubs that pointed at the deleted .agents/workflows/ were removed, so the global /start, /end, /task and /test apply. Commit 5bb0777."
     }
   ],
   "handoffs": [
@@ -869,12 +621,32 @@
       ],
       "session": 14,
       "loop_state": null
+    },
+    {
+      "seat": "planner",
+      "pick_up": "Write the first loop brief, for T-001: verify revocation against the live database. It is the one unmet gate before anything is exposed publicly. The brief is a read-only investigation: count agent rows per name, and check whether superseded apiKeyHash values still authenticate. It must name what has to keep working afterwards (every seat still registers and talks through hub-talk). Brief goes in docs/loops/. Gauge accepts; Rivet builds.",
+      "watch_out": [
+        "The developer handoff in the record is Session 14's and predates the seats. It was written for a single agent, not for Rivet.",
+        "a2a-rivet and a2a-qa have node_modules (npm ci; vitest 84/84 in a2a-rivet at 5bb0777) but no .env. The live stack and repo peers need Aaron's .env, which is his to copy.",
+        "The main checkout's .claude/settings.local.json does not carry over to the worktrees, so each seat starts with fresh permission prompts.",
+        "SIA's seats run load-sensitive test suites on this machine. Aaron's standing ruling: work normally; pause only when a SIA seat asks for a controlled rerun."
+      ],
+      "open_questions": [
+        "Seat transport: Claude Code cross-session messages or a hub room via scripts/hub-talk.mjs? AGENT.md allows both. Dogfooding the hub would exercise T-008 and T-017, but it makes the seats depend on the thing they are changing."
+      ],
+      "session": 15,
+      "loop_state": {
+        "open_prs": [],
+        "frozen_sha": null,
+        "questions_for_aaron": [],
+        "rulings": []
+      }
     }
   ],
   "last_session": {
-    "n": 14,
-    "date": "2026-09-20",
-    "uuid": null,
-    "seat": null
+    "n": 15,
+    "date": "2026-09-22",
+    "uuid": "f11f4c14-93fb-4b0f-8ba2-a716a1187e70",
+    "seat": "planner"
   }
 }

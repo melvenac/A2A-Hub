@@ -1,6 +1,9 @@
 # SIA migration — A2A-Hub import
 
-**Date:** 2026-09-22 · **Author:** A2A-Hub planner seat · **Status:** draft ready for Aaron's `--commit`
+**Date:** 2026-09-22 · **Author:** A2A-Hub planner seat (Relay) · **Status:** done. Aaron ran
+`--commit`; the migration landed at `3beac7c` + `9fa2bcb`, and the seats at `5bb0777`. Recorded as
+D-001 and D-002 in `state.json` (rev 1). The sections below were written before the commit and are
+kept as written.
 
 ## What was run
 
@@ -53,11 +56,17 @@ Output: `.agents/state.draft.json` + `.agents/state.import-report.md` (untracked
 - **Checked, not assumed:** `--commit` consumes the edited draft file (`runCommit` reads and
   re-validates it, `index.ts:609-612`). It does not re-derive.
 
-## Remaining
+## Outcome
 
-- **Aaron runs `open-brain state import --commit`** in A2A-Hub. Per SIA `G-007`, the auto-mode
-  classifier denies it inside an agent session. It snapshots `.agents/`, writes `state.json` rev 0,
-  trims SUMMARY.md, and re-renders INBOX/task/next-session from state.
-- Then commit the migration on a branch. This touches `.agents/**` and docs only.
-- SIA side: delete `seedVerified`/`seedGaps` from the importer (Atlas's task list).
-- Seat setup to mirror SIA (roles, `AGENT.md`, per-worktree `AGENT.local.md`, `~/Worktrees/` checkouts).
+- **Committed.** Aaron ran `--commit`. `state show` read rev 0: 74 tasks (39 open), T-001 at P0,
+  objective set, matching the reviewed draft. A fresh checkout had zero CR bytes in `state.json`,
+  and `state show` read it correctly there.
+- **Seats (`5bb0777`, D-002).** Relay / Rivet / Gauge in `~/Worktrees/a2a-planner`, `a2a-rivet`,
+  `a2a-qa`. SIA's own `readAgentIdentity` and `describeRoleFiles` resolve each tree to its seat and
+  load its role file plus `shared.md` (2 of 2, no problems). Rivet and QA have `npm ci`; vitest in
+  `a2a-rivet` ran 84/84, matching Session 14's count.
+- **SIA side.** The seeds defect is SIA task T-175 ("Delete the seeds from the importer"), open,
+  recorded at SIA `86778ef`. Also reported to
+  Atlas: the importer cannot tell that an input predates the last `Session_N.md`.
+- **Not done here:** `.env` in the seat worktrees (Aaron's secret to copy); per-worktree
+  permissions. The seat-transport question is open in the planner handoff.
