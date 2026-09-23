@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 6 by open-brain v1.7.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 11 by open-brain v1.7.0 — do not edit; change state via ob_state -->
 
 # Next Session Handoff
 
@@ -6,13 +6,15 @@
 
 ### Pick up here
 
-Loop 1 is briefed: docs/loops/loop-1-read-receipts.md (T-049 read receipts + T-051 --peer repair). Next: when Atlas lifts the SIA QA pause, hand the brief to Rivet to propose a design, then rule on it; Gauge accepts against rows A1-A7. T-001 is Loop 2 (Relay's ruling, session 15; Aaron may overrule through Atlas). T-050 waits on a live Cursor-hook trial after the pause.
+Loop 1 is building. Brief on master (PR #1, 2eb7928). Rivet's design (docs/loops/loop-1-design.md, a2a-rivet) was approved in docs/loops/loop-1-ruling-1.md, which includes an addendum on SIA's background and drain patterns. Next: Rivet pushes a candidate on a loop/ branch (D-005) and sends its ls-remote SHA; freeze that SHA for Gauge (A1-A7). The morning items for Aaron are: the PR and merge, updating ~/Projects/A2A-Hub (the hub-talk every SIA seat runs, per Atlas), the .env for the local-stack rows, and merging docs/loop-1-ruling-1. T-001 is Loop 2.
 
 ### Watch out
 
-- Shared work with SIA (T-049/T-050/T-051) runs under D-003: questions for Aaron go through Atlas (SIA planner), quoted both ways; outward acts need Aaron's word for that act. Check relayed claims against source before recording them.
+- Shared work with SIA (T-049/T-050/T-051) runs under D-003: questions for Aaron go through Atlas (SIA planner), quoted both ways; outward acts need Aaron's word for that act. Aaron may also give it directly in this repo's session, as he did for the PR #1 merge. Check relayed claims against source before recording them.
+- D-005: seats push their OWN working branches without asking (Rivet loop/* chore/*, Gauge qa/*, Relay docs/*); never master, never force, never another seat's branch; read back with ls-remote. Merges, tags, redeploys, main-checkout updates and live Convex writes still need Aaron's word for that act. The question behind D-005 was Atlas's own; Aaron may revisit it.
 - While SIA QA runs, Atlas can call a pause: no builds or test runs from Rivet or Gauge until Atlas says done. Git pushes of documents are not covered by the pause (Atlas, 2026-09-23).
 - No tcm redeploy while SIA hub traffic is live; ask Atlas first. A redeploy is image plus `npx convex deploy`, verified with a real send.
+- Every SIA seat runs ~/Projects/A2A-Hub/scripts/hub-talk.mjs (Atlas, 2026-09-23; Grok's exact invocation is unconfirmed). That checkout was at f7f102d; a GitHub merge does not update it. Receipts for SIA seats need it updated on Aaron's word, and no update overnight.
 - Decisions are append-only in ob_state (no op amends one); a correction is a new decision pointing at the old, as D-004 does for D-003.
 - Done tasks occupy T-040..T-048; check the highest id before opening a task (session 15 near-miss).
 - The developer handoff in the record is Session 14's and predates the seats. It was written for a single agent, not for Rivet.
@@ -30,11 +32,14 @@ Loop 1 is briefed: docs/loops/loop-1-read-receipts.md (T-049 read receipts + T-0
 
 **SHA frozen for QA:** _None._
 
-**Questions pending for Aaron:** 
-- Via Atlas, 2026-09-23: may Relay push branch docs/loop-1-read-receipts and open a PR to master (brief + record rev 1->6 + rendered views + session log; no code, no deploy)?
+**Questions pending for Aaron:** _None._
 
 **Rulings made mid-loop:** 
 - Session 15: Loop 1 = T-049 + T-051; T-001 moves to Loop 2; T-050 stays in investigation (Relay).
+- Push + PR #1 authorised: Aaron to Atlas in the SIA planner session (SIA record session 81), 2026-09-23, verbatim "yes, including rev 6", answering Relay's question put to him verbatim; Atlas to Relay by cross-session message the same day under SIA D-039 / A2A D-003. Scope: push that branch and open the PR.
+- Merge of PR #1 authorised by Aaron directly in this A2A-Hub planner session (session 15), 2026-09-23, verbatim: "merge when ready". Merged with a merge commit pinned to head c2ea92d: 2eb79282e1aab1480f54e6f2b5d459ec27bb5a67; c2ea92d verified an ancestor of origin/master after fetch.
+- Ruling 1 on Rivet's Loop 1 design (docs/loops/loop-1-ruling-1.md): approved to build. Q1: Rivet's reading of 'no change to the reader's client' is right; L4 accepted (fails closed); correction, a merge updates no checkout, so delivery names a checkout-update step. Q2: L3 option (a), accept and document the rule 'run --inbox or --wait only where its output reaches the agent'; --no-read-mark rejected. Addendum: SIA's drain pattern named in the docs as forbidden.
+- D-005 standing push authority recorded (Aaron via Atlas, "yes to  your quesition"); shared.md amended to match.
 
 ## developer _(written session 14)_
 

@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 6,
+  "revision": 11,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -624,6 +624,12 @@
       "title": "Correction to D-003: SIA D-039 is on SIA master (PR #123, merge 7a717ae)",
       "date": "2026-09-23",
       "note": "D-003 says D-039 was 'not yet on SIA master when this was written'. That was true when observed (SIA origin/master was 4e334d8), but PR #123 merged afterwards at 7a717ae. Relay re-checked after Atlas reported it: 2055c65 is an ancestor of SIA origin/master at 7a717ae (git merge-base --is-ancestor, fetched 2026-09-23). Written as a new decision because ob_state has no op to amend one; D-003 stands in every other respect."
+    },
+    {
+      "id": "D-005",
+      "title": "Standing push authority: A2A-Hub seats push their OWN working branches without asking; never master, never force, never another seat's branch; merges and tcm redeploys stay Aaron's",
+      "date": "2026-09-23",
+      "note": "Aaron, in the SIA planner session (SIA record session 81), 2026-09-23, verbatim: \"yes to  your quesition\". The question, as Atlas put it to him: \"Should A2A-Hub's seats get the same standing push authority for their own working branches?\" Relayed Atlas -> Relay by cross-session message the same day under SIA D-039 / A2A D-003. The question was Atlas's own, not relayed from an A2A-Hub seat; it is recorded as Aaron's authority because the answer is his. 'The same' refers to SIA D-038 part (1), checked against SIA origin/master aef8195: any seat may push ITS OWN working branches without asking; never master, never a force push, never a branch another seat owns; every push is read back with ls-remote and named in the commit, report or message that follows it. In A2A-Hub: Rivet's loop/* and chore/*, Gauge's qa/*, Relay's docs/*. NOT imported from SIA: D-032's docs/record merge exception, and D-038 part (2). Merging to master, tagging, tcm redeploys, updating the main checkout ~/Projects/A2A-Hub, and writes to live Convex each still need Aaron's word for that act. This amends shared.md's 'Each outward-facing act needs authority for THAT act' for own-branch pushes only."
     }
   ],
   "handoffs": [
@@ -666,11 +672,13 @@
     },
     {
       "seat": "planner",
-      "pick_up": "Loop 1 is briefed: docs/loops/loop-1-read-receipts.md (T-049 read receipts + T-051 --peer repair). Next: when Atlas lifts the SIA QA pause, hand the brief to Rivet to propose a design, then rule on it; Gauge accepts against rows A1-A7. T-001 is Loop 2 (Relay's ruling, session 15; Aaron may overrule through Atlas). T-050 waits on a live Cursor-hook trial after the pause.",
+      "pick_up": "Loop 1 is building. Brief on master (PR #1, 2eb7928). Rivet's design (docs/loops/loop-1-design.md, a2a-rivet) was approved in docs/loops/loop-1-ruling-1.md, which includes an addendum on SIA's background and drain patterns. Next: Rivet pushes a candidate on a loop/ branch (D-005) and sends its ls-remote SHA; freeze that SHA for Gauge (A1-A7). The morning items for Aaron are: the PR and merge, updating ~/Projects/A2A-Hub (the hub-talk every SIA seat runs, per Atlas), the .env for the local-stack rows, and merging docs/loop-1-ruling-1. T-001 is Loop 2.",
       "watch_out": [
-        "Shared work with SIA (T-049/T-050/T-051) runs under D-003: questions for Aaron go through Atlas (SIA planner), quoted both ways; outward acts need Aaron's word for that act. Check relayed claims against source before recording them.",
+        "Shared work with SIA (T-049/T-050/T-051) runs under D-003: questions for Aaron go through Atlas (SIA planner), quoted both ways; outward acts need Aaron's word for that act. Aaron may also give it directly in this repo's session, as he did for the PR #1 merge. Check relayed claims against source before recording them.",
+        "D-005: seats push their OWN working branches without asking (Rivet loop/* chore/*, Gauge qa/*, Relay docs/*); never master, never force, never another seat's branch; read back with ls-remote. Merges, tags, redeploys, main-checkout updates and live Convex writes still need Aaron's word for that act. The question behind D-005 was Atlas's own; Aaron may revisit it.",
         "While SIA QA runs, Atlas can call a pause: no builds or test runs from Rivet or Gauge until Atlas says done. Git pushes of documents are not covered by the pause (Atlas, 2026-09-23).",
         "No tcm redeploy while SIA hub traffic is live; ask Atlas first. A redeploy is image plus `npx convex deploy`, verified with a real send.",
+        "Every SIA seat runs ~/Projects/A2A-Hub/scripts/hub-talk.mjs (Atlas, 2026-09-23; Grok's exact invocation is unconfirmed). That checkout was at f7f102d; a GitHub merge does not update it. Receipts for SIA seats need it updated on Aaron's word, and no update overnight.",
         "Decisions are append-only in ob_state (no op amends one); a correction is a new decision pointing at the old, as D-004 does for D-003.",
         "Done tasks occupy T-040..T-048; check the highest id before opening a task (session 15 near-miss).",
         "The developer handoff in the record is Session 14's and predates the seats. It was written for a single agent, not for Rivet.",
@@ -685,11 +693,13 @@
       "loop_state": {
         "open_prs": [],
         "frozen_sha": null,
-        "questions_for_aaron": [
-          "Via Atlas, 2026-09-23: may Relay push branch docs/loop-1-read-receipts and open a PR to master (brief + record rev 1->6 + rendered views + session log; no code, no deploy)?"
-        ],
+        "questions_for_aaron": [],
         "rulings": [
-          "Session 15: Loop 1 = T-049 + T-051; T-001 moves to Loop 2; T-050 stays in investigation (Relay)."
+          "Session 15: Loop 1 = T-049 + T-051; T-001 moves to Loop 2; T-050 stays in investigation (Relay).",
+          "Push + PR #1 authorised: Aaron to Atlas in the SIA planner session (SIA record session 81), 2026-09-23, verbatim \"yes, including rev 6\", answering Relay's question put to him verbatim; Atlas to Relay by cross-session message the same day under SIA D-039 / A2A D-003. Scope: push that branch and open the PR.",
+          "Merge of PR #1 authorised by Aaron directly in this A2A-Hub planner session (session 15), 2026-09-23, verbatim: \"merge when ready\". Merged with a merge commit pinned to head c2ea92d: 2eb79282e1aab1480f54e6f2b5d459ec27bb5a67; c2ea92d verified an ancestor of origin/master after fetch.",
+          "Ruling 1 on Rivet's Loop 1 design (docs/loops/loop-1-ruling-1.md): approved to build. Q1: Rivet's reading of 'no change to the reader's client' is right; L4 accepted (fails closed); correction, a merge updates no checkout, so delivery names a checkout-update step. Q2: L3 option (a), accept and document the rule 'run --inbox or --wait only where its output reaches the agent'; --no-read-mark rejected. Addendum: SIA's drain pattern named in the docs as forbidden.",
+          "D-005 standing push authority recorded (Aaron via Atlas, \"yes to  your quesition\"); shared.md amended to match."
         ]
       }
     }
