@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 11 by open-brain v1.7.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 16 by open-brain v1.7.0 — do not edit; change state via ob_state -->
 
 # Next Session Handoff
 
@@ -6,19 +6,21 @@
 
 ### Pick up here
 
-Loop 1 is building. Brief on master (PR #1, 2eb7928). Rivet's design (docs/loops/loop-1-design.md, a2a-rivet) was approved in docs/loops/loop-1-ruling-1.md, which includes an addendum on SIA's background and drain patterns. Next: Rivet pushes a candidate on a loop/ branch (D-005) and sends its ls-remote SHA; freeze that SHA for Gauge (A1-A7). The morning items for Aaron are: the PR and merge, updating ~/Projects/A2A-Hub (the hub-talk every SIA seat runs, per Atlas), the .env for the local-stack rows, and merging docs/loop-1-ruling-1. T-001 is Loop 2.
+Loop 1 ACCEPTED: Gauge's report 2 (qa/loop-1 fb441ab) passes A1-A7 on e886b6b; the live start-stack check is UNVERIFIED and deferred. The PRs for the code (loop/1-read-receipts), the QA evidence (qa/loop-1) and this record go to Aaron to merge. After the merge: close T-049 and T-051. Then the delivery step, on Aaron's word: update ~/Projects/A2A-Hub (the hub-talk every SIA seat runs), restart the main stack and do a real send (A6's deferred live start). Then a tcm redeploy, Convex first, cleared with Atlas for live SIA traffic. Loop 2 = T-001.
 
 ### Watch out
 
-- Shared work with SIA (T-049/T-050/T-051) runs under D-003: questions for Aaron go through Atlas (SIA planner), quoted both ways; outward acts need Aaron's word for that act. Aaron may also give it directly in this repo's session, as he did for the PR #1 merge. Check relayed claims against source before recording them.
-- D-005: seats push their OWN working branches without asking (Rivet loop/* chore/*, Gauge qa/*, Relay docs/*); never master, never force, never another seat's branch; read back with ls-remote. Merges, tags, redeploys, main-checkout updates and live Convex writes still need Aaron's word for that act. The question behind D-005 was Atlas's own; Aaron may revisit it.
-- While SIA QA runs, Atlas can call a pause: no builds or test runs from Rivet or Gauge until Atlas says done. Git pushes of documents are not covered by the pause (Atlas, 2026-09-23).
-- No tcm redeploy while SIA hub traffic is live; ask Atlas first. A redeploy is image plus `npx convex deploy`, verified with a real send.
-- Every SIA seat runs ~/Projects/A2A-Hub/scripts/hub-talk.mjs (Atlas, 2026-09-23; Grok's exact invocation is unconfirmed). That checkout was at f7f102d; a GitHub merge does not update it. Receipts for SIA seats need it updated on Aaron's word, and no update overnight.
+- Shared work with SIA (T-049/T-050/T-051) runs under D-003: questions for Aaron go through Atlas (SIA planner), quoted both ways; outward acts need Aaron's word for that act. Aaron may also give it directly in this repo's session. Check relayed claims against source before recording them.
+- D-005: seats push their OWN working branches without asking (Rivet loop/* chore/*, Gauge qa/*, Relay docs/*); never master, never force, never another seat's branch; read back with ls-remote. Merges, tags, redeploys, main-checkout updates and live Convex writes still need Aaron's word for that act.
+- While SIA QA runs, Atlas can call a pause: no builds or test runs from Rivet or Gauge until Atlas says done. Git pushes of documents are not covered by the pause.
+- No tcm redeploy while SIA hub traffic is live; ask Atlas first. A redeploy is image plus `npx convex deploy`, verified with a real send. Receipts reach SIA only after BOTH the main-checkout update (for hub-talk) AND the tcm redeploy (for the routes, since SIA's room lives on tcm).
+- Every SIA seat runs ~/Projects/A2A-Hub/scripts/hub-talk.mjs (Atlas, 2026-09-23; Grok's exact invocation is unconfirmed). That checkout was at f7f102d, and a GitHub merge does not update it.
+- The main stack (3210/4000) was DOWN on the night of 2026-09-23. start-stack.ps1 reuses anything already listening on 3210/4000, so never run it from a seat worktree.
+- Seat test stacks: Rivet 3310/4100 (and others), Gauge 3410/4410/4420. Check a port is free and the listener PID is your own before trusting it (T-053).
+- A3-type checks need per-seat keys: under the shared dev-key, a GET-marks-caller regression survives (T-003 note).
+- Relay's error shape in session 15, twice: asserting a fact about an artifact (the ruling's backticks, Gauge's instrument) without reading it. Read first. The entries are in Session_15.md.
 - Decisions are append-only in ob_state (no op amends one); a correction is a new decision pointing at the old, as D-004 does for D-003.
-- Done tasks occupy T-040..T-048; check the highest id before opening a task (session 15 near-miss).
-- The developer handoff in the record is Session 14's and predates the seats. It was written for a single agent, not for Rivet.
-- a2a-rivet and a2a-qa have node_modules (npm ci; vitest 84/84 in a2a-rivet at 5bb0777) but no .env. The live stack and repo peers need Aaron's .env, which is his to copy.
+- Check the highest task id before opening a task.
 - The main checkout's .claude/settings.local.json does not carry over to the worktrees, so each seat starts with fresh permission prompts.
 - SIA's seats run load-sensitive test suites on this machine. Aaron's standing ruling: work normally; pause only when a SIA seat asks for a controlled rerun.
 
@@ -28,18 +30,22 @@ Loop 1 is building. Brief on master (PR #1, 2eb7928). Rivet's design (docs/loops
 
 ### Loop state
 
-**Open PRs:** _None._
+**Open PRs:** 
+- loop/1-read-receipts @ e886b6bd4bd233da36a7cb6f5ce150b266d52f9c — QA: accepted — Gauge report 2 (qa/loop-1 fb441ab): A1-A7 PASS; A6 live start UNVERIFIED (deferred to the main-checkout update). It merges cleanly into ce2fdca; the merged tree differs from the tested tree only in record/doc files (checked with git merge-tree). The PR number is recorded after it is opened.
+- qa/loop-1 @ fb441ab5d1c3283bcc46682ee65ab094834cdbe3 — QA: not_required — Gauge's criteria, reports 1 and 2, instruments and run logs. Documents only.
 
-**SHA frozen for QA:** _None._
+**SHA frozen for QA:** `e886b6bd4bd233da36a7cb6f5ce150b266d52f9c`
 
-**Questions pending for Aaron:** _None._
+**Questions pending for Aaron:** 
+- Merge the Loop 1 PRs (code, QA evidence, record)?
 
 **Rulings made mid-loop:** 
-- Session 15: Loop 1 = T-049 + T-051; T-001 moves to Loop 2; T-050 stays in investigation (Relay).
-- Push + PR #1 authorised: Aaron to Atlas in the SIA planner session (SIA record session 81), 2026-09-23, verbatim "yes, including rev 6", answering Relay's question put to him verbatim; Atlas to Relay by cross-session message the same day under SIA D-039 / A2A D-003. Scope: push that branch and open the PR.
-- Merge of PR #1 authorised by Aaron directly in this A2A-Hub planner session (session 15), 2026-09-23, verbatim: "merge when ready". Merged with a merge commit pinned to head c2ea92d: 2eb79282e1aab1480f54e6f2b5d459ec27bb5a67; c2ea92d verified an ancestor of origin/master after fetch.
-- Ruling 1 on Rivet's Loop 1 design (docs/loops/loop-1-ruling-1.md): approved to build. Q1: Rivet's reading of 'no change to the reader's client' is right; L4 accepted (fails closed); correction, a merge updates no checkout, so delivery names a checkout-update step. Q2: L3 option (a), accept and document the rule 'run --inbox or --wait only where its output reaches the agent'; --no-read-mark rejected. Addendum: SIA's drain pattern named in the docs as forbidden.
-- D-005 standing push authority recorded (Aaron via Atlas, "yes to  your quesition"); shared.md amended to match.
+- Session 15: Loop 1 = T-049 + T-051; T-001 moves to Loop 2.
+- PR #1 (brief) merged at 2eb7928 and PR #2 (ruling 1, D-005) at ce2fdca, both on Aaron's direct word.
+- Gauge Q1: A6's live start is UNVERIFIED, deferred to the main-checkout update. Gauge Q2: left members are observation-only -> T-052.
+- Report 1 on cb7cda7: A2.6, A6.3 and A7 FAIL. A6.3 was kept as written; Rivet added the a2aTasks section rather than the criterion being narrowed. T-055 was opened for the baseline 500 class.
+- A7 instrument ruled (a), unchanged, before the re-run: each rule goes on one header line.
+- Re-frozen at e886b6b; report 2 ALL PASS.
 
 ## developer _(written session 14)_
 
