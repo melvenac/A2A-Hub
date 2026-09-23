@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 22,
+  "revision": 23,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -558,6 +558,16 @@
       "closed_session": null,
       "supersedes": null,
       "note": "Found by Gauge in Loop 1 QA at cb7cda7 (row A2.6): POST /a2a/session/:id/read and GET /reads return 500 'Server Error' for an unknown or malformed session id, because Convex's v.id(\"sessions\") argument validator throws before the handler's own 404 branch can run. The new routes are fixed in Loop 1. The same class exists in the baseline GET /a2a/session/:id/messages and probably in every route that passes :sessionId straight into a v.id validator. Sweep them all. A 500 tells a client to retry; a malformed id should get a 4xx that says so."
+    },
+    {
+      "id": "T-056",
+      "title": "alice daemon did not answer a relay turn on the local stack",
+      "priority": "P2",
+      "status": "open",
+      "opened_session": 15,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "2026-09-23 20:41Z, local stack on v1.8.0 (V-002): relay sent turn 1 to alice in 2-party room k57a620yfmampa74d1yqqw0e8n8eyysh. The room is in alice's /a2a/peer/alice/sessions (active, turn 1 of 500), the message qualifies under qualifiesAsTrigger (not group, not from alice), and alice's heartbeat is live (/a2a/agents/live). No reply after several minutes. Not diagnosed. Relay's unconfirmed hypothesis: handleSessions (src/wrapper/daemon.ts ~173) walks all 24 of alice's sessions in one try, so any error (e.g. a generateReply failure in an old demo room) aborts the whole poll and later rooms are never reached. That would predate Loop 1, since Loop 1 did not touch daemon.ts. First step: read the 'A2A alice' window's stderr for '[alice] poll error'. Same class as ADR-013 if confirmed: one failure silently mutes every room."
     }
   ],
   "verified": [
@@ -579,6 +589,19 @@
           "type": "checkout",
           "path": "~/Projects/A2A-Hub",
           "observation": "Fast-forwarded f7f102d -> 003f57d (v1.8.0), clean. Its hub-talk --inbox against tcm printed '[hub-talk] turn 1 (yours): unread by atlas since 2026-09-23T20:36:01Z — never read this room'. The local main stack (3210/4000) was NOT started, so A6's live start-stack check is still UNVERIFIED."
+        }
+      ],
+      "since_session": 15,
+      "status": "verified"
+    },
+    {
+      "id": "V-002",
+      "claim": "The main local stack starts on v1.8.0 from ~/Projects/A2A-Hub (003f57d) and carries a real send with read receipts; this is Loop 1's deferred A6 live start",
+      "evidence": [
+        {
+          "type": "live-check",
+          "path": "~/Projects/A2A-Hub start-stack.ps1",
+          "observation": "2026-09-23 20:40Z, on Aaron's word (\"go\"). Ports 3210/3211/4000/5173 were checked free first. start-stack.ps1 exited 0: build ok, Convex up, hub up, alice/bob windows, client up. Listener owners confirmed as the stack's own processes (T-053 guard): 3210 convex-local-backend (parent `convex dev --local` in ~/Projects/A2A-Hub), 4000 `node --env-file=.env dist\\src\\index.js`, 5173 vite. Real send: hub-talk --as relay --peer alice --say -> room k57a620yfmampa74d1yqqw0e8n8eyysh turn 1, rc 0. --wait printed '[hub-talk] turn 1 (yours): unread by alice since 2026-09-23T20:41:09Z — never read this room' and timed out (rc 2) as documented."
         }
       ],
       "since_session": 15,

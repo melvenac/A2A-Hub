@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 22 by open-brain v1.8.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 23 by open-brain v1.8.0 — do not edit; change state via ob_state -->
 
 # Inbox
 
@@ -45,6 +45,7 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-052** Read receipts for a member who has left the room
 - [ ] **T-053** Hub reports "running" and exits 0 when its port is taken
 - [ ] **T-055** Malformed or unknown session id returns 500, not 4xx
+- [ ] **T-056** alice daemon did not answer a relay turn on the local stack
 
 ## P3
 
