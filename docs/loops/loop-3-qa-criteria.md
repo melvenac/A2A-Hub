@@ -61,7 +61,11 @@ seeds in `git archive` scratch copies), **receipts read with a parser**. Added f
   counts: (a) a request log that records, per request, route, status, and **whether** an
   `X-Agent-Key` header was present and whether it equals the literal `dev-key`, never its value;
   (b) a rule `forward-then-drop` for `POST /a2a/rotate`: forward, let the hub commit, then destroy
-  the client socket.
+  the client socket. Rotate and register bodies are never logged, because they carry keys.
+  *Validated 2026-09-24* (`loop-3-qa/x-selftest.mjs`, stub upstream, 9/9): key presence and
+  `dev-key` are flagged without values; a commit the client never heard of is counted; Loop 1's
+  `drop` still fires; no key appears in the log. Re-checked on the real candidate before the run
+  counts.
 - **S — keyscan**, `docs/loops/loop-3-qa/keyscan.mjs`. **Validated at `ea9d057`:** over `src/
   scripts/ client/` it finds exactly the 7 `dev-key` code sites of Amendment 1 (4 of them
   `|| "…"` fallbacks), tags the 4 comment mentions separately, and exits 2 when told to expect 0.
@@ -83,6 +87,15 @@ seeds in `git archive` scratch copies), **receipts read with a parser**. Added f
   line names that port, then proves every QA port free. It exits non-zero while any port is taken.
   **Validated at the lift, before the first start,** against a known positive: a dummy listener on a
   QA port must be found, killed and shown gone.
+  *Validated 2026-09-24, after the lift, three cases:*
+  - (C) a list containing 4000 is refused, and nothing is killed;
+  - (B) a listener whose command line does not name its port is **not** killed, and T exits 1;
+  - (A) a recorded PID naming its port is killed, and every port is shown free, exit 0.
+
+  The first run failed open: a `[string]`-typed `$Ports` re-joined the split list, the port
+  lookups errored, the errors read as "free", and T reported STOPPED while the dummy still
+  listened. Fixed: a separate array, and a lookup error now counts as undetermined, never free.
+  Then re-validated.
 - **M — mutants** as in Loop 1: shown landed, `tsc --noEmit` clean, observed to fire before judged.
 
 **Both directions** means the state is asserted before the act and its opposite after, or a
