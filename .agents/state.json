@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 32,
+  "revision": 33,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -760,6 +760,12 @@
       "title": "Standing push authority: A2A-Hub seats push their OWN working branches without asking; never master, never force, never another seat's branch; merges and tcm redeploys stay Aaron's",
       "date": "2026-09-23",
       "note": "Aaron, in the SIA planner session (SIA record session 81), 2026-09-23, verbatim: \"yes to  your quesition\". The question, as Atlas put it to him: \"Should A2A-Hub's seats get the same standing push authority for their own working branches?\" Relayed Atlas -> Relay by cross-session message the same day under SIA D-039 / A2A D-003. The question was Atlas's own, not relayed from an A2A-Hub seat; it is recorded as Aaron's authority because the answer is his. 'The same' refers to SIA D-038 part (1), checked against SIA origin/master aef8195: any seat may push ITS OWN working branches without asking; never master, never a force push, never a branch another seat owns; every push is read back with ls-remote and named in the commit, report or message that follows it. In A2A-Hub: Rivet's loop/* and chore/*, Gauge's qa/*, Relay's docs/*. NOT imported from SIA: D-032's docs/record merge exception, and D-038 part (2). Merging to master, tagging, tcm redeploys, updating the main checkout ~/Projects/A2A-Hub, and writes to live Convex each still need Aaron's word for that act. This amends shared.md's 'Each outward-facing act needs authority for THAT act' for own-branch pushes only."
+    },
+    {
+      "id": "D-006",
+      "title": "Aaron approves Loop 3's hub-talk key-contract change and staged cutover (T-003 Q1); each outward act still needs his word",
+      "date": "2026-09-24",
+      "note": "Aaron, in the SIA planner session (SIA record 90), 2026-09-24 ~19:57Z, verbatim: \"yes\". The question he saw was Atlas's summary of Relay's Q1, verbatim: \"A2A-Hub wants to give every agent its own hub key instead of the shared one, switching over in stages so no seat loses the hub. It won't happen while SIA has a candidate being built or tested. May it go ahead?\" Relayed Atlas -> Relay by cross-session message under SIA D-039 / A2A D-003. Relay's Q1 behind that summary: the hub-talk contract changes in the Loop 3 design section 3.5 (no default key, exit 1 before any network call; a key file per name and hub; --init-key/--rotate-key that never print the key; register failures become rc 1; hub-side refusal of shared, short or re-keyed names), and the section 3.6/4.2 cutover (deploy in warn with the main checkout untouched; per-name --init-key from a worktree; main-checkout update only after a read-only check; new names during the window only via --init-key). The design is final at loop/3-per-agent-keys 88a8e0f. LIMIT: Aaron saw the summary, not items 1-5; if a later reading of this approval turns on a detail the summary omitted, ask him. SCOPE: this approves the contract change and the cutover plan. It is NOT authority for any single outward act: the merge, the deploy, each tcm --init-key, the main-checkout update, and any release each still need his word. TIMING (SIA planner): no cutover step touching `grok` or `atlas` while SIA candidate A7 is being built or scored (grok session record 95, then QA 96); the SIA planner names the window."
     }
   ],
   "handoffs": [
