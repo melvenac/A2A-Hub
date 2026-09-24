@@ -2,7 +2,7 @@
 // Every URL comes from the environment. There are no defaults, and main-stack ports are refused.
 import { spawn } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { mkdirSync, readFileSync, existsSync } from "node:fs";
+import { mkdirSync, readFileSync, existsSync, appendFileSync } from "node:fs";
 import { join } from "node:path";
 
 export const HUB = process.env.QA_HUB;         // the QA hub, or the fault proxy in front of it
@@ -20,6 +20,8 @@ mkdirSync(TMP, { recursive: true });
 // anywhere but the throwaway QA stack (Amendment O6). There is no default key: a call made without a
 // seat's key goes out keyless.
 const SALT = randomBytes(16).toString("hex");
+// Loop 3 K6: record the salt in scratch, so the leak scan can find any key built from it.
+appendFileSync(join(TMP, "salts.txt"), SALT + "\n");
 export const key = (name) => `${name}-${SALT}`;
 export const asSeat = (name) => ({ "X-Agent-Key": key(name) });
 const KEY_DIR = join(TMP, "keys"); // hub-talk's key-file directory, never the real ~/.a2a-hub/keys

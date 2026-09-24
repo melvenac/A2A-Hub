@@ -12,6 +12,9 @@
 #   base       4530        ea9d057    hub, warn,   -> cvxB   (baseline: old on old)
 #   newOld     4531        candidate  hub, warn,   -> cvxB   (B2.5: new app on old functions)
 #   proxy      4550        qa         fault proxy X -> 4510
+#   mut        4540        m3 copy    M3 mutant hub (GET messages marks the caller), warn, -> cvxA
+#   cvxE       3530/3531   esc copy   isolated scratch Convex, candidate functions (H3.2 escalation)
+#   (cvxA's convex dev also opens its dashboard on 6790/6791; T proves those free too)
 #
 # Every hub command line carries --qa-port=<port> (the hub ignores argv), so T can prove it owns the
 # process before it kills it. Main-stack ports are never used; the Convex ports are always explicit,
@@ -22,7 +25,9 @@ param(
   [string]$Cand = "C:\Users\melve\Worktrees\qa3-cand",
   [string]$Old = "C:\Users\melve\Worktrees\qa3-old",
   [string]$Qa = "C:\Users\melve\Worktrees\a2a-qa",
-  [string]$EnvFile = "C:\Users\melve\Worktrees\a2a-qa\.env"
+  [string]$EnvFile = "C:\Users\melve\Worktrees\a2a-qa\.env",
+  [string]$MutTree = "",
+  [string]$EscTree = ""
 )
 $ErrorActionPreference = 'Stop'
 New-Item -ItemType Directory -Force $QaTmp | Out-Null
@@ -64,6 +69,8 @@ foreach ($part in ($Parts -split '[,\s]+' | Where-Object { $_ })) {
     "oldS"   { Hub $part $Old 4521 3510 "strict" }
     "base"   { Hub $part $Old 4530 3520 "warn" }
     "newOld" { Hub $part $Cand 4531 3520 "warn" }
+    "mut"    { if (-not $MutTree) { throw "mut needs -MutTree" }; Hub $part $MutTree 4540 3510 "warn" }
+    "cvxE"   { if (-not $EscTree) { throw "cvxE needs -EscTree" }; Cvx $part $EscTree 3530 3531 }
     "proxy"  { Launch $part $Qa @("docs/loops/loop-1-qa/fault-proxy.mjs", "--qa-port=4550") @{ QA_PROXY_PORT = "4550"; QA_UPSTREAM = "http://127.0.0.1:4510" } @(4550) }
     default  { throw "unknown part $part" }
   }

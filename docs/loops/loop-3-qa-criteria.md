@@ -10,7 +10,8 @@ B2), and Rivet's design `docs/loops/loop-3-design.md` at `origin/loop/3-per-agen
 (revision 3: §11 B1/B2, D-007's release, §12's human peer), **design text only**. Code references are to `ea9d057`.
 
 **Baseline** ("old"): `ea9d057` (master, v1.8.0): the hub build, its Convex functions, and its
-`hub-talk`. **Candidate:** none yet. `bc157f5` was withdrawn by Relay for a re-freeze (DK). Relay names the frozen SHA. Every observation names it. If the
+`hub-talk`. **Candidate (verdict SHA, named by Relay):** `loop/3-build-r3` = `fe4eb147aa0d41484bbc1c2983ac4407c54bea58`.
+History: `bc157f5` was withdrawn for DK. `84694b9` was surfaced on (findings F1, F2 and the doc finding). `de27ab8` fixed F1 and F2, and `fe4eb14` adds only `docs/joining-the-hub.md` over it. **Every row runs on `fe4eb14` itself**; Relay allowed a carry-over from `de27ab8`, but it is not used. Every observation names it. If the
 SHA moves mid-evaluation the run is void and starts again.
 
 ---
@@ -434,6 +435,44 @@ re-frozen build refuses **acquiring** `sha256("dev-key")` inside the mutations, 
 known positive, or the U2 exemption breaks. **Any acquisition of the `dev-key` hash is a finding**
 (Relay's ruling 3a).
 
+### F1 — no key hash is readable, and no name can be taken over through Convex (ruling 3)
+
+Found at `84694b9`: the public `agents:getByName` and `agents:listOnline` returned full `apiKeyHash`
+values, and the public `agents:rotateKey` accepted a hash as proof. A direct Convex caller could
+read a victim's hash and rotate the victim onto its own key.
+
+1. **Class search** (`loop-3-qa/f1scan.mjs`): every public query in `convex/` is called once, with
+   exactly the arguments its validator declares (a hash argument gets a dummy that is no key's
+   hash). A result carrying an `apiKeyHash` field anywhere is flagged. **Validated at `84694b9`,
+   where it must flag exactly `getByName` and `listOnline`.** On the candidate: every query is
+   called, and none is flagged.
+2. **The takeover chain re-run:** no hash is obtainable from `getByName` or `listOnline`, and a
+   public `rotateKey` is refused (Relay accepted rotation as admin-only). The attacker's key
+   resolves to no one, and the victim's own key still resolves.
+3. **`getByName` skew, both directions:**
+   - (a) The `ea9d057` app on candidate functions. Its name-claim path reads
+     `existing?.apiKeyHash`, now absent, but a different key on an owned name is still refused
+     (the mutation's C7) and the stored hash is unchanged, in warn and strict. Its ask gate still
+     reads `askPolicy` (allowed 200, denied 403).
+   - (b) The candidate app on `ea9d057` functions: the ask gate works on the old `getByName` shape.
+
+### F2 — classify never makes the retired key authenticate (ruling 3)
+
+Found at `84694b9`: `classifyAtDeploy` marked a lone unclassified `dev-key` row `owned`, after
+which the `dev-key` resolved to it.
+
+1. **Every `keyStatus` writer**, listed statically, is mapped to the rows that cover it (known
+   positives: `registerCore`, `rotateKey`, `classifyAtDeploy`, `stampCoHolders`). An uncovered
+   writer fails F2.
+2. **A lone unclassified `dev-key` row** stays `legacy` after classify, and `whoami(dev-key)` is
+   `null`. Control: a lone unclassified fresh-key row **is** promoted to `owned` and resolves.
+
+### DEMOTE — a retired-key row left `owned` by an earlier build is demoted (ruling 3)
+
+An `owned` row holding `sha256("dev-key")`, as `84694b9` could leave it: `getByKeyHash` never
+resolves it, even before classify. Classify then demotes it to `legacy`, and its output shows
+`demoted >= 1`.
+
 ### K8 — a migrated name keeps its key (C7, O1)
 
 Setup: a P8 legacy row `qa-k8` holding a shared short key `s`, with other legacy holders of `s`.
@@ -491,8 +530,12 @@ promotes `qa-r1c`, or the control is not promoted.
    name with no file. It must also exit non-zero and say `whoami: null` for a file whose key
    resolves to nothing. Then it exits 0 when every name has a file resolving to itself. It prints no
    key and no hash.
-4. **Loop 1 still runs:** `selftest`, `rows A1 A2 A3 A5 A7`, `a6` and `skew` (harness
-   @ `0ca2358`) pass on the candidate. `a6`'s strict hub is P7's strict hub.
+4. **Loop 1 still runs:** `selftest`, `rows A1 A2 A3 A5 A7`, `a6` and `m3check` (the harness on this
+   branch) pass on the candidate. `a6`'s strict hub is P7's strict hub. **Loop 1's A4 (`skew.mjs`) is
+   replaced, not skipped (Relay, 2026-09-24).** A4 tested the `2eb7928` to v1.8.0 transition, which
+   is history, and its identity check requires the `/reads` route to be absent on old apps. The
+   skew that can bite now is the deployed `ea9d057` hub against the candidate's functions, and
+   B2.2-B2.6 and N.1/N.2 cover that.
 5. **Local stack** (split by Relay's ruling on Q1, below):
    - **(a) In QA:** key generation through the code path `start-stack.ps1` calls (`hub-key.mjs
      init`, for `alice` and `bob`), with `A2A_KEY_DIR` set to scratch. Both directions: the two key

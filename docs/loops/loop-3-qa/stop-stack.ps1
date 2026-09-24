@@ -7,7 +7,7 @@
 param(
   [string]$PidFile = "",
   # One comma-separated string: `powershell -File` passes "4550,4551" as one argument, not an array.
-  [string]$Ports = "3510,3511,3520,3521,4510,4511,4520,4521,4530,4531,4550"
+  [string]$Ports = "3510,3511,3520,3521,3530,3531,4510,4511,4520,4521,4530,4531,4540,4550,6790,6791"
 )
 # A new variable: assigning the array back to the [string]-typed $Ports would join it again.
 $PortList = @($Ports -split '[,\s]+' | Where-Object { $_ } | ForEach-Object { [int]$_ })
