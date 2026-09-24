@@ -4,12 +4,19 @@
 answering Relay's ruling 1 (`docs/loops/loop-3-ruling-1.md`, `c34a792`). Nothing here is built or
 tested (SIA hold).
 
+**Revision 3 (D-007 and the browser client, for Relay, from `e166057`):**
+- The 8 `dev-key` rows are released, not migrated (§4.1, §4.2, §4.3).
+- The unused four are released in the deploy act. Each live name is released and re-registered
+  in one transaction at its own step, so no gap exists.
+- The case of an old client on a released name is stated (§4.3).
+- New **§12**: a key for the human peer `aaron` that never changes its peer type (local stack).
+
 **Ruling 2 (`e709329`): approved to build** once the SIA hold lifts, subject to B1 and B2. Both are
 written into **§11** as binding conditions, and §1.2 and §3.6 now point to it. **Folded in with them
 are SIA record 90's corrections (via Relay, T-003 note rev 30):**
 - `grok` is SIA's seat, so it moves to steps 6 and 9;
 - tcm's spelling is `http://100.124.212.87:4000`;
-- the unmigrated names are split by owner (§4.3);
+- the unmigrated names are split by owner (§4.3; superseded by D-007 in revision 3);
 - SIA's candidate window is a precondition of step 3.
 
 Gauge's unit-test finding is in §8.
@@ -362,9 +369,21 @@ alice's and bob's files itself (§3.2).
 
 A legacy name's first register with a fresh key is a **name claim onto an unshared hash**. In warn
 the new mutation allows it: U1 passes because nobody holds the new hash, and the floor passes. In
-one transaction it stamps the old hash's other unclassified holders `legacy` (§1.1), patches the
-row to the new hash with `keyStatus: "owned"`, and logs `[auth] MIGRATE <name>: legacy key replaced
-by own key`. From then on C7 applies: no register can move it again, only rotate.
+one transaction it:
+1. stamps the old hash's other unclassified holders `legacy` (§1.1);
+2. **deletes the name's legacy row(s) and inserts a fresh row** with the new hash and
+   `keyStatus: "owned"`, taking the instance lease as rotate does (§2.2 step 4);
+3. logs `[auth] MIGRATE <name>: legacy row replaced by a fresh owned row`.
+
+From then on C7 applies: no register can move the name again, only rotate.
+
+**Revision 3 (D-007): the migration replaces the row rather than patching it.** So a migration
+*is* "release the row, then register the name fresh", done in one transaction. **D-007 holds
+literally, and no gap opens between the release and the fresh register** (§4.3). A fresh row keeps
+nothing from the legacy one: no `askPolicy` (absent means allow all, ADR-012), no instance lease,
+and a new `_id`. Nothing depends on those: only `convex/agents.ts` reads or writes `agents` (D-007's
+note), and the lease is taken fresh. Any `askPolicy` a legacy row carries is counted in step 2's read
+(§4.2) and set again if needed. The `peers` row, sessions and messages are untouched.
 
 **This works the same for the last holder as for the first.** Whether a row is legacy is stored, so
 bob, the last `dev-key` holder on the local stack after alice migrates, is still legacy and still
@@ -385,31 +404,38 @@ silent, and repaired by `agents:release` (§4.3) on Aaron's word. The window is 
 1. **Build and QA on a throwaway stack** once the hold lifts (K1–K6, K8).
 2. **Pre-deploy read (read-only):** tcm's hub log for `WOULD REJECT name claim on cursor-grok` or
    `grok-probe`. Both are owned today, so C7 binds them from deploy. If either bot picks a new key
-   per run, it would get 409 after deploy, and its operator must be told first.
+   per run, it would get 409 after deploy, and its operator must be told first. **Also, with Loop
+   2's instrument, count which of the 8 `dev-key` rows carry an `askPolicy`** (names and counts
+   only). D-007 replaces those rows, so any policy there must be set again (§4.1).
 3. **Precondition (SIA's timing constraint, SIA record 90):** nothing a live `grok` exchange
    depends on may change while SIA has a candidate in flight (A6 now, then QA 94). **The SIA
    planner names the window, and step 3 happens only inside it.** Steps 5–9 touch `grok`'s row or
    its client, so they respect the same constraint: the SIA planner clears each one that touches
    `grok` or its checkout. **As of D-006 (rev 33), `atlas` is under the same rule:** no step that
    touches `grok` or `atlas` runs while SIA's A7 is being built or scored.
-   **Deploy, one act:** push the Convex functions to tcm, run `agents:classifyAtDeploy` at once,
-   then deploy the hub. `AUTH_MODE` stays `warn`. **`~/Projects/A2A-Hub` is not touched.** The 8
-   `dev-key` names become legacy. They keep working (U2 warn) and now resolve to no one (U3).
+   **Deploy, one act:** push the Convex functions to tcm, then run `agents:classifyAtDeploy` at
+   once. Then **release the four unused names, `clark`, `cursor`, `general` and `probe`, with
+   `agents:release`** (D-007; §4.3). Then deploy the hub. `AUTH_MODE` stays `warn`.
+   **`~/Projects/A2A-Hub` is not touched.** The four live `dev-key` names (`relay`, `atlas`,
+   `forge`, `grok`) become legacy. They keep working (U2 warn) and now resolve to no one (U3).
    `cursor-grok` and `grok-probe` become owned and keep resolving. **Loop 2's read, repeated:**
-   still 10 rows, same hashes, `keyStatus` 2 owned and 8 legacy. (If the classification were
-   delayed, §1.1's stamping still keeps every shared-at-deploy row legacy. It runs first anyway, so
-   the window in which an unshared legacy key is unattributed is minutes.)
+   6 rows, the same hashes for those 6, `keyStatus` 2 owned and 4 legacy. (If the classification
+   were delayed, §1.1's stamping would still keep every shared-at-deploy row legacy. It runs first
+   anyway, so the window in which an unshared legacy key is unattributed is minutes.)
 4. **A worktree of the new client** (merged master, checked out outside `~/Projects/A2A-Hub`). All
-   of steps 5–8 run from it. The main checkout still serves every seat with the old client (§3.6).
-5. **Canary: `relay`**, A2A-Hub's own seat, run by the planner: `--init-key` with `HUB_URL` at tcm,
-   then `whoami`, then a round trip with another seat.
-6. **SIA's names** (`atlas`; **`grok`, SIA's Cursor developer seat**; the retired **`forge` and
-   `probe`**, kept by SIA's ruling, §4.3; and any other SIA name), in the order and window the SIA
-   planner picks: `--init-key` for each name, run from the
-   worktree. The seat's own sessions keep using the old hub-talk from the main checkout
-   throughout, so **nothing about how a seat talks changes at this step.**
-7. **`cursor`**, the only possible outside bot. Its owner is unknown, so Aaron decides (§4.3).
-8. **Names nobody migrates** (§4.3).
+   of steps 5–7 run from it. The main checkout still serves every seat with the old client (§3.6).
+5. **Canary: `relay`**, A2A-Hub's own seat, run by the planner: `--init-key` with `HUB_URL` at tcm.
+   That is the release and the fresh register in one transaction (§4.1). Then `whoami`, then a
+   round trip with another seat.
+6. **SIA's live names, `atlas`, `forge` and `grok`** (D-007: each released and re-registered at
+   its own step), in the order and window the SIA planner picks, never while A7 is being built or
+   scored: `--init-key` for each name, run from the worktree. The seat's own sessions keep using
+   the old hub-talk from the main checkout throughout, so **nothing about how a seat talks changes
+   at this step.**
+7. **Any released name that is needed again** (`clark`, `cursor`, `general`, `probe`): its
+   `--init-key` from the worktree inserts it fresh, as owned. It is optional, one per name, each on
+   Aaron's word.
+8. *(Removed in revision 3: D-007 leaves no name that nobody migrates.)*
 9. **Main-checkout update**, on Aaron's word and inside the SIA planner's window, only after
    `hub-key.mjs check` (§3.6) passes for every name that runs from `~/Projects/A2A-Hub`, for each
    hub it talks to. **`grok` is on that list either way.** Its hub-talk very likely runs from the
@@ -423,35 +449,58 @@ switches to the new client with a key file already in place. The only seat that 
 missing from step 9's name list. It fails loud (exit 1, `--init-key` instruction), not silent, and
 that is why the SIA planner supplies SIA's part of the list.
 
-### 4.3 Names nobody migrates (Amendment N1)
+### 4.3 Releasing the `dev-key` rows (D-007; replaces Amendment N1's options)
 
-A name left on the `dev-key` keeps the `dev-key` held, and K7 fails. SIA's record (record 90,
-via Relay) splits the candidates by owner:
+**D-007 (Aaron, 2026-09-24): every `agents` row that used the `dev-key` is released, not migrated.**
+A name that is needed again registers fresh with `--init-key`, which inserts it as owned. This
+supersedes the SIA planner's keep-and-migrate ruling for `forge` and `probe`. `cursor-grok` and
+`grok-probe` are not covered; they stay, classified owned. Releasing a row touches only `agents`
+(D-007's note), so `peers`, `sessions`, `sessionPeers` and `messages` stay. SIA's rooms are
+history and remain intact.
 
-- **`forge`, `probe`: SIA's planner has ruled KEEP and MIGRATE** (T-003 note rev 31). Their rooms
-  are SIA's history, and deleting the rows would be an irreversible live write. They move with SIA's
-  seats in §4.2 step 6, inside the SIA-named window. Any SIA seat may run `--init-key` for them from
-  the new-client worktree. Each act still needs Aaron's word. **Release is not an option for
-  them.**
-- **`clark`, `general`, and `cursor` if nobody migrates it:** not SIA's. **Aaron chooses** from
-  the three options below.
+**`agents:release({ name })`** is an `internalMutation`, run with the admin key via `convex run`.
+It deletes the name's `agents` row(s). Before deleting, it stamps the hash's other unclassified
+holders `legacy` (§1.1). The name is then unclaimed, and the next register inserts it. It also
+remains the operator's repair for a lost key or a hijacked name.
 
-The options for Aaron's names: Three options, **each a live Convex write on tcm, so each
-needs Aaron's word per name:**
+Two ways to release, by whether the name has a live seat:
 
-- **(a) Aaron migrates it** from the workstation with `--init-key` like any seat. The key lands in
-  his key directory; the name stays his and can be revived. **Recommended for `clark`**, which is
-  the default name of Aaron's own assistant.
-- **(b) Release it:** a new `internalMutation agents:release({ name })` deletes the name's `agents`
-  row (the `peers` row and its sessions stay). Before deleting, it stamps the hash's other
-  unclassified holders `legacy` (§1.1). Callable only with the admin key, via `convex run`.
-  The name becomes unclaimed and the next register takes it. **Recommended for `general`** if Aaron confirms it
-  is a test name. The same mutation is the operator's repair for
-  a lost key or a hijacked name.
-- **(c) Leave it.** K7 cannot pass until it moves, and strict stays off.
+| Names | How | When |
+|---|---|---|
+| `clark`, `cursor`, `general`, `probe` (no live user) | `agents:release`, one call per name | In the deploy act (§4.2 step 3), after `classifyAtDeploy`. Each call is a live write on Aaron's word. |
+| `relay`, `atlas`, `forge`, `grok` (live seats) | **`--init-key` from the worktree.** §4.1's migration deletes the legacy row and inserts the fresh owned row **in one transaction** | At the name's own step: `relay` at 5, the others at 6 in SIA's window. |
 
-The choice is made per name (§10, Q2), and each needs Aaron's word as a live write. No option sends
-a request to tcm with the `dev-key` (N1).
+**Why the live names are not released by `agents:release`.** A separate release followed later by
+`--init-key` would leave a live seat with no `agents` row in between. §4.1's transaction is the
+release and the register together, so **for a live name no gap exists.** There is nothing for an
+old client to see except the step itself: before it, the name is legacy and talks unattributed;
+after it, the name is owned and the old client's `dev-key` register is refused while it goes on
+talking unattributed (§3.6).
+
+**An old client on a released unused name** (`clark`, `cursor`, `general` or `probe`, between the
+deploy and any `--init-key` for it). This differs from B1's new-name case, because **the `peers`
+row survives the release:**
+
+- Its register (`dev-key`) is refused: U1's 409 while any legacy row holds the `dev-key`, the floor's
+  400 after that. The old client swallows the refusal. No `agents` row is made, and
+  `peers.register` is not reached (the refusal throws, §11 B2).
+- **But `sessions.create` and `messages.send` succeed**, because they look up `peers`, which still
+  has the name. So the old client **talks, unattributed** (`req.agentName` null in warn), exactly
+  like an unmigrated legacy seat. No `Unknown peer` error fires, so B1's hint does not reach it.
+- It is missing from `GET /a2a/agents/live` (no `agents` row), so no-arg lobby pairing *to* it
+  fails, and its heartbeats are no-ops.
+- **The name is unclaimed.** Anyone's `--init-key` can take it and own it. After that the old
+  client still talks unattributed, and it cannot take the name back (U1, floor, C7).
+
+**This is not silent loss.** Every turn it sends is delivered, with the `from` the old client
+asserts (T-058's class). But the hub does not know who sent it. The hub cannot flag it without
+changing how `peers` without `agents` rows behave, and humans (`aaron`, `hub`) are exactly such
+peers. So the prevention is a rule: **B1's rule extends to released names: until step 9, a
+released name comes back only through `--init-key` from the worktree.** These four names have no
+live user (D-007), so the case is expected only from a stray old script. At step 9 the old client is
+gone. In strict (T-002 step 4, after K7) its requests would be 403.
+
+No option sends a request to tcm with the `dev-key` (N1).
 
 ### 4.4 Seeing that the migration is complete
 
@@ -536,7 +585,7 @@ other key leaves the stored hash unchanged, and the name's own key still resolve
 | `N` owned, holds `H` already | ok (heartbeat-like, as today) | ok |
 | `N` owned, `H` differs (C7) | **409** | 409 |
 | `N` legacy, holds `H` already (U2) | ok + `WOULD REJECT legacy` | 409 |
-| `N` legacy, `H` differs and is unshared (migration, §4.1) | stamp, patch, `owned` + `MIGRATE` | 409 |
+| `N` legacy, `H` differs and is unshared (migration, §4.1) | stamp, replace row (fresh, `owned`) + `MIGRATE` | 409 |
 
 "Owned" and "legacy" are the stored `keyStatus` (no status reads as legacy). No row of this table
 counts holders except U1, which asks only whether *another* name holds `H`.
@@ -607,7 +656,8 @@ caller-asserted identities are **T-058** (P2). The bootstrap docs are in scope h
 - **Q1, via the SIA planner (D-003), sent by Relay after this revision:** the §3.5 contract
   changes to hub-talk, with the cutover order in §3.6 and §4.2. It also asks the SIA planner for
   SIA's part of step 9's name list: every SIA seat name, and the `HUB_URL` spelling each one uses.
-- **Q2, to Aaron directly:** migrate, release or leave `clark`, `general` and `cursor` (§4.3).
+- **Q2: settled by D-007.** All 8 `dev-key` rows are released (§4.3). Any released name that is
+  needed again returns by `--init-key`, on Aaron's word per name.
   `forge` and `probe` are settled (SIA's ruling: keep and migrate).
 - **Q3, to Aaron directly:** which name his browser client (`client/`) should use now that it has
   no default key.
@@ -642,8 +692,9 @@ next depends on the mode:
 So most paths already end in rc 1, but with the **wrong cause** ("Unknown peer"), and one path
 waits in silence. That is ADR-013's shape.
 
-**The rule (binding, and it goes to SIA in Q1):** **between step 3 and step 9, a new seat name is
-created only by `--init-key` from the new-client worktree.** After that the name has an owned row
+**The rule (binding, and it goes to SIA in Q1; revision 3 extends it to released names, §4.3):**
+**between step 3 and step 9, a new seat name, or a released one, is
+created (or re-created) only by `--init-key` from the new-client worktree.** After that the name has an owned row
 and a peer row, and its seat can keep using the old client from the main checkout like any
 migrated name (§3.6). A2A-Hub's seats follow the same rule. The rule ends at step 9, when the new
 client is the only client.
@@ -699,3 +750,66 @@ three keys:
 
 Also: a refused register through the old hub (U1 and C7) returns non-200, makes no peer row, and
 leaves the stored hash unchanged.
+
+---
+
+## 12. The browser client as the human peer `aaron` (revision 3, local stack)
+
+**The problem.** `client/src/App.svelte` posts as `aaron` (`:6`, `:175`) with a hardcoded
+`dev-key` (`:8`), which §3.4 removes. Every `/a2a` route needs a key that resolves to an `agents`
+row. But registering `aaron` through `/a2a/register` calls `peers.register(type: "agent")`, which
+overwrites the type (`convex/peers.ts:16-21`). The hub then re-registers `aaron` as `human` on its
+first notification (`src/index.ts:55`). So the peer type would flip back and forth. Relay's
+decision, pending Aaron: the browser acts as `aaron`.
+
+**The design: four small changes. No new table, and no split from Loop 3 needed.**
+
+- **H1. Registration never changes an existing peer's type.** A new mutation,
+  `peers.ensure({ name, type })`, inserts the peer with `type` if absent. If the peer exists, it
+  sets only `isActive: true`, never `type` or `metadata`. `/a2a/register` calls `ensure` instead
+  of `peers.register`, with `type = agentCard.kind === "human" ? "human" : "agent"`.
+  `peers.register` is unchanged, and the hub's startup still uses it, so `aaron` is human whichever
+  runs first. Side effect: register no longer wipes a peer's `metadata` (it passes none today, and
+  nothing reads peer metadata at `ea9d057`).
+- **H2. `aaron` gets an owned `agents` row** with `agentCard: { name: "aaron", kind: "human" }`.
+  It is created by `node scripts/hub-key.mjs init --as aaron --kind human` on the local hub, the
+  same code path as `--init-key` with the card's kind as a flag. The key file is
+  `127.0.0.1-4000/aaron.key`. U1, C7, the floor and rotate apply to it like any row.
+- **H3. A human row is never treated as an online agent.** `agents.listOnline` leaves out rows
+  whose `agentCard.kind` is `"human"`. Otherwise `escalation.ts:14-18` could pick `aaron` as
+  `agents[0]` and escalate a task to a person as though it were a daemon. `/a2a/agents/live` would
+  also list `aaron`.
+- **H4. The browser holds the key without it ever being printed.**
+  - The Key field starts empty and is `type="password"`.
+  - The key is kept in the browser's `localStorage`, with every access in try/catch, so the page
+    works without it.
+  - To get it there, Aaron runs `node scripts/hub-key.mjs copy --as aaron`. It puts the key on the
+    OS clipboard (`clip` / `pbcopy`) and prints only `copied key for aaron@127.0.0.1-4000
+    (prefix xxxxxxxx)`. Aaron pastes it into the field.
+  - The key never reaches stdout, a file in the repo, or a transcript. With no key, requests get
+    the 401 they already get.
+
+**B2 check against the old hub:**
+- `peers.ensure` is new, so the old hub never calls it.
+- `listOnline` leaving out human rows only hides `aaron` from the old hub, which is correct.
+- `peers.register` is unchanged.
+
+**Left as is:**
+- The browser's seed post uses `from: "alice"` (`App.svelte:149`), so it posts as `alice` under
+  `aaron`'s key. That is T-058's class (a `from` the caller asserts) and is not checked in this
+  loop.
+- On tcm nothing registers `aaron` as an agent, so H1–H4 are deployed but have no effect there.
+
+**For Gauge:**
+- After `hub-key.mjs init --as aaron --kind human`, `peers` shows `aaron` as `human`. It still
+  does after a hub restart and after a second register.
+- `aaron`'s key resolves to `aaron`.
+- `listOnline` and `/a2a/agents/live` leave `aaron` out.
+- An escalation with no named target never picks `aaron`.
+- An agent re-registering an existing human peer's name does not flip its type. That name is
+  owned by its key (C7), so only `aaron`'s own key can re-register it.
+
+**For Aaron (Relay's decision, pending his confirmation):** the browser acts as `aaron`. If he
+prefers a separate name (for example `aaron-web`, an ordinary human-kind row), only H2's name
+changes.
+
