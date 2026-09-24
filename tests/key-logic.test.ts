@@ -146,3 +146,16 @@ describe("the retired shared key (departure 1 backstop), pure", () => {
     expect(decideRotate({ row: { apiKeyHash: "c", keyStatus: "owned" }, currentHash: "c", newHash: R, newHeldByOtherName: false })).toMatchObject({ status: 400 });
   });
 });
+
+describe("ownedStatusFor: the one chokepoint for writing owned (ruling 3, F2)", () => {
+  it("never yields owned for the retired hash; classifyAtDeployStatus agrees", async () => {
+    const { ownedStatusFor, classifyAtDeployStatus, RETIRED_SHARED_KEY_HASH: R } = await import("../convex/keyLogic.js");
+    expect(ownedStatusFor(R)).toBe("legacy");
+    expect(ownedStatusFor("fresh")).toBe("owned");
+    expect(classifyAtDeployStatus(R, false)).toBe("legacy");
+    expect(classifyAtDeployStatus("fresh", true)).toBe("legacy");
+    expect(classifyAtDeployStatus("fresh", false)).toBe("owned");
+    expect(resolveKeyHolder([{ name: "a", apiKeyHash: R, keyStatus: "owned" }])).toBeNull();
+    expect(describeKeyHash([{ name: "a", apiKeyHash: R, keyStatus: "owned" }])).toBe("legacy");
+  });
+});

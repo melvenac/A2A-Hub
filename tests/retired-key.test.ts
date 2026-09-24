@@ -1,6 +1,15 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { register, registerAgent, rotateKey } from "../convex/agents.js";
+import {
+  classifyAtDeploy,
+  getByKeyHash,
+  getByName,
+  keyHashStatus,
+  listOnline,
+  register,
+  registerAgent,
+  rotateKey,
+} from "../convex/agents.js";
 import { RETIRED_SHARED_KEY_HASH } from "../convex/keyLogic.js";
 
 // Loop 3 ruling on departure 1: every public mutation that can set apiKeyHash
@@ -123,5 +132,83 @@ describe("the retired shared key is never acquired (departure 1 backstop)", () =
     );
     expect(data).toMatchObject({ status: 400 });
     expect([...rows.values()][0].apiKeyHash).toBe("own");
+  });
+});
+
+// Ruling 3, F1: no public function returns apiKeyHash, so a direct caller
+// cannot read the stored hash that rotateKey takes as proof.
+describe("no public function returns apiKeyHash (ruling 3, F1)", () => {
+  const seed = () =>
+    fakeCtx([
+      { name: "victim", apiKeyHash: "victim-hash", keyStatus: "owned", agentCard: { kind: "ide-session" }, lastSeen: 1, status: "online" },
+      { name: "other", apiKeyHash: "other-hash", keyStatus: "owned", agentCard: {}, lastSeen: 2, status: "online" },
+    ]);
+
+  it("every public agents query answers without a hash in any shape", async () => {
+    const { ctx } = seed();
+    const outputs = [
+      await call(getByName, ctx, { name: "victim" }),
+      await call(listOnline, ctx, {}),
+      await call(getByKeyHash, ctx, { apiKeyHash: "victim-hash" }),
+      await call(keyHashStatus, ctx, { apiKeyHash: "victim-hash" }),
+    ];
+    for (const out of outputs) {
+      const text = JSON.stringify(out);
+      expect(text).not.toContain("apiKeyHash");
+      expect(text).not.toContain("victim-hash");
+    }
+  });
+
+  it("getByName keeps what the hub needs (askPolicy), and listOnline what its callers read", async () => {
+    const { ctx } = seed();
+    expect(await call(getByName, ctx, { name: "victim" })).toEqual({ name: "victim", askPolicy: undefined });
+    const rows = await call(listOnline, ctx, {});
+    expect(rows.map((r: any) => Object.keys(r).sort())).toEqual([
+      ["agentCard", "lastSeen", "name", "status"],
+      ["agentCard", "lastSeen", "name", "status"],
+    ]);
+  });
+
+  it("the takeover chain fails: step 1 yields no hash, so rotation has no proof", async () => {
+    const { ctx, rows } = seed();
+    const looked = await call(getByName, ctx, { name: "victim" });
+    const stolen = (looked as any)?.apiKeyHash;
+    expect(stolen).toBeUndefined();
+    const data = await refusal(
+      call(rotateKey, ctx, { name: "victim", currentHash: stolen ?? "", newHash: "attacker-hash" })
+    );
+    expect(data).toMatchObject({ status: 409 });
+    expect([...rows.values()].find((r) => r.name === "victim").apiKeyHash).toBe("victim-hash");
+    expect(await call(getByKeyHash, ctx, { apiKeyHash: "victim-hash" })).toEqual({ name: "victim" });
+  });
+});
+
+// Ruling 3, F2: no path marks a row holding the retired hash owned.
+describe("classifyAtDeploy never promotes the retired key (ruling 3, F2)", () => {
+  it("a lone unclassified row holding it stays legacy and authenticates nobody", async () => {
+    const { ctx, rows } = fakeCtx([
+      { name: "alice", apiKeyHash: RETIRED_SHARED_KEY_HASH, agentCard: {}, lastSeen: 1, status: "online" },
+    ]);
+    const counts = await call(classifyAtDeploy, ctx, {});
+    expect(counts).toMatchObject({ owned: 0, legacy: 1 });
+    expect([...rows.values()][0].keyStatus).toBe("legacy");
+    expect(await call(getByKeyHash, ctx, { apiKeyHash: RETIRED_SHARED_KEY_HASH })).toBeNull();
+  });
+
+  it("control: a lone row holding a fresh 43-character key's hash is promoted", async () => {
+    const fresh = createHash("sha256").update("x".repeat(43)).digest("hex");
+    const { ctx, rows } = fakeCtx([{ name: "bob", apiKeyHash: fresh, agentCard: {}, lastSeen: 1, status: "online" }]);
+    expect(await call(classifyAtDeploy, ctx, {})).toMatchObject({ owned: 1, legacy: 0 });
+    expect([...rows.values()][0].keyStatus).toBe("owned");
+    expect(await call(getByKeyHash, ctx, { apiKeyHash: fresh })).toEqual({ name: "bob" });
+  });
+
+  it("repairs a row an earlier build marked owned, and the lookup refuses it either way", async () => {
+    const { ctx, rows } = fakeCtx([
+      { name: "alice", apiKeyHash: RETIRED_SHARED_KEY_HASH, keyStatus: "owned", agentCard: {}, lastSeen: 1, status: "online" },
+    ]);
+    expect(await call(getByKeyHash, ctx, { apiKeyHash: RETIRED_SHARED_KEY_HASH })).toBeNull();
+    expect(await call(classifyAtDeploy, ctx, {})).toMatchObject({ demoted: 1 });
+    expect([...rows.values()][0].keyStatus).toBe("legacy");
   });
 });

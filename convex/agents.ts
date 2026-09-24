@@ -4,9 +4,12 @@ import type { Doc } from "./_generated/dataModel";
 import { ConvexError, v } from "convex/values";
 import { decideHeartbeat } from "./instanceLogic.js";
 import {
+  classifyAtDeployStatus,
   decideRegister,
   decideRotate,
   describeKeyHash,
+  ownedStatusFor,
+  RETIRED_SHARED_KEY_HASH,
   resolveKeyHolder,
   type KeyHashStatus,
 } from "./keyLogic.js";
@@ -143,7 +146,7 @@ async function registerCore(
         agentCard: args.agentCard,
         lastSeen: now,
         status: "online",
-        keyStatus: "owned",
+        keyStatus: ownedStatusFor(args.apiKeyHash),
         ...instanceFields,
         ...policyFields,
       });
@@ -160,7 +163,7 @@ async function registerCore(
         agentCard: args.agentCard,
         lastSeen: now,
         status: "online",
-        keyStatus: "owned",
+        keyStatus: ownedStatusFor(args.apiKeyHash),
         activeInstanceId: takeoverId(args.instanceId),
         lastHeartbeatAt: now,
         ...policyFields,
@@ -228,7 +231,7 @@ export const rotateKey = mutation({
     const now = Date.now();
     await ctx.db.patch(c._id, {
       apiKeyHash: args.newHash,
-      keyStatus: "owned",
+      keyStatus: ownedStatusFor(args.newHash),
       activeInstanceId: takeoverId(args.instanceId),
       lastHeartbeatAt: now,
       lastSeen: now,
@@ -242,27 +245,41 @@ export const rotateKey = mutation({
  * keyStatus, so a second run changes nothing. Admin key, right after the push:
  *   convex run agents:classifyAtDeploy
  * Returns counts only, never a name next to a hash.
+ *
+ * Ruling 3, F2: a row holding the retired shared key is never owned, even a
+ * lone one (classifyAtDeployStatus). It also demotes any such row an earlier
+ * build (84694b9) marked owned, so a local database classified by that build
+ * is repaired by running this once more.
  */
 export const classifyAtDeploy = internalMutation({
   args: {},
-  handler: async (ctx): Promise<{ owned: number; legacy: number; untouched: number }> => {
+  handler: async (
+    ctx
+  ): Promise<{ owned: number; legacy: number; untouched: number; demoted: number }> => {
     const all = await ctx.db.query("agents").collect();
     let owned = 0;
     let legacy = 0;
     let untouched = 0;
+    let demoted = 0;
     for (const row of all) {
       if (row.keyStatus !== undefined) {
-        untouched++;
+        if (row.keyStatus === "owned" && row.apiKeyHash === RETIRED_SHARED_KEY_HASH) {
+          await ctx.db.patch(row._id, { keyStatus: "legacy" });
+          demoted++;
+        } else {
+          untouched++;
+        }
         continue;
       }
       const shared = all.some(
         (r) => r.apiKeyHash === row.apiKeyHash && r.name !== row.name
       );
-      await ctx.db.patch(row._id, { keyStatus: shared ? "legacy" : "owned" });
-      if (shared) legacy++;
-      else owned++;
+      const status = classifyAtDeployStatus(row.apiKeyHash, shared);
+      await ctx.db.patch(row._id, { keyStatus: status });
+      if (status === "owned") owned++;
+      else legacy++;
     }
-    return { owned, legacy, untouched };
+    return { owned, legacy, untouched, demoted };
   },
 });
 
@@ -320,20 +337,15 @@ export const getByName = query({
     args
   ): Promise<{
     name: string;
-    apiKeyHash: string;
     askPolicy?: { allow: string[] };
   } | null> => {
     const agent = await ctx.db
       .query("agents")
       .withIndex("by_name", (q) => q.eq("name", args.name))
       .first();
-    return agent
-      ? {
-          name: agent.name,
-          apiKeyHash: agent.apiKeyHash,
-          askPolicy: agent.askPolicy,
-        }
-      : null;
+    // No public function returns apiKeyHash (ruling 3, F1): a stored hash is
+    // rotateKey's proof, so it must be readable only with the admin key.
+    return agent ? { name: agent.name, askPolicy: agent.askPolicy } : null;
   },
 });
 
@@ -366,14 +378,20 @@ export const keyHashStatus = query({
 });
 
 // Online agents. A human-kind row (the browser client's `aaron`, §12 H3) is
-// never an online agent: escalation picks agents[0] from this list.
+// never an online agent: escalation picks agents[0] from this list. Rows are
+// projected: no apiKeyHash, keyStatus or instance lease leaves this query
+// (ruling 3, F1). Its callers read name, lastSeen and agentCard.kind only.
 export const listOnline = query({
   args: {},
-  handler: async (ctx): Promise<any[]> => {
+  handler: async (
+    ctx
+  ): Promise<{ name: string; agentCard: any; lastSeen: number; status: "online" | "offline" }[]> => {
     const rows = await ctx.db
       .query("agents")
       .filter((q) => q.eq(q.field("status"), "online"))
       .collect();
-    return rows.filter((r) => r.agentCard?.kind !== "human");
+    return rows
+      .filter((r) => r.agentCard?.kind !== "human")
+      .map((r) => ({ name: r.name, agentCard: r.agentCard, lastSeen: r.lastSeen, status: r.status }));
   },
 });

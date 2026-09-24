@@ -22,6 +22,20 @@ export const KEY_FLOOR = 32;
 export const RETIRED_SHARED_KEY_HASH =
   "7e9f8fd111802be56c379d597842e29b2cebd35ff2133d431a49fa556a18704e";
 
+/**
+ * The one chokepoint for writing keyStatus "owned" (ruling 3, F2): a row that
+ * holds the retired shared key's hash is never owned, on any path, public or
+ * internal. Every writer of "owned" asks this instead of writing the literal.
+ */
+export function ownedStatusFor(apiKeyHash: string): KeyStatus {
+  return apiKeyHash === RETIRED_SHARED_KEY_HASH ? "legacy" : "owned";
+}
+
+/** classifyAtDeploy's rule: owned only if unshared and not the retired key. */
+export function classifyAtDeployStatus(apiKeyHash: string, shared: boolean): KeyStatus {
+  return shared ? "legacy" : ownedStatusFor(apiKeyHash);
+}
+
 export type RegisterDecision =
   | { kind: "insert" }
   | { kind: "same"; legacy: boolean }
@@ -112,9 +126,12 @@ export function decideRotate(input: {
  * to two) carries one name and is owned. Anything else resolves to nobody.
  */
 export function resolveKeyHolder(
-  rows: { name: string; keyStatus?: KeyStatus }[]
+  rows: { name: string; apiKeyHash?: string; keyStatus?: KeyStatus }[]
 ): { name: string } | null {
   if (rows.length === 0) return null;
+  // The retired key authenticates nobody, even on a row a pre-fix
+  // classifyAtDeploy (84694b9) marked owned (ruling 3, F2).
+  if (rows.some((r) => r.apiKeyHash === RETIRED_SHARED_KEY_HASH)) return null;
   if (rows.some((r) => r.name !== rows[0].name)) return null;
   if (!rows.every(isOwned)) return null;
   return { name: rows[0].name };
@@ -124,9 +141,10 @@ export type KeyHashStatus = "owned" | "legacy" | "shared" | "unknown";
 
 /** Why a hash does or does not authenticate. For log lines only, never auth. */
 export function describeKeyHash(
-  rows: { name: string; keyStatus?: KeyStatus }[]
+  rows: { name: string; apiKeyHash?: string; keyStatus?: KeyStatus }[]
 ): KeyHashStatus {
   if (rows.length === 0) return "unknown";
   if (rows.some((r) => r.name !== rows[0].name)) return "shared";
+  if (rows.some((r) => r.apiKeyHash === RETIRED_SHARED_KEY_HASH)) return "legacy";
   return rows.every(isOwned) ? "owned" : "legacy";
 }

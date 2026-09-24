@@ -19,6 +19,8 @@ Loop 3 (T-003, P0): per-agent keys and rotation. Brief `docs/loops/loop-3-per-ag
   - It takes the instance lease, so a second instance still on the old key is superseded (a 409 on heartbeat in warn, a 403 in strict) and cannot bring the key back.
   - It fails closed in warn too.
 - **`GET /a2a/whoami`** returns the name a key authenticates as, or `null`.
+- **No public Convex function returns `apiKeyHash`** (ruling 3, F1). `getByName` and `listOnline` project it out, so the stored hash that `rotateKey` takes as proof is readable only with the admin key.
+- **No path ever marks a row holding the retired shared key owned** (ruling 3, F2). `ownedStatusFor` is the one chokepoint, `classifyAtDeploy` repairs rows an earlier build promoted, and the lookup never authenticates that hash.
 - **Migration (§4.1, D-007).** A legacy name's first register with a fresh key deletes its legacy row and inserts a fresh owned one, in one transaction.
   - `agents:classifyAtDeploy` (internal) classifies the rows present at deploy, once.
   - `agents:release` (internal) deletes a name's agents row. Peers, sessions and messages stay.

@@ -728,8 +728,9 @@ calls keeps its argument validator and its return shape:**
 |---|---|---|
 | `agents.getByKeyHash` (`src/auth.ts:51`) | **Stays `{ name } \| null`.** Legacy, shared and unknown are all `null`. | `if (!agent)` (`auth.ts:62`) sees `null`: warn logs `WOULD REJECT unknown`, strict 403. No object ever reaches it without a name. |
 | `agents.register` (`src/index.ts:364`) | Same args (new ones optional). Success still returns the row id. **A refusal throws a `ConvexError` `{ status, reason }`**, never a return value. | The throw reaches the old handler's `catch`: 500 with the reason, and `peers.register` is not reached. A refused name never gets a peer row, and a refused re-key leaves the hash unchanged (K8). A returned `{ ok: false }` would have been read as success, which is why refusal is a throw. The new hub maps the `ConvexError` to 409/400. |
-| `agents.getByName` (`index.ts:78,352`) | Unchanged. The new hub reads `keyStatus` through the new functions, not through this one. | Unchanged. |
-| `agents.heartbeat` (`index.ts:277`), `agents.listOnline` (`index.ts:302`, `escalation.ts:14`) | Unchanged. `listOnline` rows carry the new optional `keyStatus` field. | Extra field ignored (`/agents/live` projects the fields it needs). |
+| `agents.getByName` (`index.ts:78,352`) | **Revision 5 (ruling 3, F1): returns `{ name, askPolicy }` only, with no `apiKeyHash`.** The new hub reads only `askPolicy` from it (`denyNamedAsk`, `index.ts:78`), and its register path does not call it. | Its `evaluateNameClaim` (`index.ts:352-353`) now sees no stored hash, so it returns `ok`, and the old hub calls the mutation. The mutation's C7 and U1 then refuse a different key (a throw, so a 500 and no peer row). A same-key re-register still succeeds. The ask gate still gets `askPolicy`. |
+| `agents.heartbeat` (`index.ts:277`) | Unchanged. | Unchanged. |
+| `agents.listOnline` (`index.ts:302`, `escalation.ts:14`) | **Revision 5 (F1): rows projected to `{ name, agentCard, lastSeen, status }`.** There is no `apiKeyHash`, `keyStatus` or instance lease, and human-kind rows are left out (§12). | `/agents/live` reads `name`, `lastSeen` and `agentCard.kind`, and escalation reads `name`: all present. |
 | `sessions.create`, `messages.send` | Only the text of the `Unknown peer` error changes (B1). | The text is passed through. |
 | `messages.markRead` | Unchanged. The `reader` check (§5) is in Express. | Unchanged. |
 
@@ -852,3 +853,56 @@ direct caller could register a new name with it. The public key would then authe
 **The 3210 incident is recorded as a breach of the build limit**, self-reported, with no harm
 found. **Rule from now on:** every `convex dev` and hub start pins its ports
 (`--local-cloud-port`, `--local-site-port`, `PORT`) and is preceded by a port listing.
+
+---
+
+## 14. Ruling 3 (`4bb787c`): Gauge's two findings in `84694b9`
+
+**F1: a direct Convex caller could take over any name.** `getByName` and `listOnline` are public
+and returned `apiKeyHash`. `rotateKey` is public and takes `currentHash` as its proof. So a
+direct caller could read the victim's hash and then rotate the victim's name to its own key.
+
+- **Fix: no public Convex function returns `apiKeyHash`, in any shape.**
+  - `getByName` returns `{ name, askPolicy }`.
+  - `listOnline` returns `{ name, agentCard, lastSeen, status }`.
+  - Class search: every public function in `convex/agents.ts`, the only module that reads the
+    `agents` table (`peers.ts`'s `unknownPeerError` returns an Error, never a row). The rest
+    return an id, `{ id, event }`, `{ ok }`, `{ name } | null` or a status string.
+  - The skew rows are in §11 B2's table.
+- **Rotation's proof stays the stored hash (Rivet's call).** With the fix, the hash is readable
+  only with the admin key, and whoever holds the admin key owns the database anyway.
+  - I did not take the stronger option of `rotateKey` hashing a presented plaintext key. It would
+    put live keys into Convex function arguments, which Convex may log or keep. That trades F1 for a
+    K6 exposure on every rotation.
+  - The hub still takes the plaintext at its HTTP edge and hashes it there, as today.
+- Tested (`tests/retired-key.test.ts`):
+  - Every public agents query, run on a seeded row, output checked for any `apiKeyHash` field or
+    the stored hash.
+  - The takeover chain: step 1 yields no hash, rotation is refused (409), and the victim's key still
+    resolves to the victim.
+  - A mutant that puts the hash back in `getByName` fails 3 of those tests.
+  - Live on the throwaway stack, `getByName` and `listOnline` through `convex run` carry no
+    hash-shaped string.
+
+**F2: `classifyAtDeploy` promoted a lone retired-key row to owned.**
+
+- **Fix: `ownedStatusFor(apiKeyHash)` in `convex/keyLogic.ts` is the only way any path writes
+  `owned`.** It yields `legacy` for the retired hash. The writers of `keyStatus`, all covered:
+  - `registerCore` insert and migration: `ownedStatusFor`, and `decideRegister` already refuses
+    acquiring the retired hash.
+  - `rotateKey`: `ownedStatusFor`, and `decideRotate` already refuses the retired hash.
+  - `classifyAtDeploy`: `classifyAtDeployStatus`, which is `ownedStatusFor` unless shared.
+  - `stampCoHolders`: writes only `legacy`.
+- **Defence in depth:**
+  - `resolveKeyHolder` never authenticates the retired hash, even on a row marked owned.
+  - `classifyAtDeploy` also demotes any such row an earlier build marked owned (`demoted` count).
+    A local database classified by `84694b9` is repaired by running it once more.
+- Tested:
+  - Pure cases.
+  - A lone retired-key row stays legacy after classification, and the lookup returns null.
+  - Control: a lone fresh-key row is promoted to owned.
+  - A pre-marked owned retired-key row is refused and then demoted.
+  - A mutant that drops the check from `classifyAtDeployStatus` fails 2 tests.
+  - Live on the throwaway stack: a lone imported retired-key row classifies legacy, and
+    `getByKeyHash` returns null for it while an owned control resolves.
+
