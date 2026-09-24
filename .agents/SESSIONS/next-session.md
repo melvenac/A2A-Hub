@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 35 by open-brain v1.8.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 36 by open-brain v1.8.0 — do not edit; change state via ob_state -->
 
 # Next Session Handoff
 
@@ -6,7 +6,7 @@
 
 ### Pick up here
 
-Relay session 16 (checkpoint 3, 2026-09-24 ~20:10Z). Session 16's record through rev 34 is MERGED to master (PR #10, e166057, on Aaron's word "yes"). LOOP 3 (T-003, per-agent keys) is designed and approved, and waits on the SIA local hold. Design: loop/3-per-agent-keys (final 88a8e0f; notes a0eaa89, 12614e1). Rivet is now revising section 4.2/4.3 for D-007 (release all 8 dev-key rows, not migrate; live names released together with their fresh --init-key), and designing a key for the browser client's human peer `aaron` that does not flip its peer type. Rulings: docs/loops/loop-3-ruling-1.md, loop-3-ruling-2.md. Gauge's criteria: qa/loop-3-harness-keys (a522deb, 728a4e3, d4f04be); Gauge is adding a release row and the browser item. D-006: Aaron approved the hub-talk contract and staged cutover. GATES: build when the SIA planner lifts the local hold (the lift covers the throwaway QA stack; every process is STOPPED, not idle, during SIA full stops); merge on Gauge's acceptance + Aaron's word; tcm acts per design section 4.2, each on Aaron's word, in a SIA-named window (not during SIA candidate A7).
+Relay session 16 (checkpoint 4, 2026-09-24). Session 16's record through rev 34 is MERGED (PR #10, e166057); revs 35+ are on docs/session-16-b (not merged). LOOP 3 (T-003, per-agent keys) is FULLY PLANNED, with no open questions for Aaron: design FINAL at loop/3-per-agent-keys a2e1562; criteria ACCEPTED at qa/loop-3-harness-keys f09cb01; D-006 (contract + cutover), D-007 (release the 8 dev-key rows), browser page acts as `aaron` (Aaron, verbatim "page should act as aaron"). GATES: Rivet builds when the SIA planner lifts the local hold (the lift covers the throwaway QA stack; every process STOPPED during SIA full stops); Gauge runs acceptance and must message Relay before the H4 clipboard step, so Relay can warn Aaron first; merge on Gauge's acceptance + Aaron's word; tcm acts per design section 4.2, each on Aaron's word, in a SIA-named window (never during SIA candidate A7).
 
 ### Watch out
 
@@ -32,15 +32,17 @@ Relay session 16 (checkpoint 3, 2026-09-24 ~20:10Z). Session 16's record through
 **SHA frozen for QA:** _None._
 
 **Questions pending for Aaron:** 
-- Browser client: confirm Relay's decision that the browser page acts as `aaron` (your own name) with a key of its own, which Rivet designs so `aaron` stays a human peer (asked in detail in session 16).
+- Merge docs/session-16-b (record revs 35+) when convenient.
 
 **Rulings made mid-loop:** 
 - Loop 2 (T-001) run by Relay on Aaron's word, verbatim "you do it, turning on manual mode"; read-only; closed with V-003.
 - tcm rebuild: none. Aaron, session 16: "tcm rebuild was assuming a new version was being created. If non, no rebuild."
-- Loop 3: brief Amendment 1 (fe0ef05); ruling 1 (c34a792); ruling 2 (e709329) approved to build; rev 2 (88a8e0f) accepted.
+- Loop 3: brief Amendment 1 (fe0ef05); ruling 1 (c34a792); ruling 2 (e709329) approved to build; rev 2 (88a8e0f) and rev 3 (a2e1562) accepted; migration replaces the row (no stored agents _id anywhere, checked).
 - D-006 (Aaron via the SIA planner): hub-talk key contract + staged cutover approved.
-- D-007 (Aaron, direct): release all 8 dev-key rows; each agent re-registers fresh (supersedes the SIA planner's keep-and-migrate for forge/probe).
-- Session 16 record merged: PR #10, e166057, on Aaron's word "yes".
+- D-007 (Aaron, direct): release all 8 dev-key rows; each agent re-registers fresh.
+- Browser page acts as `aaron` (Aaron, direct: "page should act as aaron").
+- Gauge's criteria accepted at f09cb01, including the H4 clipboard rule.
+- Session 16 record through rev 34 merged: PR #10, e166057, on Aaron's word "yes".
 
 ## developer _(written session 16)_
 
