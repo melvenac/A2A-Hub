@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 36,
+  "revision": 37,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -577,7 +577,7 @@
       "opened_session": 16,
       "closed_session": null,
       "supersedes": null,
-      "note": "Found by Rivet in the Loop 3 design (loop/3-per-agent-keys d8962da, §9): the tracked docker-compose.yml:48-49 publishes Convex on 3210:3210 (every interface). docs/redeploying-tcm.md:14 says tcm binds convex to 127.0.0.1:3210, so tcm may differ from the tracked file. UNVERIFIED on tcm. If reachable, every public Convex function can be called without the hub: messages:markRead with any reader, agents:heartbeat for any name. First step: a read-only check of tcm's live compose file and listening ports (Aaron's word, manual mode). Candidate fixes: bind 127.0.0.1:3210 in the tracked compose, and/or make hub-only functions internal. Gates exposure (T-002 step 5). Ruled in docs/loops/loop-3-ruling-1.md."
+      "note": "Found by Rivet in the Loop 3 design (loop/3-per-agent-keys d8962da, §9): the tracked docker-compose.yml:48-49 publishes Convex on 3210:3210 (every interface). docs/redeploying-tcm.md:14 says tcm binds convex to 127.0.0.1:3210, so tcm may differ from the tracked file. UNVERIFIED on tcm. If reachable, every public Convex function can be called without the hub: messages:markRead with any reader, agents:heartbeat for any name. First step: a read-only check of tcm's live compose file and listening ports (Aaron's word, manual mode). Candidate fixes: bind 127.0.0.1:3210 in the tracked compose, and/or make hub-only functions internal. Gates exposure (T-002 step 5). Ruled in docs/loops/loop-3-ruling-1.md. ADDED session 16 (2026-09-24): SIA D-043 (Aaron: \"yes, set it up now\") puts a self-hosted GitHub Actions runner on tcm as an unprivileged user outside the docker group. Loopback binding does NOT protect against a local user: any runner job, including PR-built code, can call public Convex functions at 127.0.0.1:3210 (and reach the hub on 4000) without a key. The docker-group exclusion only keeps it from the admin key. Relay told the SIA planner and suggested: trusted workflows only (no fork-PR jobs), and an owner-matched firewall rule blocking the runner user from 127.0.0.1:3210/3211/4000. Making hub-only functions internal is the code-level fix, and it covers this case as well."
     },
     {
       "id": "T-058",
