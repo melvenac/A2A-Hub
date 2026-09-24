@@ -390,7 +390,8 @@ silent, and repaired by `agents:release` (§4.3) on Aaron's word. The window is 
    depends on may change while SIA has a candidate in flight (A6 now, then QA 94). **The SIA
    planner names the window, and step 3 happens only inside it.** Steps 5–9 touch `grok`'s row or
    its client, so they respect the same constraint: the SIA planner clears each one that touches
-   `grok` or its checkout.
+   `grok` or its checkout. **As of D-006 (rev 33), `atlas` is under the same rule:** no step that
+   touches `grok` or `atlas` runs while SIA's A7 is being built or scored.
    **Deploy, one act:** push the Convex functions to tcm, run `agents:classifyAtDeploy` at once,
    then deploy the hub. `AUTH_MODE` stays `warn`. **`~/Projects/A2A-Hub` is not touched.** The 8
    `dev-key` names become legacy. They keep working (U2 warn) and now resolve to no one (U3).
