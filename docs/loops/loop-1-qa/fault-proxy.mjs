@@ -64,7 +64,7 @@ const server = http.createServer(async (req, res) => {
       const sid = path.split("/")[3];
       const inj = mode.inject || { from: "qa-a", content: "qa injected turn" };
       const r = await fetch(`${UP}/a2a/session/${sid}/message`, {
-        method: "POST", headers: { "Content-Type": "application/json", "X-Agent-Key": req.headers["x-agent-key"] || "dev-key" },
+        method: "POST", headers: { "Content-Type": "application/json", ...(req.headers["x-agent-key"] ? { "X-Agent-Key": req.headers["x-agent-key"] } : {}) },
         body: JSON.stringify(inj),
       });
       entry.injected = { status: r.status, body: await r.text() };

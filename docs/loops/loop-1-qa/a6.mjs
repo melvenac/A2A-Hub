@@ -1,9 +1,8 @@
 // A6.4 (seats still talk: default lobby join) and A6.5 (auth on the new routes).
 // QA_STRICT_HUB=<:4450 AUTH_MODE=strict>, QA_OLD_HT, QA_OLD_HUB plus the usual env.
-import { talk, hub, check, results, DIRECT } from "./harness.mjs";
+import { talk, hub, key, check, results, DIRECT } from "./harness.mjs";
 import { join } from "node:path";
 const tag = Date.now().toString(36);
-const key = (n) => `${n}-key`;
 const NEW_HT = join(process.env.QA_TREE, "scripts", "hub-talk.mjs");
 
 // A6.4 default lobby join: two seats, no --peer, no --session. Run for new client on the candidate hub
