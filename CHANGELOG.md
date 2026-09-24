@@ -12,7 +12,7 @@ Loop 3 (T-003, P0): per-agent keys and rotation. Brief `docs/loops/loop-3-per-ag
   - **Only an owned row authenticates (U3).** A hash two names share, or one not yet migrated, resolves to nobody. From deploy on, the `dev-key` resolves to no one.
   - **Ownership is stored.** New optional field `agents.keyStatus` (`owned` | `legacy`). It is never derived from a holder count, so the last holder of a shared key cannot become owned by attrition (ruling 1, R1).
   - **A migrated name keeps its key (C7).** In warn as well as strict, a register with a different key is refused (`409`), and the stored hash is unchanged.
-  - **Key floor.** A key acquired by register or rotate must be at least 32 characters (`400`). This refuses the `dev-key` structurally, with no literal in the code.
+  - **Key floor.** A key acquired by register or rotate must be at least 32 characters (`400`). This refuses the `dev-key` structurally, with no literal in the code. The floor rides on a flag from the hub, so as a backstop every public mutation that can set a key refuses to acquire the retired shared key's hash, in both modes and whatever the flag says. A legacy holder may keep it until its release. The general direct-Convex-caller gap belongs to T-057.
   - The rules live in the Convex mutation, so the check and the write commit together (`convex/keyLogic.ts`, `agents.registerAgent`). Refusals throw a `ConvexError`, so the v1.8.0 hub never reads one as success.
 - **Rotation: `POST /a2a/rotate`.** The current key goes in the header and `{ newApiKey }` in the body.
   - It is a compare-and-swap, and the old key stops authenticating at once.

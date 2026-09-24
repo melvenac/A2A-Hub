@@ -11,6 +11,17 @@ export type KeyStatus = "owned" | "legacy";
 
 export const KEY_FLOOR = 32;
 
+/**
+ * sha256 of the retired shared key that 8 tcm names held (Loop 2, V-003). No
+ * name may ever acquire it again, in either mode, whatever the caller reports
+ * about key length (Loop 3 ruling on departure 1): the floor is decided by the
+ * hub, and a direct Convex caller can omit that flag. Held as the hash, never
+ * the key. A legacy row that already holds it may keep re-registering (U2)
+ * until its release.
+ */
+export const RETIRED_SHARED_KEY_HASH =
+  "7e9f8fd111802be56c379d597842e29b2cebd35ff2133d431a49fa556a18704e";
+
 export type RegisterDecision =
   | { kind: "insert" }
   | { kind: "same"; legacy: boolean }
@@ -38,6 +49,10 @@ export function decideRegister(input: {
   const { existing, presentedHash, heldByOtherName, keyTooShort, strict } = input;
   const holdsIt = existing !== null && existing.apiKeyHash === presentedHash;
 
+  // The retired shared key is never acquired, whatever keyTooShort says.
+  if (!holdsIt && presentedHash === RETIRED_SHARED_KEY_HASH) {
+    return { kind: "refuse", status: 400, reason: "the retired shared key cannot be registered" };
+  }
   // U1: no name acquires a hash another name holds. Both modes.
   if (heldByOtherName && !holdsIt) {
     return { kind: "refuse", status: 409, reason: "key held by another agent" };
@@ -82,6 +97,9 @@ export function decideRotate(input: {
   }
   if (newHash === currentHash) {
     return { kind: "refuse", status: 400, reason: "new key must differ from the current key" };
+  }
+  if (newHash === RETIRED_SHARED_KEY_HASH) {
+    return { kind: "refuse", status: 400, reason: "the retired shared key cannot be registered" };
   }
   if (newHeldByOtherName) {
     return { kind: "refuse", status: 409, reason: "key held by another agent" };

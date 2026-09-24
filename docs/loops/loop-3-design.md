@@ -813,3 +813,42 @@ decision, pending Aaron: the browser acts as `aaron`.
 prefers a separate name (for example `aaron-web`, an ordinary human-kind row), only H2's name
 changes.
 
+
+---
+
+## 13. Build rulings (Relay, on the build at `bc157f5`)
+
+**Departure 2 (`getByKeyHash` reads up to 2 rows, all owned, one name): accepted.** U1 keeps a
+hash to one name, and tolerating a same-name duplicate the collapse has not removed yet is harmless.
+
+**Departure 1 (the key floor is decided by the hub via `keyTooShort`): accepted, with a backstop.**
+Only the hub sees the plaintext key, so the floor rides on a flag the hub sets. `register` is a
+public mutation and the flag is optional, so a direct Convex caller can omit it. Once the last
+legacy holder of the retired shared key is released, U1 would no longer block that hash, and a
+direct caller could register a new name with it. The public key would then authenticate again.
+
+- **Backstop (built):** `decideRegister` and `decideRotate`, the shared decision functions behind
+  every public mutation that can set `apiKeyHash` (`register`, `registerAgent`, `rotateKey`),
+  refuse *acquiring* the retired shared key's hash. They refuse it in both modes, in-transaction,
+  whatever `keyTooShort` says (`400 the retired shared key cannot be registered`).
+- The hash is a constant in `convex/keyLogic.ts` (`RETIRED_SHARED_KEY_HASH`, prefix `7e9f8fd1`),
+  never the key itself. K5's search stays clean.
+- A legacy row that already holds the hash may keep re-registering it (U2 warn) until its release,
+  so the live seats keep working.
+- Tested:
+  - The pure decision (`tests/key-logic.test.ts`).
+  - Each public entry point called directly with no flag (`tests/retired-key.test.ts`). A mutant
+    that removes the register check fails 4 of its 8 tests.
+  - Live on the throwaway stack: both `agents:register` and `agents:registerAgent`, called through
+    `convex run` with the hash and no flag, return that 400 and create no row.
+- **The general direct-caller gap is T-057's, not Loop 3's.** A direct Convex caller can still
+  register a *new* name with a short key other than the retired one, because the floor rests on the
+  hub's flag. U1 and C7 hold for that caller, so it cannot share or take over a key. Closing the gap
+  means making hub-only functions unreachable from outside the hub: bind Convex to `127.0.0.1`, or
+  make them `internalMutation`s (§9, T-057).
+- The v1.8.0-hub skew window (§11 B2) is accepted as is: the old hub sends no flag for those
+  minutes, and U1 and C7 still apply while legacy holders exist.
+
+**The 3210 incident is recorded as a breach of the build limit**, self-reported, with no harm
+found. **Rule from now on:** every `convex dev` and hub start pins its ports
+(`--local-cloud-port`, `--local-site-port`, `PORT`) and is preceded by a port listing.

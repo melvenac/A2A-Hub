@@ -135,3 +135,14 @@ describe("resolveKeyHolder (U3) and describeKeyHash", () => {
     expect(describeKeyHash([{ name: "a", keyStatus: "owned" }])).toBe("owned");
   });
 });
+
+describe("the retired shared key (departure 1 backstop), pure", () => {
+  it("is refused on acquisition whatever keyTooShort says, and kept by a holder", async () => {
+    const { RETIRED_SHARED_KEY_HASH: R } = await import("../convex/keyLogic.js");
+    const base = { heldByOtherName: false, keyTooShort: false, strict: false };
+    expect(decideRegister({ ...base, existing: null, presentedHash: R })).toMatchObject({ status: 400 });
+    expect(decideRegister({ ...base, existing: { apiKeyHash: "x", keyStatus: "owned" }, presentedHash: R })).toMatchObject({ status: 400 });
+    expect(decideRegister({ ...base, existing: { apiKeyHash: R }, presentedHash: R, heldByOtherName: true })).toEqual({ kind: "same", legacy: true });
+    expect(decideRotate({ row: { apiKeyHash: "c", keyStatus: "owned" }, currentHash: "c", newHash: R, newHeldByOtherName: false })).toMatchObject({ status: 400 });
+  });
+});
