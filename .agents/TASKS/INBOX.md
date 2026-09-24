@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 28 by open-brain v1.8.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 29 by open-brain v1.8.0 — do not edit; change state via ob_state -->
 
 # Inbox
 
@@ -20,6 +20,7 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-008** `hub-talk` exit code 1 means two opposite things
 - [ ] **T-017** `--inbox` then `--wait` re-delivers turns already read (two cursors disagree)
 - [ ] **T-050** Wake an idle IDE seat that has an unread turn in its room
+- [ ] **T-057** Convex may be reachable from the tailnet on 3210, bypassing the hub
 
 ## P2
 
@@ -45,6 +46,7 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-053** Hub reports "running" and exits 0 when its port is taken
 - [ ] **T-055** Malformed or unknown session id returns 500, not 4xx
 - [ ] **T-056** alice daemon did not answer a relay turn on the local stack
+- [ ] **T-058** Caller-asserted identities beyond /read (heartbeat, message from, task claim)
 
 ## P3
 
@@ -61,6 +63,7 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-038** Resolve the stale Session 12 stub
 - [ ] **T-039** Buzz is parked
 - [ ] **T-054** Committed convex/_generated is stale (no instanceLogic); `convex dev` dirties the tree
+- [ ] **T-059** Agent name format rule (look-alike and junk names)
 
 ## Done (last 3 sessions)
 
