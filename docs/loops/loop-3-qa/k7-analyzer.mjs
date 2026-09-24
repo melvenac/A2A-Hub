@@ -51,8 +51,12 @@ for (const r of rows) {
 }
 // Canonical row per name: newest lastSeen, ties by _id (the rule register uses).
 const canon = (list) => list.reduce((c, r) => (r.lastSeen > c.lastSeen || (r.lastSeen === c.lastSeen && r._id < c._id) ? r : c));
-// What getByKeyHash would answer under U3: a name only if exactly one row holds the hash and it is owned.
-const resolves = (h) => { const l = byHash.get(h) ?? []; return l.length === 1 && l[0].keyStatus === "owned" ? l[0].name : null; };
+// What getByKeyHash answers under U3 as accepted (Relay, departure 2): it reads at most 2 rows, and
+// returns the name when every row read is owned and they all carry one name.
+const resolves = (h) => {
+  const l = (byHash.get(h) ?? []).slice(0, 2);
+  return l.length > 0 && l.every((r) => r.keyStatus === "owned") && new Set(l.map((r) => r.name)).size === 1 ? l[0].name : null;
+};
 
 const flags = [];
 const dupNames = [...byName].filter(([, l]) => l.length > 1).map(([n]) => n);

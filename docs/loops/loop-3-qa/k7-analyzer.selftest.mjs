@@ -42,6 +42,8 @@ const cases = [
     [...std, "--expect-askpolicy", `forge=${createHash("sha256").update(JSON.stringify({ allow: ["relay"] })).digest("hex").slice(0, 8)}`], 0, null],
   ["askPolicy dropped by the fresh row fails", jsonl([...clean, row("forge", fresh(), "owned")]),
     [...std, "--expect-askpolicy", `forge=${createHash("sha256").update(JSON.stringify({ allow: ["relay"] })).digest("hex").slice(0, 8)}`], 1, /askPolicy for forge: none/],
+  ["U3 departure 2: two owned rows, one name, same hash -> resolves (stale flagged, not a resolve failure)", (() => { const x = fresh(); return jsonl([row("relay", x, "owned", 1000, "r1"), row("relay", x, "owned", 900, "r2")]); })(), std, 1, /relay: [0-9a-f]{8} owned resolves=true/],
+  ["U3: two rows, one name, one legacy -> does not resolve", (() => { const x = fresh(); return jsonl([row("relay", x, "owned", 1000, "r1"), row("relay", x, "legacy", 900, "r2")]); })(), std, 1, /relay: [0-9a-f]{8} owned resolves=false/],
   ["empty input is undetermined", "", std, 2, /no rows parsed/],
   ["count at the limit is undetermined", jsonl(clean), ["--limit", "3", "--auth-mode", "warn"], 2, /at --limit 3/],
   ["deploy phase: 2 owned + 8 legacy on the dev-key passes", jsonl([row("cursor-grok", fresh(), "owned"), row("grok-probe", fresh(), "owned"),

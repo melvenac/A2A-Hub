@@ -10,7 +10,7 @@ B2), and Rivet's design `docs/loops/loop-3-design.md` at `origin/loop/3-per-agen
 (revision 3: §11 B1/B2, D-007's release, §12's human peer), **design text only**. Code references are to `ea9d057`.
 
 **Baseline** ("old"): `ea9d057` (master, v1.8.0): the hub build, its Convex functions, and its
-`hub-talk`. **Candidate:** none yet. Relay names a frozen SHA. Every observation names it. If the
+`hub-talk`. **Candidate:** none yet. `bc157f5` was withdrawn by Relay for a re-freeze (DK). Relay names the frozen SHA. Every observation names it. If the
 SHA moves mid-evaluation the run is void and starts again.
 
 ---
@@ -40,6 +40,12 @@ seeds in `git archive` scratch copies), **receipts read with a parser**. Added f
   functions are pushed, as in the deploy act in miniature (design §4.2 step 3). Each seeded
   row is read back (name, 8-hex prefix, `keyStatus` absent) **before** the push, so the seed proves
   it landed.
+  **Seeding method (Relay, 2026-09-24, instrument only):** for K1.4, K8, R1, MIG, REL and DK.2's
+  second case, the same shape is seeded with `convex import --table agents --append` (plus the
+  matching `peers` rows) into the candidate's scratch deployment. The rows have no `keyStatus` and
+  share one short key's hash. The read-back rule is unchanged: every row is read back before any row
+  runs. B2's skew and N's old-client rows use the real `ea9d057` hub, on its own scratch Convex
+  running `ea9d057` functions.
 - **P9 Log capture.** The stdout and stderr of every hub, daemon, proxy and client process go to
   separate files under `QA_TMP`. K6 scans them, and the log-line assertions below read them.
 
@@ -121,7 +127,8 @@ Setup: candidate functions, both hubs. `qa-k1a` and `qa-k1b` register with disti
    `whoami(kb) = qa-k1b` afterwards.
 4. **A legacy name moving onto a held hash.** A seeded legacy row (P8) registers with `ka`: 409 in
    both modes, and its stored prefix is unchanged.
-5. **Floor, both sides of the boundary, both modes:** a new name with a 31-character key gets 400
+5. **Floor, through the candidate hub only (Relay's ruling 3a), both sides of the boundary, both
+   modes:** a new name with a 31-character key gets 400
    `key too short`, and no row is created. A new name with a 32-character key is 200, `owned`, and
    resolves.
 
@@ -384,6 +391,38 @@ The stack is the throwaway one (P3 exception). `hub-key.mjs` runs with
 **Fails if:** any path changes `aaron`'s peer type, `aaron` is listed as online or picked by
 escalation, `copy` prints more than the prefix line, or the Key field starts filled.
 
+### DK — no mutation lets a name acquire the `dev-key` hash, with or without the hub (Relay, re-freeze)
+
+The floor is a hub flag (`keyTooShort`), so a caller that skips the hub skips the floor. The
+re-frozen build refuses **acquiring** `sha256("dev-key")` inside the mutations, in both modes.
+
+1. **Enumerate, don't assume.** A static search of the candidate's `convex/` lists every **public**
+   mutation that can write `apiKeyHash` (an `insert` or `patch` into `agents` carrying it). **The
+   search is validated on known positives:** it must list `agents.register`, `agents.registerAgent`
+   and `agents.rotateKey`. Every function it lists is tested in 2. A function it lists that is not
+   tested fails DK. Internal mutations are listed and reported, not called (they need the admin
+   key).
+2. **For each listed mutation, a direct call through the public Convex API** (`/api/mutation` on
+   scratch Convex; no hub and no `keyTooShort` argument):
+   - **Known positive first:** the same call with the hash of a fresh 43-character key succeeds (a
+     new name is inserted, or a rotation happens).
+   - **With `sha256("dev-key")` for a new name** (or as the new hash, for `rotateKey`): refused,
+     as a `ConvexError` with a status. No row is created or changed, and afterwards
+     `agents:getByKeyHash(sha256("dev-key"))` is `null`. This is checked once with no legacy holder
+     of the `dev-key` present, and once with one present. In both cases the refusal holds and the
+     result stays `null`.
+3. **The exemption stays (U2):** a legacy row that already holds the `dev-key` hash re-registers with
+   it. Through the warn hub this is allowed and logs `WOULD REJECT legacy`, and the row stays
+   `legacy`. Its key still resolves to no name.
+
+4. **During skew** (B2's hubs): the `ea9d057` hub on candidate functions registers a new name with
+   `dev-key`, in warn and in strict. It is refused (non-200), no row or peer is made, and
+   `getByKeyHash(sha256("dev-key"))` stays `null`.
+
+**Fails if:** any public mutation lets any name acquire the `dev-key` hash, the search misses a
+known positive, or the U2 exemption breaks. **Any acquisition of the `dev-key` hash is a finding**
+(Relay's ruling 3a).
+
 ### K8 — a migrated name keeps its key (C7, O1)
 
 Setup: a P8 legacy row `qa-k8` holding a shared short key `s`, with other legacy holders of `s`.
@@ -497,7 +536,11 @@ candidate).
 
 1. **Function level.** `agents:getByKeyHash` returns exactly `null`, not an object, for the legacy,
    shared and unknown hashes. For the owned hash it returns an object whose `name` is the owner. That
-   is the known positive, and it shows the nulls are not inert. `agents:keyHashStatus` returns
+   is the known positive, and it shows the nulls are not inert. **U3 as accepted (Relay, departure
+   2):** `getByKeyHash` reads at most 2 rows and returns the name when those rows are all `owned` and
+   carry one name. A seeded pair of owned rows of the same name with the same hash resolves to that
+   name. The same pair with one row `legacy`, or with two different names, gives `null`.
+   `agents:keyHashStatus` returns
    exactly one of the strings `owned`, `legacy`, `shared` and `unknown`, each matching its key,
    and nothing else (no name, no hash).
 2. **Old app on candidate functions, on a guarded GET:** strict gives 403 for legacy, shared and
@@ -517,6 +560,11 @@ candidate).
    500. The log line says `unknown`.
 6. **Old client scenario** (as N.1) with the owned key: the old app on candidate functions gives the
    same exit codes and stdout as on `ea9d057` functions.
+
+**Report only, not a finding (Relay's ruling 3a):** whether a short key that is not the `dev-key`
+can be registered on a new name by a direct Convex caller, or through the old app on candidate
+functions. The floor is a hub flag, so this is an accepted gap, owned by T-057. The `dev-key` hash is
+not in this gap: DK covers it.
 
 **Fails if:** any non-authenticating result reaches the old hub as anything but `null`, strict on
 the old app admits a legacy, shared or unknown key, a refused register leaves a peer row or changes
