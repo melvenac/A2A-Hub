@@ -1,23 +1,23 @@
 {
   "schema_version": 2,
-  "revision": 26,
+  "revision": 27,
   "project": {
     "name": "a2a-intelligent-hub"
   },
   "objective": {
-    "text": "Prove a truly remote agent can join the hub over the public internet with its own key: first verify revocation against the live database (the one unmet gate), then run the ordered remote-agent sequence — redeploy tcm with v1.7.0, per-agent keys, warn-mode soak, `AUTH_MODE=strict`, expose over HTTPS, remote registration. On-demand spawn follows.",
-    "since_session": 14
+    "text": "Prove a truly remote agent can join the hub over the public internet with its own key. Revocation of superseded keys is verified on tcm's live DB (V-003, session 16) and tcm runs v1.8.0 (V-001). Next in the ordered remote-agent sequence: per-agent keys (T-003; on tcm 8 of 10 names share the dev-key, which resolves as `atlas`, so strict means nothing until then), warn-mode soak, `AUTH_MODE=strict`, expose over HTTPS, remote registration. askPolicy on JSON-RPC (T-004) and rate limiting (T-005) also gate exposure. On-demand spawn follows.",
+    "since_session": 16
   },
   "tasks": [
     {
       "id": "T-001",
       "title": "Verify revocation against the live database",
       "priority": "P0",
-      "status": "open",
+      "status": "done",
       "opened_session": 14,
-      "closed_session": null,
+      "closed_session": 16,
       "supersedes": null,
-      "note": "`agents.register` now patches a canonical row and deletes the extras, but that has only ever run in tests. The live DB held ~39 historical rows for ~5 agents, each with its own `apiKeyHash`, and `getByKeyHash` matches any of them, so a surviving row means a superseded key still authenticates. The collapse is capped at 4000 deletes per call and self-heals across later registers. Read-only investigation first: count rows per agent name, confirm whether stale hashes remain. Do not improvise fixes against live data — report first (Session 14; roadmap v3)"
+      "note": "Read-only on tcm 2026-09-24T03:27:59Z by Relay, on Aaron's word this session, verbatim \"you do it, turning on manual mode\" (the brief assigned Rivet; the SIA hold barred launching Rivet). Report: docs/loops/loop-2-revocation-report.md. 10 names, 10 rows, no stale hash: revocation of superseded keys holds (V-003). The dev-key finding moves to T-003."
     },
     {
       "id": "T-002",
@@ -32,12 +32,12 @@
     {
       "id": "T-003",
       "title": "Per-agent key generation + rotation",
-      "priority": "P1",
+      "priority": "P0",
       "status": "open",
       "opened_session": 14,
       "closed_session": null,
       "supersedes": null,
-      "note": "deprecate the shared `dev-key` and the bootstrap key. v2 closed the validation hole; this makes key management usable. Step 2 of the remote sequence (roadmap v3). ADDED 2026-09-23 (Loop 1, Rivet's live run at cb7cda7): under the shared dev-key, req.agentName resolves to an arbitrary agent row, so a regression that makes GET /messages mark the caller read was INVISIBLE. The mutant survived, because its mark 404'd silently, and it was killed only once each seat had its own key. The shared key hides identity bugs from tests as well as from the hub, which is one more reason to do this before AUTH_MODE=strict. After T-003, add the reader === req.agentName check to POST /read (T-049's limit L2)."
+      "note": "deprecate the shared `dev-key` and the bootstrap key. v2 closed the validation hole; this makes key management usable. Step 2 of the remote sequence (roadmap v3). ADDED 2026-09-23 (Loop 1, Rivet's live run at cb7cda7): under the shared dev-key, req.agentName resolves to an arbitrary agent row, so a regression that makes GET /messages mark the caller read was INVISIBLE. The mutant survived, because its mark 404'd silently, and it was killed only once each seat had its own key. The shared key hides identity bugs from tests as well as from the hub, which is one more reason to do this before AUTH_MODE=strict. After T-003, add the reader === req.agentName check to POST /read (T-049's limit L2). MEASURED ON TCM 2026-09-24 (Loop 2, V-003, docs/loops/loop-2-revocation-report.md): 8 of 10 names (relay, grok, cursor, clark, general, probe, forge, atlas) hold the dev-key hash; only cursor-grok and grok-probe have their own keys. getByKeyHash's .first() resolves the dev-key to `atlas` for all 8, so on tcm every dev-key request is attributed to atlas. Strict mode would reject none of them, and revoking the dev-key would lock out all 8 at once: strict means nothing until this task lands. Raised P1->P0 in session 16: with T-001 closed it is the next gate."
     },
     {
       "id": "T-004",
@@ -605,6 +605,19 @@
         }
       ],
       "since_session": 15,
+      "status": "verified"
+    },
+    {
+      "id": "V-003",
+      "claim": "On tcm's live DB no agent name has more than one row and no superseded key hash survives: revocation of superseded keys holds (T-001)",
+      "evidence": [
+        {
+          "type": "live-check",
+          "path": "tcm: ~/projects/a2a-hub ./node_modules/.bin/convex data agents --limit 8000 --format jsonl",
+          "observation": "2026-09-24T03:27:59Z, read-only, run by Relay on Aaron's word (\"you do it, turning on manual mode\"), each command approved in manual mode. 10 rows (whole table: under the limit), 10 names, one row each; 0 stale hashes; getByName .first() = canonical row for every name. Local analyzer printed counts and 8-char prefixes only; validated first on a synthetic known positive (stale, shared, misresolving, getByName mismatch all flagged) and on the live dev-key positive. AUTH_MODE=warn (docker exec a2a-hub printenv AUTH_MODE). /health ok at 03:27:17Z and 03:28:29Z. Full command log: docs/loops/loop-2-revocation-report.md."
+        }
+      ],
+      "since_session": 16,
       "status": "verified"
     }
   ],
