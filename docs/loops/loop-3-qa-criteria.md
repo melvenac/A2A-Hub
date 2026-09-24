@@ -359,8 +359,12 @@ only H2's name changes. The stack is the throwaway one (P3 exception). `hub-key.
   2. `hub-key.mjs copy --as aaron`: its stdout and stderr are exactly `copied key for
      aaron@<hub-id> (prefix xxxxxxxx)`. K finds 0 key or hash hits and 0 key-shaped runs in them.
      The prefix matches the stored hash's. The clipboard, read inside the harness process and never
-     printed, equals the key file. The run's last step overwrites the clipboard, because the
-     throwaway key must not stay on Aaron's clipboard.
+     printed, equals the key file. **Clipboard handling (Relay's ruling, 2026-09-24).** The OS
+     clipboard is Aaron's. (a) The run never reads or restores its earlier contents, because that
+     would pull his data into the harness. (b) Before this step, Gauge messages Relay, who warns
+     Aaron that the clipboard will be overwritten for a few seconds. The step runs only after
+     Relay's go. (c) The step's last act sets the clipboard to an empty string, never another key.
+     The report says so.
   3. With no key, the browser's requests get 401 (the route behaviour, checked with the harness's
      keyless `hub()`).
 
