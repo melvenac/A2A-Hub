@@ -1,30 +1,30 @@
-<!-- generated from .agents/state.json rev 25 by open-brain v1.8.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 34 by open-brain v1.8.0 — do not edit; change state via ob_state -->
 
 # Next Session Handoff
 
-## planner _(written session 15)_
+## planner _(written session 16)_
 
 ### Pick up here
 
-ROLL HANDOFF (Relay session 15 -> fresh Relay). STATE: Loop 1 (T-049 read receipts, T-051 --peer) is accepted (Gauge report 2 on e886b6b), merged (#3-#8; master b5aa6b3), tagged v1.8.0 (34ac98b), DEPLOYED to tcm (V-001; rollback: image a2a-hub:prev de11bebd8f93, source ~/projects/a2a-hub.old = fd23eac), ~/Projects/A2A-Hub fast-forwarded to 003f57d (it is every SIA seat's hub-talk), and A6's live start verified (V-002). Receipts were confirmed from SIA's side by Atlas. The LOCAL STACK is STOPPED (all 11 processes by PID, ports free), on Aaron's word via Atlas: "yes, stop it" (SIA planner session, 2026-09-23), for SIA's QA runs. Restart is Aaron's and Relay's call, never while SIA QA is running a suite. A HOLD on A2A-Hub builds and tests is IN FORCE for SIA: SIA's developer has one more full suite on A4, then SIA QA (session 89) runs its suite. Keep it until the live SIA planner lifts it. FIRST ACTIONS for the fresh session: (1) ListAgents to find the live SIA planner (it is rolling too; find it by listing, not by name) and tell it you are the live Relay; (2) keep the hold; (3) do nothing on tcm. NEXT WORK, in order: T-056 (alice answers nobody on the local stack; needs the stack running, so after the hold, on Aaron's word to restart); Loop 2 = T-001 (read-only revocation check on tcm's live DB; brief first, then Aaron's word; SSH as melvenac@tcm with Aaron approving commands in manual mode); T-050's live Cursor stop-hook trial, asked for through the SIA planner under D-003 when SIA has no live Cursor session.
+Relay session 16 (checkpoint 2, 2026-09-24 ~06:40Z). LOOP 3 (T-003, per-agent keys) IS DESIGNED AND APPROVED, waiting on the SIA hold. Design FINAL: loop/3-per-agent-keys 88a8e0f (+ a0eaa89 build note: start-stack.ps1 honours A2A_KEY_DIR). Rulings: docs/loops/loop-3-ruling-1.md (R1 stored keyStatus, R2 cutover), loop-3-ruling-2.md (approved to build; B1 new names on old client, B2 getByKeyHash stays null) -- both answered in design section 11. Gauge's criteria ACCEPTED: qa/loop-3-harness-keys a522deb (docs/loops/loop-3-qa-criteria.md; harness change 0ca2358). Relay ruled Gauge's Qs: N.5 split (a: scratch A2A_KEY_DIR in QA; b: live main-stack start on Aaron's word -- never start-stack.ps1 in the QA tree); the hold lift covers the throwaway QA stack (asked the SIA planner to confirm at the lift); instrument additions approved. GATES: build when the SIA planner lifts the local hold; merge needs Q1 (Aaron, via SIA planner, expected morning 2026-09-24) + Gauge acceptance + Aaron's word; every tcm act per design section 4.2 on Aaron's word inside a SIA-named quiet window (not yet named: grok may run an A7 session if QA 94 rejects A6). Also this session: Loop 2 = T-001 closed (V-003); T-017 P1; T-057 (Convex port, P1), T-058, T-059 opened. All on docs/session-16-t017, NOT MERGED.
 
 ### Watch out
 
-- Questions for Aaron on SHARED work (anything SIA depends on: T-050, and hub transport changes) go through the live SIA planner under D-003 (mirror of SIA D-039; D-004 corrects its master status), quoted both ways, with both links of provenance recorded. Find that planner with ListAgents, not by a remembered name or pipe address. Aaron may also answer directly in this session. A2A-Hub-only work goes to Aaron directly.
+- SIA HOLD (narrowed ~03:25Z): no A2A-Hub local stack, builds, test runs or new seats on THIS machine (covers a2a-rivet-63, a2a-qa-5f). Reading, docs, git, hub traffic, tcm OK. FULL STOP (no commands, no git) when the SIA planner calls one; QA 94's suite is next. Grok's A6 session finished ~06:2xZ, so the no-tcm-restart condition is lifted, but grok is NOT in a quiet window for the key cutover until SIA's candidate A is decided. Lifting the hold is the SIA planner's call.
+- Questions for Aaron on SHARED work (anything SIA depends on: T-050, hub transport changes, hub-talk's contract) go through the live SIA planner under D-003, quoted both ways. Find it with ListAgents. A2A-Hub-only work goes to Aaron directly.
 - D-005: seats push their OWN working branches without asking (Rivet loop/* chore/*, Gauge qa/*, Relay docs/*); never master, never force, never another seat's branch; read back with ls-remote. Merges, tags, tcm deploys, main-checkout updates, starting or stopping the local stack, and live Convex writes each need Aaron's word for that act.
-- SIA holds: the SIA planner calls them before SIA full-suite runs. During a hold: no builds or tests from any A2A-Hub seat, and stay idle. Confirm each hold by message. Document pushes are not covered.
-- tcm: `ssh melvenac@tcm` (the bare `tcm` alias logs in as the Windows user and is refused). Auto mode's classifier blocks production reads; Aaron switches to manual mode to approve each command. Deploys belong to the developer seat by role; Relay deployed v1.8.0 only on Aaron's explicit word. The next deploy must rotate a2a-hub.old first, or `mv` nests into it. tcm's source is a tar of selected paths plus node_modules, not a git tree; verify it by checksum, allowing for line endings.
-- T-056 diagnosis so far (read-only replay, 2026-09-23): every hub call alice's loop makes returns 200; the queue is empty; the model id is current (claude-haiku-4-5-20251001); no old room has gained a turn. The fault is in reply generation or posting. Next: rerun the replay script (session 15 scratchpad: alice-sim.mjs; it rebuilds from daemon.ts handleSessions plus one Anthropic call) or read the 'A2A alice' window for '[alice] poll error'. Needs the local stack running.
-- One writer for the record while the planner holds a loop; other seats send handoff text to Relay. ob_state's `session` parameter stamps EVERY set_handoff in a call. Three seats share one session counter: Rivet and Gauge both used 16.
-- start-stack.ps1 reuses anything listening on 3210/4000, so never run it from a seat worktree. Stopping the stack means killing the node and backend PIDs, not only closing the windows.
-- A3-type checks need per-seat keys: under the shared dev-key, a GET-marks-caller regression survives (T-003 note).
-- Relay's error shape in session 15, twice: asserting a fact about an artifact without reading it. Read first. Near-miss: opening a task id without checking the highest.
+- tcm: `ssh melvenac@tcm`. Auto mode blocks production reads; Aaron switches to manual mode to approve each command. The next deploy must rotate a2a-hub.old first. tcm's source is a tar, not a git tree. Reading tcm's Convex: `convex data <table>` with --limit <= ~99999; generate the admin key inside tcm's shell, never print it. SIA's seats spell tcm http://100.124.212.87:4000 -- key directories are keyed on that spelling.
+- T-056 diagnosis so far (read-only replay, 2026-09-23): every hub call alice's loop makes returns 200; the queue is empty; model id current. Fault is in reply generation or posting. Next: rerun docs/loops/t-056-alice-sim.mjs or read the 'A2A alice' window for '[alice] poll error'. Needs the local stack running (held).
+- One writer for the record while the planner holds a loop; other seats send handoff text to Relay. ob_state writes the CHECKED-OUT tree: switch to the docs branch carrying the latest revision first (session 16: detached origin/master was rev 25 while the branch held 26+).
+- start-stack.ps1 reuses anything listening on 3210/4000, so never run it from a seat worktree. Stopping the stack means killing the node and backend PIDs.
+- Relay's error shape in sessions 15-16: asserting a fact about an artifact without reading it, and reporting a line when it found a class (Loop 3 brief named 3 dev-key sites; there are 7 -- Gauge found 6, Relay the 7th). Read first; search for the class.
 - Decisions are append-only in ob_state; a correction is a new decision pointing at the old.
 - SIA's seats run load-sensitive test suites on this machine. Aaron's standing ruling: work normally; pause only when a SIA seat asks for a controlled rerun.
 
 ### Open questions
 
-- Seat transport: Claude Code cross-session messages or a hub room via scripts/hub-talk.mjs? AGENT.md allows both. Dogfooding the hub would exercise T-008 and T-017, but it makes the seats depend on the thing they are changing.
+- Seat transport: Claude Code cross-session messages or a hub room via scripts/hub-talk.mjs? AGENT.md allows both.
+- What did Aaron mean by "Relay can rebuild the tcm hub when ready" (via Atlas, ~05:50Z)? Relay did NOT rebuild: tcm runs 003f57d and master differs only in docs/.agents. Ask Aaron directly.
 
 ### Loop state
 
@@ -32,12 +32,21 @@ ROLL HANDOFF (Relay session 15 -> fresh Relay). STATE: Loop 1 (T-049 read receip
 
 **SHA frozen for QA:** _None._
 
-**Questions pending for Aaron:** _None._
+**Questions pending for Aaron:** 
+- Q1 via SIA planner (queued there): may hub-talk's key contract change as in Loop 3 design section 3.5, with the section 3.6/4.2 cutover?
+- Q2 direct: clark, cursor, general -- migrate, release, or leave each? (forge/probe: SIA ruled keep + migrate)
+- Q3 direct: which name should the browser client (client/) use?
+- Direct: what was the tcm rebuild for?
+- Direct: merge docs/session-16-t017 (record rev 26-32, Loop 2 report, Loop 2/3 briefs, Loop 3 rulings 1-2)?
 
 **Rulings made mid-loop:** 
-- Loop 1 closed: accepted on e886b6b, merged, tagged v1.8.0, deployed to tcm server-first, checkout updated; A6 verified (V-001, V-002).
-- Local stack stopped 2026-09-23 on Aaron's word via Atlas, verbatim "yes, stop it" (SIA planner session, SIA record session 81), relayed under SIA D-039 / A2A D-003; executed by Relay on the SIA planner's STOP NOW after SIA's developer run ended.
-- Roll prepared on Aaron's word via Atlas, verbatim "Have relay write it's handoff first and prep for a roll. Ask all agents to make sure a clean roll will get picked up where we left off".
+- Loop 2 (T-001) run by Relay on Aaron's word in session 16, verbatim "you do it, turning on manual mode"; read-only; closed with V-003.
+- tcm rebuild NOT performed despite Aaron's go-ahead relayed by Atlas ("Relay can rebuild the tcm hub when ready", ~05:50Z): nothing to ship.
+- Loop 3 brief Amendment 1: all 6 of Gauge's objections accepted (fe0ef05).
+- Loop 3 ruling 1 (c34a792): R1 + R2 required; name format struck (T-059); T-057, T-058 opened.
+- Loop 3 ruling 2 (e709329): approved to build subject to B1, B2; rev 2 (88a8e0f) accepted without further ruling.
+- SIA planner ruled forge/probe: keep and migrate, never release.
+- Gauge's Loop 3 criteria (a522deb) accepted; N.5 split; hold lift to cover throwaway QA stack (confirm at lift).
 
 ## developer _(written session 16)_
 
