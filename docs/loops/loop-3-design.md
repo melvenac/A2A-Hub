@@ -4,6 +4,16 @@
 answering Relay's ruling 1 (`docs/loops/loop-3-ruling-1.md`, `c34a792`). Nothing here is built or
 tested (SIA hold).
 
+**Ruling 2 (`e709329`): approved to build** once the SIA hold lifts, subject to B1 and B2. Both are
+written into **§11** as binding conditions, and §1.2 and §3.6 now point to it. **Folded in with them
+are SIA record 90's corrections (via Relay, T-003 note rev 30):**
+- `grok` is SIA's seat, so it moves to steps 6 and 9;
+- tcm's spelling is `http://100.124.212.87:4000`;
+- the unmigrated names are split by owner (§4.3);
+- SIA's candidate window is a precondition of step 3.
+
+Gauge's unit-test finding is in §8.
+
 **Revision 1, what changed:** **R1**, ownership is a stored field (`keyStatus`), and only an owned
 row authenticates (§1, §7). **R2**, the main-checkout cutover is placed in §4.2, and every seat gets
 its key file before its hub-talk changes (§3.6). Also: the name-format rule is struck (now T-059,
@@ -87,9 +97,11 @@ hash.
   like the first (R1's point 2).
 
 **U3. Only an owned row authenticates.** `getByKeyHash` (`convex/agents.ts:139`) reads up to two
-rows from `by_apiKeyHash`. It returns the name **only if exactly one row holds the hash and that row
-is `owned`**. Otherwise it returns a reason (`legacy` or `shared`) and no name. `requireAgentKey`
-then treats the caller like an unknown key: strict 403, warn `WOULD REJECT legacy X-Agent-Key on
+rows from `by_apiKeyHash`. It returns `{ name }` **only if exactly one row holds the hash and that
+row is `owned`**. Otherwise it returns **`null`, exactly as for an unknown key today**. Its return
+type does not change. The reason (`legacy`, `shared` or `unknown`) comes from a separate query that
+only the new hub calls, and only to word the log line (§11, B2). `requireAgentKey` then treats the
+caller like an unknown key: strict 403, warn `WOULD REJECT legacy X-Agent-Key on
 <route>` and `req.agentName = null`. **The `dev-key` stops resolving to `atlas` on deploy, and it
 resolves to no name for as long as any row holds it, even a single row**, because every row
 holding it is legacy.
@@ -212,23 +224,27 @@ keeps its own secret without trusting the hub's transport for it.
 
 **Resolution order in every client:** `AGENT_KEY` env var if set, else the key file
 `$A2A_KEY_DIR/<hub-id>/<name>.key` (default `A2A_KEY_DIR = ~/.a2a-hub/keys`, `hub-id` = the
-`HUB_URL` host and port, e.g. `127.0.0.1-4000`, `tcm-4000`), **else fail closed**: exit 1 before any
+`HUB_URL` host and port, e.g. `127.0.0.1-4000`, `100.124.212.87-4000`), **else fail closed**: exit 1 before any
 network call, with `no key for <name> on <hub>: run hub-talk --as <name> --init-key` (rc 1 is
 hub-talk's "usage or non-retryable" code). **The error never contains a key.**
 
 **One `HUB_URL` spelling per hub (ruling 1 note).** `hub-id` comes from the URL's host and port, so
 `tcm`, the tailnet IP and the MagicDNS name would be three directories. `joining-the-hub.md` gets
-a table with the one spelling to use for each hub: `http://127.0.0.1:4000` for the local stack and
-`http://tcm:4000` for tcm (Loop 2's spelling). The tcm entry is confirmed against the `HUB_URL`
-the seats actually use before the first `--init-key`. A miss still fails loud. The error also names
-any other `hub-id` directory that has a `<name>.key` ("found a key for relay under
-100.124.212.87-4000; your HUB_URL spells this hub differently"). It gives paths only, never the
+a table with the one spelling to use for each hub:
+- `http://127.0.0.1:4000` for the local stack;
+- **`http://100.124.212.87:4000` for tcm**, the tailnet IP. That is SIA's spelling, 2 of 2 in SIA's
+  tracked tree (SIA record 90, via Relay). `joining-the-hub.md:10` uses it too.
+
+A2A-Hub's seats (`relay`'s canary included) use the same spelling, not Loop 2's `http://tcm:4000`.
+Otherwise their key files would land under `tcm-4000/`, the wrong hub-id. A miss still fails loud,
+and the error names any other `hub-id` directory that holds a `<name>.key` ("found a key for relay
+under tcm-4000; your HUB_URL spells this hub differently"). It gives paths only, never the
 contents.
 
 | Host | Where the key lives |
 |---|---|
 | **Local stack** (alice, bob, local seats) | Key files under the Windows user's `~/.a2a-hub/keys/127.0.0.1-4000/`. `start-stack.ps1` generates one per daemon name if missing (`hub-key.mjs init`, no network) before it launches `daemon.js --name <n>`. `.env` is shared by alice and bob, so it **cannot** hold their keys; `.env` gets no `AGENT_KEY`. |
-| **tcm's seats** (every seat whose `HUB_URL` is tcm, A2A-Hub's and SIA's) | Key files in the home directory of the OS user running the seat, under `tcm-4000/` (or whatever host the seat's `HUB_URL` names). A containerised seat gets `AGENT_KEY` from an untracked env file or Docker secret, never from the compose file. |
+| **tcm's seats** (every seat whose `HUB_URL` is tcm, A2A-Hub's and SIA's) | Key files in the home directory of the OS user running the seat, under `100.124.212.87-4000/` (the one tcm spelling above). A containerised seat gets `AGENT_KEY` from an untracked env file or Docker secret, never from the compose file. |
 | **Remote agent** (T-002 step 6) | Its own secret store, generated by its own CSPRNG. `joining-the-hub.md` tells it: at least 32 characters, random, never reused across names, sent only in `register` and `X-Agent-Key`. |
 
 The key directory is outside every repository, so no key can be committed by accident. Files are
@@ -319,7 +335,9 @@ keeps the old client, which still works against the new hub:
   `reader` still come from the body. **It keeps talking, and it cannot undo the migration** (C7,
   K8).
 
-So between the deploy and the checkout update, every seat talks, migrated or not. The update is
+So between the deploy and the checkout update, every existing seat talks, migrated or not. **A new
+name on the old client in that window is the exception. §11 B1 covers it:** such a name is created
+only by `--init-key` from the worktree. The update is
 safe once a read-only check passes:
 
 **`node scripts/hub-key.mjs check --hub <url> --names <n1,n2,…>`** (new client, run from the
@@ -368,7 +386,12 @@ silent, and repaired by `agents:release` (§4.3) on Aaron's word. The window is 
 2. **Pre-deploy read (read-only):** tcm's hub log for `WOULD REJECT name claim on cursor-grok` or
    `grok-probe`. Both are owned today, so C7 binds them from deploy. If either bot picks a new key
    per run, it would get 409 after deploy, and its operator must be told first.
-3. **Deploy, one act:** push the Convex functions to tcm, run `agents:classifyAtDeploy` at once,
+3. **Precondition (SIA's timing constraint, SIA record 90):** nothing a live `grok` exchange
+   depends on may change while SIA has a candidate in flight (A6 now, then QA 94). **The SIA
+   planner names the window, and step 3 happens only inside it.** Steps 5–9 touch `grok`'s row or
+   its client, so they respect the same constraint: the SIA planner clears each one that touches
+   `grok` or its checkout.
+   **Deploy, one act:** push the Convex functions to tcm, run `agents:classifyAtDeploy` at once,
    then deploy the hub. `AUTH_MODE` stays `warn`. **`~/Projects/A2A-Hub` is not touched.** The 8
    `dev-key` names become legacy. They keep working (U2 warn) and now resolve to no one (U3).
    `cursor-grok` and `grok-probe` become owned and keep resolving. **Loop 2's read, repeated:**
@@ -379,15 +402,18 @@ silent, and repaired by `agents:release` (§4.3) on Aaron's word. The window is 
    of steps 5–8 run from it. The main checkout still serves every seat with the old client (§3.6).
 5. **Canary: `relay`**, A2A-Hub's own seat, run by the planner: `--init-key` with `HUB_URL` at tcm,
    then `whoami`, then a round trip with another seat.
-6. **SIA's seats** (`atlas`, `forge`, and any other SIA name), in the order the SIA planner picks:
-   `--init-key` for each name, run from the worktree. The seat's own sessions keep using the old
-   hub-talk from the main checkout throughout, so **nothing about how a seat talks changes at this
-   step.**
-7. **Outside bots** `grok`, `cursor`: their operators, told by Aaron. They do not use our checkout.
+6. **SIA's names** (`atlas`; **`grok`, SIA's Cursor developer seat**; the retired **`forge` and
+   `probe`**, kept by SIA's ruling, §4.3; and any other SIA name), in the order and window the SIA
+   planner picks: `--init-key` for each name, run from the
+   worktree. The seat's own sessions keep using the old hub-talk from the main checkout
+   throughout, so **nothing about how a seat talks changes at this step.**
+7. **`cursor`**, the only possible outside bot. Its owner is unknown, so Aaron decides (§4.3).
 8. **Names nobody migrates** (§4.3).
-9. **Main-checkout update**, on Aaron's word, only after `hub-key.mjs check` (§3.6) passes for
-   every name that runs from `~/Projects/A2A-Hub`, for each hub it talks to. From here on the
-   seats' calls are attributed.
+9. **Main-checkout update**, on Aaron's word and inside the SIA planner's window, only after
+   `hub-key.mjs check` (§3.6) passes for every name that runs from `~/Projects/A2A-Hub`, for each
+   hub it talks to. **`grok` is on that list either way.** Its hub-talk very likely runs from the
+   main checkout, which is unverified, and a check that passes for a name that does not need it
+   costs nothing. From here on the seats' calls are attributed.
 10. **K7:** the completion check (§4.4).
 
 **No step takes a working seat off the hub.** Before step 9, every seat runs the old client, which
@@ -398,8 +424,18 @@ that is why the SIA planner supplies SIA's part of the list.
 
 ### 4.3 Names nobody migrates (Amendment N1)
 
-`clark` (last seen 2026-09-20), `probe` and `general` look abandoned. A name left on the `dev-key`
-keeps the `dev-key` held, and K7 fails. Three options, **each a live Convex write on tcm, so each
+A name left on the `dev-key` keeps the `dev-key` held, and K7 fails. SIA's record (record 90,
+via Relay) splits the candidates by owner:
+
+- **`forge`, `probe`: SIA's planner has ruled KEEP and MIGRATE** (T-003 note rev 31). Their rooms
+  are SIA's history, and deleting the rows would be an irreversible live write. They move with SIA's
+  seats in §4.2 step 6, inside the SIA-named window. Any SIA seat may run `--init-key` for them from
+  the new-client worktree. Each act still needs Aaron's word. **Release is not an option for
+  them.**
+- **`clark`, `general`, and `cursor` if nobody migrates it:** not SIA's. **Aaron chooses** from
+  the three options below.
+
+The options for Aaron's names: Three options, **each a live Convex write on tcm, so each
 needs Aaron's word per name:**
 
 - **(a) Aaron migrates it** from the workstation with `--init-key` like any seat. The key lands in
@@ -408,12 +444,13 @@ needs Aaron's word per name:**
 - **(b) Release it:** a new `internalMutation agents:release({ name })` deletes the name's `agents`
   row (the `peers` row and its sessions stay). Before deleting, it stamps the hash's other
   unclassified holders `legacy` (§1.1). Callable only with the admin key, via `convex run`.
-  The name becomes unclaimed and the next register takes it. **Recommended for `probe` and
-  `general`** if Aaron confirms they are test names. The same mutation is the operator's repair for
+  The name becomes unclaimed and the next register takes it. **Recommended for `general`** if Aaron confirms it
+  is a test name. The same mutation is the operator's repair for
   a lost key or a hijacked name.
 - **(c) Leave it.** K7 cannot pass until it moves, and strict stays off.
 
-Aaron chooses per name (§10, Q2). No option sends a request to tcm with the `dev-key` (N1).
+The choice is made per name (§10, Q2), and each needs Aaron's word as a live write. No option sends
+a request to tcm with the `dev-key` (N1).
 
 ### 4.4 Seeing that the migration is complete
 
@@ -524,6 +561,12 @@ accepted register, as today.
   and `hub()` has no default key. That same per-seat setup is what kills M3 (K3), and it is now the
   standard setup. `m3check.mjs`'s `M3.devkey` line changes meaning (the `dev-key` resolves to no
   one), so it becomes a check that the `dev-key` is refused.
+- **Unit tests under the floor (Gauge's scan):** `tests/identity.test.ts:139,160,181` register
+  with `"k1"` and `"other"`. They mock Convex (`hash:owner`), so the floor fires in Express first.
+  In the build they get 32+ character literals. Those are test-only keys registered on no stack
+  (O6). The name-claim cases they test are rewritten against the new decision function (§1.3).
+  No other `tests/` register call uses a literal key under 32 characters (`git grep` at
+  `ea9d057`).
 - The local stack starts, with keys generated by `start-stack.ps1` on first run. On an existing
   local database where alice and bob hold the `dev-key`, their rows have no `keyStatus` and so are
   legacy. **Each one's first register with its own key is §4.1's migration, in warn, in either
@@ -563,8 +606,8 @@ caller-asserted identities are **T-058** (P2). The bootstrap docs are in scope h
 - **Q1, via the SIA planner (D-003), sent by Relay after this revision:** the §3.5 contract
   changes to hub-talk, with the cutover order in §3.6 and §4.2. It also asks the SIA planner for
   SIA's part of step 9's name list: every SIA seat name, and the `HUB_URL` spelling each one uses.
-- **Q2, to Aaron directly:** migrate, release or leave each abandoned name (`clark`, `probe`,
-  `general`) (§4.3).
+- **Q2, to Aaron directly:** migrate, release or leave `clark`, `general` and `cursor` (§4.3).
+  `forge` and `probe` are settled (SIA's ruling: keep and migrate).
 - **Q3, to Aaron directly:** which name his browser client (`client/`) should use now that it has
   no default key.
 
@@ -575,3 +618,83 @@ caller-asserted identities are **T-058** (P2). The bootstrap docs are in scope h
 4. Each `release` or migration of an abandoned name (step 8).
 5. The main-checkout update (step 9).
 6. K7's read.
+
+---
+
+## 11. Binding conditions from ruling 2
+
+### B1. A new name on the old client, between step 3 and step 9
+
+**What that seat sees.** The old client registers the new name with the `dev-key`. The new hub
+refuses it: U1's 409 while any legacy row holds the `dev-key`, and the floor's 400 after that. So no
+`agents` row and no `peers` row is made (`src/index.ts:364-370`). The old client swallows the
+refusal (`scripts/hub-talk.mjs:169-183`), and it swallows heartbeats too (`:103-109`). What happens
+next depends on the mode:
+
+| Old-client call | What the seat sees today (`ea9d057`) |
+|---|---|
+| `--peer X`, or no-arg mode where it creates the lobby | rc 1: `/a2a/session -> 500 {"error":"Unknown peer: <name>"}` (`convex/sessions.ts:22`) |
+| `--session <id> --say` | rc 1: `-> 500 … Unknown peer: <name>` (`convex/messages.ts:29`) |
+| no-arg mode, waiting for another seat to open the lobby | It prints `waiting for another ide-session peer…` until `--join-timeout`, then rc 1 `no live IDE peer…`. **This is the silent case:** the other seats cannot see it, because it has no `agents` row. |
+| `--session <id> --wait` / `--inbox` | It reads the room; the receipt post fails on stderr ("not a participant"). |
+
+So most paths already end in rc 1, but with the **wrong cause** ("Unknown peer"), and one path
+waits in silence. That is ADR-013's shape.
+
+**The rule (binding, and it goes to SIA in Q1):** **between step 3 and step 9, a new seat name is
+created only by `--init-key` from the new-client worktree.** After that the name has an owned row
+and a peer row, and its seat can keep using the old client from the main checkout like any
+migrated name (§3.6). A2A-Hub's seats follow the same rule. The rule ends at step 9, when the new
+client is the only client.
+
+**Loud as far as the hub can make it, without changing the old client.** The old client prints the
+hub's error body on every `api()` failure (`hub-talk.mjs:156`). So the new Convex functions give
+the cause where they throw `Unknown peer`. When the name has no `agents` row either,
+`sessions.create` and `messages.send` throw `Unknown peer: <name> (not registered on this hub; if
+its register was refused, create it with hub-talk --init-key)`. That turns two of the four paths
+into a correct, loud cause, on the old client, with no client change. **The waiting path cannot be
+reached from the hub:** the old client sends nothing the hub could refuse until the join timeout.
+That path is closed by the rule, not by code.
+
+*Rejected:* making the refused register half-succeed (a peer row with no agent row) so that the old
+client could talk. It would split the invariant that register makes both rows, and it would leave a
+name anyone could claim. That is a new ambiguity, not a fix.
+
+**Gauge's acceptance item (ruling 2):** on the new hub, the `ea9d057` hub-talk registers a new name
+with `--say` into an existing room. Assert rc 1, the stderr containing `not registered on this
+hub`, and no `agents` or `peers` row for the name. Then run `--init-key` for that name from the new
+client and repeat the same old-client `--say`. Assert rc 0, a turn from the name, and the name's
+stored hash unchanged.
+
+### B2. The old hub against the new functions
+
+The deploy act pushes the functions first, then classifies, then redeploys the hub (§4.2 step 3).
+For those minutes the `ea9d057` hub runs against the new functions. **Every function the old hub
+calls keeps its argument validator and its return shape:**
+
+| Function (old hub call site) | Change | Old hub against it |
+|---|---|---|
+| `agents.getByKeyHash` (`src/auth.ts:51`) | **Stays `{ name } \| null`.** Legacy, shared and unknown are all `null`. | `if (!agent)` (`auth.ts:62`) sees `null`: warn logs `WOULD REJECT unknown`, strict 403. No object ever reaches it without a name. |
+| `agents.register` (`src/index.ts:364`) | Same args (new ones optional). Success still returns the row id. **A refusal throws a `ConvexError` `{ status, reason }`**, never a return value. | The throw reaches the old handler's `catch`: 500 with the reason, and `peers.register` is not reached. A refused name never gets a peer row, and a refused re-key leaves the hash unchanged (K8). A returned `{ ok: false }` would have been read as success, which is why refusal is a throw. The new hub maps the `ConvexError` to 409/400. |
+| `agents.getByName` (`index.ts:78,352`) | Unchanged. The new hub reads `keyStatus` through the new functions, not through this one. | Unchanged. |
+| `agents.heartbeat` (`index.ts:277`), `agents.listOnline` (`index.ts:302`, `escalation.ts:14`) | Unchanged. `listOnline` rows carry the new optional `keyStatus` field. | Extra field ignored (`/agents/live` projects the fields it needs). |
+| `sessions.create`, `messages.send` | Only the text of the `Unknown peer` error changes (B1). | The text is passed through. |
+| `messages.markRead` | Unchanged. The `reader` check (§5) is in Express. | Unchanged. |
+
+**The reason travels by a query the old hub never calls:** `agents.keyHashStatus({ apiKeyHash })`,
+which returns `"owned" | "legacy" | "shared" | "unknown"` and nothing else (no name, no hash). The new
+`requireAgentKey` calls it **only after `getByKeyHash` has returned `null`**, and only to word the
+log line. **The auth decision never depends on it.** If the query fails (for example, a new hub
+wrongly deployed ahead of its functions), the line says `unknown` and the decision is unchanged.
+New functions (`rotateKey`, `keyHashStatus`, `classifyAtDeploy`, `release`) are ones the old hub
+never calls.
+
+**Gauge's skew item (ruling 2, in the spirit of Loop 1's `skew.mjs`):** the `ea9d057` hub build
+runs against the new functions on a throwaway stack. It is run in **strict** and in warn, with
+three keys:
+- a legacy key: warn passes with `WOULD REJECT`, strict 403;
+- an unknown key: warn passes with `WOULD REJECT`, strict 403;
+- an owned key: resolves to its name in both modes.
+
+Also: a refused register through the old hub (U1 and C7) returns non-200, makes no peer row, and
+leaves the stored hash unchanged.
