@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 37,
+  "revision": 38,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -571,13 +571,13 @@
     },
     {
       "id": "T-057",
-      "title": "Convex may be reachable from the tailnet on 3210, bypassing the hub",
+      "title": "Convex is callable without the hub: tracked compose publishes 3210 on all interfaces; on tcm, any local process can call it",
       "priority": "P1",
       "status": "open",
       "opened_session": 16,
       "closed_session": null,
       "supersedes": null,
-      "note": "Found by Rivet in the Loop 3 design (loop/3-per-agent-keys d8962da, §9): the tracked docker-compose.yml:48-49 publishes Convex on 3210:3210 (every interface). docs/redeploying-tcm.md:14 says tcm binds convex to 127.0.0.1:3210, so tcm may differ from the tracked file. UNVERIFIED on tcm. If reachable, every public Convex function can be called without the hub: messages:markRead with any reader, agents:heartbeat for any name. First step: a read-only check of tcm's live compose file and listening ports (Aaron's word, manual mode). Candidate fixes: bind 127.0.0.1:3210 in the tracked compose, and/or make hub-only functions internal. Gates exposure (T-002 step 5). Ruled in docs/loops/loop-3-ruling-1.md. ADDED session 16 (2026-09-24): SIA D-043 (Aaron: \"yes, set it up now\") puts a self-hosted GitHub Actions runner on tcm as an unprivileged user outside the docker group. Loopback binding does NOT protect against a local user: any runner job, including PR-built code, can call public Convex functions at 127.0.0.1:3210 (and reach the hub on 4000) without a key. The docker-group exclusion only keeps it from the admin key. Relay told the SIA planner and suggested: trusted workflows only (no fork-PR jobs), and an owner-matched firewall rule blocking the runner user from 127.0.0.1:3210/3211/4000. Making hub-only functions internal is the code-level fix, and it covers this case as well."
+      "note": "Found by Rivet in the Loop 3 design (§9): the tracked docker-compose.yml:48-49 publishes Convex on 3210:3210 (every interface). RELAYED EVIDENCE FROM tcm (SIA record 97, read-only, via the SIA planner, 2026-09-24): `sudo ss -ltnp '( sport = :3210 or sport = :3211 )'` gives `LISTEN 0 4096 127.0.0.1:3210 0.0.0.0:* users:((\"docker-proxy\",pid=355695,fd=8))` and nothing on 3211; `docker port convex` gives `3210/tcp -> 127.0.0.1:3210` (rc=0). Convex is also reachable from the host at 172.20.0.2:3210/3211 over the a2a docker bridge. So: (1) tcm's Convex is NOT published to the tailnet, and tcm's live compose differs from the tracked file. A deploy from the tracked compose would widen it to every interface, so FIX THE TRACKED FILE to 127.0.0.1:3210. (2) Any local process on tcm can still call every PUBLIC Convex function (agents:register/registerAgent, messages:markRead, agents:heartbeat) without the hub or a key. SIA D-043's CI runner is firewalled off it (owner-matched GH_RUNNER chain), but other local users are not. The code-level fix is making hub-only functions internal. Loop 3 closes only the dev-key part of this, with a dev-key-hash refusal in every hash-setting mutation; short keys on new names via a direct call remain this task's. Relay has not verified this on tcm itself: it is second-hand, from record 97's raw lines. Verify on Aaron's word. Gates exposure (T-002 step 5)."
     },
     {
       "id": "T-058",
