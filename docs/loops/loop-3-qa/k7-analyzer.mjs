@@ -4,13 +4,14 @@
 // Usage: ... | node k7-analyzer.mjs --limit L --auth-mode <value read from the hub>
 //          [--phase deploy --expect-rows N --expect-owned N --expect-legacy N]
 //          [--expect-prefix name=abcd1234]... [--expect-names a,b,c] [--expect-absent x,y]
+//          [--expect-askpolicy name=<8-hex fingerprint>]... (fingerprint = sha256 of the policy JSON)
 // Phase "complete" (the default) passes only on the completion conditions of design §4.4.
 // Exit 0 pass, 1 fail, 2 undetermined (nothing parsed, or the count reached the limit).
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 const argv = process.argv.slice(2);
-const opt = { phase: "complete", prefixes: {} };
+const opt = { phase: "complete", prefixes: {}, policies: {} };
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i], v = argv[i + 1];
   if (a === "--limit") { opt.limit = Number(v); i++; }
@@ -23,10 +24,14 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === "--input") { opt.input = v; i++; }
   else if (a === "--expect-names") { opt.names = v.split(",").filter(Boolean); i++; }
   else if (a === "--expect-absent") { opt.absent = v.split(",").filter(Boolean); i++; }
+  else if (a === "--expect-askpolicy") { const [n, f] = v.split("="); opt.policies[n] = f; i++; }
 }
 if (!opt.limit || !opt.authMode) { console.log("UNDETERMINED: --limit and --auth-mode are required"); process.exit(2); }
 
 const P = (h) => String(h).slice(0, 8);
+// askPolicy is not a secret (allow-lists of names). Its fingerprint lets a policy be matched across a re-registration.
+const stable = (v) => (v && typeof v === "object" ? (Array.isArray(v) ? v.map(stable) : Object.fromEntries(Object.keys(v).sort().map((k) => [k, stable(v[k])]))) : v);
+const FP = (pol) => createHash("sha256").update(JSON.stringify(stable(pol))).digest("hex").slice(0, 8);
 const DEV = createHash("sha256").update("dev-key").digest("hex");
 const text = readFileSync(opt.input ?? 0, "utf8");
 const rows = [];
@@ -74,10 +79,20 @@ if (opt.names) {
   const have = [...byName.keys()].sort(), want = [...opt.names].sort();
   if (have.join() !== want.join()) flags.push(`name set differs: missing ${want.filter((n) => !byName.has(n)).join(",") || "none"}; unexpected ${have.filter((n) => !want.includes(n)).join(",") || "none"}`);
 }
+for (const [n, f] of Object.entries(opt.policies)) {
+  const l = byName.get(n);
+  const got = l && canon(l).askPolicy !== undefined ? FP(canon(l).askPolicy) : "none";
+  if (got !== f) flags.push(`askPolicy for ${n}: ${got}, expected ${f}`);
+}
 for (const n of opt.absent ?? []) if (byName.has(n)) flags.push(`${n} should be absent (released) but has ${byName.get(n).length} row(s)`);
 
 console.log(`rows ${rows.length} (limit ${opt.limit}), names ${byName.size}, hashes ${byHash.size}; keyStatus owned ${counts.owned}, legacy ${counts.legacy}, none ${counts.none}; AUTH_MODE ${opt.authMode}`);
-for (const [n, l] of [...byName].sort()) { const c = canon(l); console.log(`  ${n}: ${P(c.apiKeyHash)} ${c.keyStatus ?? "(none)"} resolves=${resolves(c.apiKeyHash) === n}`); }
+for (const [n, l] of [...byName].sort()) {
+  const c = canon(l);
+  console.log(`  ${n}: ${P(c.apiKeyHash)} ${c.keyStatus ?? "(none)"} resolves=${resolves(c.apiKeyHash) === n} id=…${String(c._id).slice(-6)} askPolicy=${c.askPolicy !== undefined ? FP(c.askPolicy) : "none"}`);
+}
+const withPolicy = rows.filter((r) => r.askPolicy !== undefined).map((r) => r.name);
+console.log(`askPolicy on ${withPolicy.length} row(s)${withPolicy.length ? `: ${withPolicy.join(", ")}` : ""}`);
 console.log(`dev-key ${P(DEV)}: held by ${devHolders.length} row(s), resolves to ${resolves(DEV) ?? "no name"}`);
 for (const f of flags) console.log(`FLAG ${f}`);
 
@@ -86,7 +101,7 @@ if (opt.phase === "deploy") {
   // After step 3: legacy rows are expected here; judge against the stated counts only.
   pass = rows.length === opt.rows && counts.owned === opt.owned && counts.legacy === opt.legacy && counts.none === 0
     && !dupNames.length && !stale.length && resolves(DEV) === null && opt.authMode === "warn"
-    && !flags.some((f) => /^name set differs|should be absent|prefix mismatch/.test(f));
+    && !flags.some((f) => /^name set differs|should be absent|prefix mismatch|^askPolicy for/.test(f));
 } else {
   pass = flags.length === 0;
 }
