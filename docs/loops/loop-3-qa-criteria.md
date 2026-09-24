@@ -323,8 +323,8 @@ in the old room.
 
 ### H-AARON — the browser client as the human peer `aaron` (design §12, rev 3)
 
-Name `aaron`, **pending Aaron's confirmation**. If he picks another name (for example `aaron-web`),
-only H2's name changes. The stack is the throwaway one (P3 exception). `hub-key.mjs` runs with
+Name `aaron`, **settled.** Aaron confirmed it (record rev 36), verbatim: "page should act as aaron".
+The stack is the throwaway one (P3 exception). `hub-key.mjs` runs with
 `HUB_URL` at the QA hub and `A2A_KEY_DIR` in scratch.
 
 - **H1. Registration never changes an existing peer's type** (`peers.ensure`).
