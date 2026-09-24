@@ -1,7 +1,15 @@
 # Loop 3 — per-agent keys and rotation: design (T-003)
 
-**Date:** 2026-09-24 · **Author:** Rivet (developer seat), session 16 · **Status:** design, for
-Relay's ruling. Nothing here is built or tested (SIA hold).
+**Date:** 2026-09-24 · **Author:** Rivet (developer seat), session 16 · **Status:** revision 1,
+answering Relay's ruling 1 (`docs/loops/loop-3-ruling-1.md`, `c34a792`). Nothing here is built or
+tested (SIA hold).
+
+**Revision 1, what changed:** **R1**, ownership is a stored field (`keyStatus`), and only an owned
+row authenticates (§1, §7). **R2**, the main-checkout cutover is placed in §4.2, and every seat gets
+its key file before its hub-talk changes (§3.6). Also: the name-format rule is struck (now T-059,
+§6). §9's items are now T-057 and T-058. The `HUB_BOOTSTRAP_KEY` doc repair is in scope (§0).
+There is one `HUB_URL` spelling per hub (§3.2). U1, the key floor, C7's refusal, rotation and
+condition 5 are unchanged.
 
 **Brief:** `docs/loops/loop-3-per-agent-keys-brief.md` at `fe0ef05` (`origin/docs/session-16-t017`),
 **including Amendment 1**, which holds where it and the brief's first text disagree. It rests on
@@ -27,46 +35,75 @@ needs Aaron's word until build or deploy; §10 lists the acts that do.
   `.agents/SYSTEM/PRD.md:77,88,120` (PRD says `/a2a/register` "requires bootstrap key"; it does not),
   `.agents/SYSTEM/RULES.md:57`. `changeme123` appears only in old INBOX text (Sessions 1–3).
 
-**Consequence for the build:** those seven places are stale and should be removed or corrected in
-the same change (docs only). Registration is open, and this design keeps it open (§6).
+**Consequence for the build (in scope, ruling 1 §10.4):** those seven places are removed or
+corrected in the same change, alongside `joining-the-hub.md:137-141`. Docs only. Registration is
+open, and this design keeps it open (§6).
 
 ---
 
 ## 1. Uniqueness — a key belongs to one name
 
-### Terms
+### 1.1 Ownership is stored: `keyStatus` (R1)
 
-- **Owned name.** The name's stored hash is held by no other name. Today: `cursor-grok`,
-  `grok-probe`.
-- **Shared name.** Its stored hash is also held by another name. Today: the 8 `dev-key` names.
-- **Acquiring a hash.** A register or rotate that would leave a name holding a hash it does not
-  hold now. Re-registering with the hash you already hold is not acquiring.
+**New optional field on `agents`: `keyStatus: "owned" | "legacy"`.** A row with no `keyStatus` is
+treated as `legacy`. The status is **written, never recomputed from how many names share a hash**:
 
-### Rules (both are enforced inside the Convex mutation, see §1.3)
+- **`owned` is set only when a name acquires a key under the new rules:** the insert of a new name,
+  a migration claim (§4.1), or a rotate (§2). Each of these has already passed U1 and the key floor,
+  so an owned hash is held by exactly one name.
+- **Rows present at deploy are classified once** by `internalMutation agents:classifyAtDeploy`
+  (admin key, `convex run`), which runs in the same act as the Convex push (§4.2). It touches only
+  rows that have no `keyStatus`. **A row whose hash no other name holds becomes `owned`, and a row
+  whose hash is shared becomes `legacy`.** Run a second time, it changes nothing.
+- **Attrition cannot promote a row, even if the classification runs late.** Three paths can take
+  a holder away from a hash: a legacy row's migration, `agents:release` (§4.3), and the register
+  collapse deleting a duplicate row that carries an older hash (`convex/agents.ts:64-73`; tcm has
+  no duplicates today, per Loop 2). Before any of them writes, it stamps `keyStatus: "legacy"` on
+  every row with no status that holds the hash being given up. Rotate is not a fourth path,
+  because an owned hash has no other holder. So if bob is the last `dev-key` holder when `classifyAtDeploy` runs, bob is already
+  stamped `legacy` and is skipped. **A hash that was shared at deploy never becomes owned by
+  attrition**, whatever order the acts happen in.
+- **`legacy` never turns into `owned` in place.** A legacy row becomes owned only by acquiring a
+  fresh hash (migration). Its old hash stays unowned until no row holds it.
+
+**Classification at deploy (ruling 1: "say which"):** `cursor-grok` and `grok-probe` were unshared
+at Loop 2's read, so `classifyAtDeploy` makes them **owned**. They keep authenticating, and C7 binds
+them from that moment (hence the pre-deploy churn check, §4.2 step 2). The 8 `dev-key` names become
+**legacy**. `classifyAtDeploy` prints only counts (`owned N, legacy M`), never a name next to a hash.
+
+### 1.2 Rules (enforced inside the Convex mutation, see §1.3)
 
 **U1. No name may acquire a hash another name holds. Both modes: `409 key held by another agent`.**
-This covers a new name, an owned name, and a shared name moving to another shared hash. **New
+This covers a new name, an owned name, and a legacy name moving to another shared hash. **New
 sharing is never created, in warn or strict.** The response names neither the other agent nor the
 hash.
 
-**U2. A shared name re-registering with the hash it already holds:**
-- **warn:** allowed, as today, and logged `[auth] WOULD REJECT shared key on register <name>`
-  (name only). This keeps the 8 unmigrated seats working (no flag day).
-- **strict:** `409 key shared with another agent; migrate first`. Strict is only flipped after K7
-  shows no shared hash (T-002 step 4), so this does not fire in practice. It is stated so strict
-  never admits a shared key.
+**U2. A legacy name re-registering with the hash it already holds:**
+- **warn:** allowed, as today, and logged `[auth] WOULD REJECT legacy key on register <name>` (name
+  only). This keeps the 8 unmigrated seats working (no flag day).
+- **strict:** `409 legacy key; migrate first`. Strict is only flipped after K7 shows no legacy row
+  (T-002 step 4), so this does not fire in practice. It is stated so strict never admits a legacy
+  key. **This no longer depends on the hash being shared**, so the last `dev-key` holder is refused
+  like the first (R1's point 2).
 
-**U3. A hash held by two or more names authenticates nobody.** `getByKeyHash`
-(`convex/agents.ts:139`) reads up to two rows from `by_apiKeyHash`; if they carry different names it
-returns "shared" rather than the `.first()` row. `requireAgentKey` then treats the caller like an
-unknown key: strict 403, warn `WOULD REJECT shared X-Agent-Key on <route>` and `req.agentName =
-null`. **The `dev-key` stops resolving to `atlas` on deploy**, before anyone migrates.
+**U3. Only an owned row authenticates.** `getByKeyHash` (`convex/agents.ts:139`) reads up to two
+rows from `by_apiKeyHash`. It returns the name **only if exactly one row holds the hash and that row
+is `owned`**. Otherwise it returns a reason (`legacy` or `shared`) and no name. `requireAgentKey`
+then treats the caller like an unknown key: strict 403, warn `WOULD REJECT legacy X-Agent-Key on
+<route>` and `req.agentName = null`. **The `dev-key` stops resolving to `atlas` on deploy, and it
+resolves to no name for as long as any row holds it, even a single row**, because every row
+holding it is legacy.
 
-Why U3 is safe in warn: `req.agentName` feeds `evaluateAsk` (`src/ask-policy.ts`) and the
+The "exactly one row" check is defence in depth: U1 already keeps an owned hash to one name.
+
+Why U3 is safe in warn (Relay checked this, ruling 1): `req.agentName` feeds `evaluateAsk` (`src/ask-policy.ts`) and the
 self-skip in `POST /a2a/session/:id/message` (`src/index.ts:412-415`). A null asker is *allowed* by
 `evaluateAsk` (ADR-012), so U3 can only lift an askPolicy denial for a `dev-key` caller in warn; it
 cannot block one. Every other route ignores `req.agentName`. The gain: the warn log now counts
-shared-key traffic separately, which is a live progress signal for the migration (§4.4).
+legacy-key traffic separately, which is a live progress signal for the migration (§4.4).
+
+**Schema:** `keyStatus` is optional in `convex/schema.ts`, so rows present at deploy stay valid
+before `classifyAtDeploy` runs. `ENTITIES.md` is updated with it in the same change (RULES).
 
 ### 1.3 Where the rule lives
 
@@ -80,7 +117,9 @@ shared-key traffic separately, which is a live progress signal for the migration
    `127.0.0.1:3210` from inside tcm), anyone on the tailnet can call the public mutation
    `agents:register` directly and skip every Express check. Rules inside the mutation hold for that
    caller too. **The mode-independent rules (U1, C7, the key floor) do not depend on the caller
-   being honest about `AUTH_MODE`.** See §9 for what this does not fix.
+   being honest about `AUTH_MODE`.** `keyStatus` is written only by these mutations and by the
+   internal ones, never taken from a request argument. §9 (now T-057) covers what this does not
+   fix.
 
 `evaluateNameClaim` (`src/identity.ts:5-12`) is replaced by one pure decision function shared by the
 mutation and the unit tests (the same pattern as `decideHeartbeat` in `convex/instanceLogic.ts`).
@@ -102,10 +141,10 @@ X-Agent-Key: <current key>
 
 - **Proof of the current key is the `X-Agent-Key` header, resolved by the guard.** The name is
   `req.agentName`. **The body carries no name**, so no one can rotate another agent's key.
-- **Fails closed in both modes.** If `req.agentName` is null (unknown key, shared key under U3, or
-  no key), the handler returns `403 rotation requires your current key` in **warn as well as
-  strict**. It is a new route with no legacy callers, so this is not a flag day. A shared key
-  therefore cannot rotate: **a `dev-key` name migrates by claim (§4), never by rotate.**
+- **Fails closed in both modes.** If `req.agentName` is null (an unknown key, a legacy key under
+  U3, or no key), the handler returns `403 rotation requires your current key` in **warn as well
+  as strict**. It is a new route with no legacy callers, so this is not a flag day. Only owned rows
+  can rotate: **a legacy name migrates by claim (§4.1), never by rotate.**
 - `newApiKey` must pass the key floor (§3.3) and differ from the current key: else `400`.
 
 ### 2.2 Mutation `agents.rotateKey({ name, currentHash, newHash, instanceId? })`
@@ -114,10 +153,11 @@ Atomic, in one transaction:
 
 1. Collapse the name's rows exactly as `register` does (canonical = newest `lastSeen`, tie by
    `_id`; delete the rest, `convex/agents.ts:41-73`). **The collapse is reused, not weakened.**
-2. **Compare-and-swap:** canonical `apiKeyHash` must equal `currentHash`, else `409 stale key`.
+2. **Compare-and-swap:** canonical `apiKeyHash` must equal `currentHash` and the row must be
+   `owned`, else `409 stale key`.
    This closes the race of two rotations with the same old key: the second one loses.
 3. **U1:** `newHash` held by any other name → `409 key held by another agent`.
-4. Patch `apiKeyHash = newHash`. If `instanceId` is given, also take the instance lease
+4. Patch `apiKeyHash = newHash` (`keyStatus` stays `owned`). If `instanceId` is given, also take the instance lease
    (`activeInstanceId = instanceId`, `lastHeartbeatAt = now`); if not, set `activeInstanceId` to a
    fresh random id the hub generates and discards (see 2.3).
 
@@ -133,7 +173,9 @@ patch no row holds the old hash, so the next request with it resolves to nothing
 - **Its heartbeat** (`POST /a2a/heartbeat/:name`) gets `409 superseded` from `decideHeartbeat`
   (lease held by another id, fresh) and `daemon.ts:272-274` exits, as it does today. In strict it
   gets 403 from the guard first; **the daemon must treat 403 on any hub call as fatal** (exit 1,
-  `key rejected for <name>; run --init-key or --rotate-key`), not retry.
+  `key rejected for <name>; run --init-key or --rotate-key`), not retry. **In warn there is no
+  403**, so a superseded daemon leaves by the 409 heartbeat path, exit 0, as today. K2's
+  second-instance case asserts both paths (Amendment O2; ruling 1 note).
 - **Its requests** carry the old key: strict 403; warn `WOULD REJECT unknown X-Agent-Key`, passed
   through with `req.agentName = null`, i.e. unattributed. Warn stays advisory, which is the
   documented cost of warn.
@@ -173,6 +215,15 @@ keeps its own secret without trusting the hub's transport for it.
 `HUB_URL` host and port, e.g. `127.0.0.1-4000`, `tcm-4000`), **else fail closed**: exit 1 before any
 network call, with `no key for <name> on <hub>: run hub-talk --as <name> --init-key` (rc 1 is
 hub-talk's "usage or non-retryable" code). **The error never contains a key.**
+
+**One `HUB_URL` spelling per hub (ruling 1 note).** `hub-id` comes from the URL's host and port, so
+`tcm`, the tailnet IP and the MagicDNS name would be three directories. `joining-the-hub.md` gets
+a table with the one spelling to use for each hub: `http://127.0.0.1:4000` for the local stack and
+`http://tcm:4000` for tcm (Loop 2's spelling). The tcm entry is confirmed against the `HUB_URL`
+the seats actually use before the first `--init-key`. A miss still fails loud. The error also names
+any other `hub-id` directory that has a `<name>.key` ("found a key for relay under
+100.124.212.87-4000; your HUB_URL spells this hub differently"). It gives paths only, never the
+contents.
 
 | Host | Where the key lives |
 |---|---|
@@ -243,13 +294,47 @@ C7 or U1 rejection would be invisible and the seat would carry on unattributed.
 3. **New flags** `--init-key` and `--rotate-key`. Existing flags and exit codes 0/1/2 are
    unchanged.
 4. **Register failures are now rc 1** with the hub's reason (was silent).
-5. **One-time step per SIA seat:** `hub-talk --as <name> --init-key` against tcm, once §4's
-   deploy is in, each on Aaron's word (K7).
+5. **One-time step per SIA seat:** `hub-talk --as <name> --init-key` against tcm, **run from the
+   new client in a worktree, before `~/Projects/A2A-Hub` is updated** (§3.6), each on Aaron's word
+   (K7). After that the main checkout's update changes nothing a seat can see, except that its
+   calls are attributed.
 6. **Hub side, visible to SIA:** a key held by another name, or shorter than 32 characters, is
    refused at register in both modes; a migrated name cannot be re-registered with a different key
    (C7).
 
 T-017's cursor change is **not** bundled (brief, out of scope).
+
+### 3.6 The client cutover: key files first, main checkout last (R2)
+
+`~/Projects/A2A-Hub` is every SIA seat's hub-talk (V-001). **The new hub-talk reaches it only after
+every seat that runs from it has a key file for every hub it talks to.** Until then the checkout
+keeps the old client, which still works against the new hub:
+
+- **Old hub-talk on a legacy name** (not migrated yet): it registers with the `dev-key` and
+  re-registers the hash it holds, so U2 warn applies: allowed and logged. Its requests are
+  unattributed (U3). **It keeps talking.**
+- **Old hub-talk on a name already migrated** from a worktree: its register is refused (U1 while
+  other legacy names hold the `dev-key`, or the key floor once none do). The old client ignores
+  the status (`hub-talk.mjs:169-183`). Its requests pass in warn, unattributed, and `from` and
+  `reader` still come from the body. **It keeps talking, and it cannot undo the migration** (C7,
+  K8).
+
+So between the deploy and the checkout update, every seat talks, migrated or not. The update is
+safe once a read-only check passes:
+
+**`node scripts/hub-key.mjs check --hub <url> --names <n1,n2,…>`** (new client, run from the
+worktree). For each name it reports `key file: yes/no` and `whoami: <name>/null`, and exits 0 only
+if every name has a file whose key resolves to itself. It prints no key and no hash. **The names
+are the list of seats that run from the main checkout.** The SIA planner supplies SIA's part of it
+(the D-003 question carries this). A2A-Hub's part is `relay` and any other A2A-Hub seat name that talks
+to that hub.
+
+**A seat that appears after the update without a key file exits 1 with the `--init-key`
+instruction.** That is K5 for a new seat, not a flag day for an existing one.
+
+The local stack is the same case in miniature. It runs from whichever checkout launches it. Its
+seats get key files under `127.0.0.1-4000/` from the worktree first. `start-stack.ps1` generates
+alice's and bob's files itself (§3.2).
 
 ---
 
@@ -257,15 +342,18 @@ T-017's cursor change is **not** bundled (brief, out of scope).
 
 ### 4.1 How a `dev-key` name moves: a claim, once, in warn
 
-A shared name's first register with a fresh key is a **name claim onto an unshared hash**. In warn
-the new mutation allows it (U1 passes: nobody holds the new hash; the floor passes) and logs
-`[auth] MIGRATE <name>: shared key replaced by own key`. From that moment the name is **owned**
-and C7 applies: no register can move it again, only rotate.
+A legacy name's first register with a fresh key is a **name claim onto an unshared hash**. In warn
+the new mutation allows it: U1 passes because nobody holds the new hash, and the floor passes. In
+one transaction it stamps the old hash's other unclassified holders `legacy` (§1.1), patches the
+row to the new hash with `keyStatus: "owned"`, and logs `[auth] MIGRATE <name>: legacy key replaced
+by own key`. From then on C7 applies: no register can move it again, only rotate.
 
-This is the one place warn still lets a register change a stored hash, and it can only ever move a
-name **off** a shared hash, never onto one (U1). The migration is therefore a ratchet: the set of
-shared names only shrinks. Under strict the claim is refused (U2), which is why migration finishes
-before T-002 step 4.
+**This works the same for the last holder as for the first.** Whether a row is legacy is stored, so
+bob, the last `dev-key` holder on the local stack after alice migrates, is still legacy and still
+migrates (R1's point 1). This is the one place warn still lets a register change a stored hash. It
+can only move a legacy row onto a fresh unshared hash, never onto a shared one (U1), and never
+applies to an owned row (C7). So the migration is a ratchet: legacy rows only ever get fewer. Under
+strict the claim is refused (U2), which is why migration finishes before T-002 step 4.
 
 **Hijack in the window, stated.** Until a seat migrates, anyone on the tailnet can claim its name
 first. The rightful seat then gets `409 name holds its own key` from `--init-key`: loud, not
@@ -280,22 +368,33 @@ silent, and repaired by `agents:release` (§4.3) on Aaron's word. The window is 
 2. **Pre-deploy read (read-only):** tcm's hub log for `WOULD REJECT name claim on cursor-grok` or
    `grok-probe`. Both are owned today, so C7 binds them from deploy. If either bot picks a new key
    per run, it would get 409 after deploy, and its operator must be told first.
-3. **Deploy** the hub and push the Convex functions to tcm, `AUTH_MODE` stays `warn`. Nothing
-   changes for the 8 shared names (U2 warn), except they now resolve to no one (U3). **Loop 2's
-   read, repeated:** still 10 rows, same hashes.
-4. **Canary: `relay`** (A2A-Hub's own seat, operated by the planner): `hub-talk --as relay
-   --init-key` with `HUB_URL` at tcm, then `whoami`, then a round trip with another seat.
-5. **SIA's seats** (`atlas`, `forge`, and any other SIA name on the list), in the order the SIA
-   planner picks, each after its seat runs the new hub-talk (§3.5).
-6. **Outside bots** `grok`, `cursor`: their operators, told by Aaron.
-7. **Names nobody migrates** (§4.3).
-8. **K7:** the completion check (§4.4).
+3. **Deploy, one act:** push the Convex functions to tcm, run `agents:classifyAtDeploy` at once,
+   then deploy the hub. `AUTH_MODE` stays `warn`. **`~/Projects/A2A-Hub` is not touched.** The 8
+   `dev-key` names become legacy. They keep working (U2 warn) and now resolve to no one (U3).
+   `cursor-grok` and `grok-probe` become owned and keep resolving. **Loop 2's read, repeated:**
+   still 10 rows, same hashes, `keyStatus` 2 owned and 8 legacy. (If the classification were
+   delayed, §1.1's stamping still keeps every shared-at-deploy row legacy. It runs first anyway, so
+   the window in which an unshared legacy key is unattributed is minutes.)
+4. **A worktree of the new client** (merged master, checked out outside `~/Projects/A2A-Hub`). All
+   of steps 5–8 run from it. The main checkout still serves every seat with the old client (§3.6).
+5. **Canary: `relay`**, A2A-Hub's own seat, run by the planner: `--init-key` with `HUB_URL` at tcm,
+   then `whoami`, then a round trip with another seat.
+6. **SIA's seats** (`atlas`, `forge`, and any other SIA name), in the order the SIA planner picks:
+   `--init-key` for each name, run from the worktree. The seat's own sessions keep using the old
+   hub-talk from the main checkout throughout, so **nothing about how a seat talks changes at this
+   step.**
+7. **Outside bots** `grok`, `cursor`: their operators, told by Aaron. They do not use our checkout.
+8. **Names nobody migrates** (§4.3).
+9. **Main-checkout update**, on Aaron's word, only after `hub-key.mjs check` (§3.6) passes for
+   every name that runs from `~/Projects/A2A-Hub`, for each hub it talks to. From here on the
+   seats' calls are attributed.
+10. **K7:** the completion check (§4.4).
 
-A seat that has not moved keeps working throughout, in warn, unattributed. **No step takes a
-working seat down**, except a seat still running a client whose code predates §3.5 and whose name
-has already migrated: its register gets 409, which the old hub-talk ignores, and it carries on in
-warn as an unattributed caller. That is the intended result: it can no longer undo the migration
-(C7, K8).
+**No step takes a working seat off the hub.** Before step 9, every seat runs the old client, which
+works against the new hub whether or not its name has migrated (§3.6). At step 9, every seat
+switches to the new client with a key file already in place. The only seat that can fail is one
+missing from step 9's name list. It fails loud (exit 1, `--init-key` instruction), not silent, and
+that is why the SIA planner supplies SIA's part of the list.
 
 ### 4.3 Names nobody migrates (Amendment N1)
 
@@ -307,7 +406,8 @@ needs Aaron's word per name:**
   his key directory; the name stays his and can be revived. **Recommended for `clark`**, which is
   the default name of Aaron's own assistant.
 - **(b) Release it:** a new `internalMutation agents:release({ name })` deletes the name's `agents`
-  row (the `peers` row and its sessions stay). Callable only with the admin key, via `convex run`.
+  row (the `peers` row and its sessions stay). Before deleting, it stamps the hash's other
+  unclassified holders `legacy` (§1.1). Callable only with the admin key, via `convex run`.
   The name becomes unclaimed and the next register takes it. **Recommended for `probe` and
   `general`** if Aaron confirms they are test names. The same mutation is the operator's repair for
   a lost key or a hijacked name.
@@ -321,13 +421,22 @@ Aaron chooses per name (§10, Q2). No option sends a request to tcm with the `de
 into the local analyzer, prefixes only). It must show:
 
 - every name has one row, and every hash is held by exactly one name;
+- **every row is `keyStatus: "owned"`**, with no legacy row and no row without a status;
 - the hash of `dev-key` (computed locally by the analyzer, compared by prefix `7e9f8fd1`) is held by
   **no** name;
 - no stale hash resolves (V-003);
 - `AUTH_MODE` is `warn`.
 
-**A second, independent signal:** after step 7, the hub log has no `WOULD REJECT shared` line over
-a working day. Shared-key traffic is counted separately thanks to U3.
+**A second, independent signal:** after step 9, the hub log shows no `WOULD REJECT legacy` line
+for a working day. U3 counts legacy-key traffic separately.
+
+**The R1 acceptance case (for Gauge)** follows from §1.1 and §4.1. On a throwaway stack, three
+names share one short key, and two of them migrate. The new code refuses to create that state
+(U1, floor), so the three rows are seeded the way tcm's were: registered through the old hub build
+(`ea9d057`) against the same throwaway Convex, before the new functions are pushed. The third still migrates by `--init-key`, and
+the shared key resolves to no name at every step. The migrated names' own keys resolve to them. Add
+a fourth step: run `classifyAtDeploy` *after* the two migrations. The third name must stay legacy,
+which is the stamping layer.
 
 ---
 
@@ -355,8 +464,8 @@ put Aaron in every seat's path. What limits it after this design:
   `release` changes its key.
 - **U1:** a key cannot be shared, so a new name cannot borrow another agent's identity.
 - **Key floor:** 32 characters, so a new name cannot be registered with a guessable key.
-- **Name format:** `^[a-z0-9][a-z0-9-]{0,62}$`, 400 otherwise. All 10 tcm names match. It stops
-  junk and look-alike names (`Relay`, `relay `). Relay may strike this if it is out of scope.
+- *(The name-format rule proposed here was struck by ruling 1 and is now T-059. Registration
+  accepts the same names as today.)*
 - **Reach:** tcm is on the tailnet only. **Squatting and registration floods stay possible for
   anyone on the tailnet** until T-005 (rate limiting). Exposure (T-002 step 5) must wait for T-005
   and strict. Named here, not solved here.
@@ -370,9 +479,9 @@ key; use rotate`, in warn as well as strict. The stored hash is not changed.** R
 only way to change it; `agents:release` (§4.3) is the operator's way out.
 
 Enforced in `agents.register` before the patch at `convex/agents.ts:55-62`: the mutation reads the
-canonical row's hash, checks whether any other name holds it (`by_apiKeyHash`, two rows), and
-refuses if the name is owned and the presented hash differs. **The warn-mode re-key that O1 found is
-gone for owned names.** For shared names it survives only as §4.1's one-way move off a shared hash.
+canonical row's **stored** `keyStatus` and refuses if it is `owned` and the presented hash differs.
+Nothing is counted. **The warn-mode re-key that O1 found is gone for owned names.** For legacy
+names it survives only as §4.1's one-way move onto a fresh hash.
 
 **K8 follows directly:** re-registering a migrated name with its old key (the `dev-key`) or any
 other key leaves the stored hash unchanged, and the name's own key still resolves to it.
@@ -385,11 +494,14 @@ other key leaves the stored hash unchanged, and the name's own key still resolve
 |---|---|---|
 | `H` held by another name, and `N` does not hold `H` (U1) | 409 | 409 |
 | `H` acquired and key shorter than 32 (floor) | 400 | 400 |
-| `N` new | insert | insert |
-| `N` holds `H` already, `H` unshared | ok (heartbeat-like, as today) | ok |
-| `N` holds `H` already, `H` shared (U2) | ok + `WOULD REJECT shared` | 409 |
+| `N` new | insert, `owned` | insert, `owned` |
+| `N` owned, holds `H` already | ok (heartbeat-like, as today) | ok |
 | `N` owned, `H` differs (C7) | **409** | 409 |
-| `N` shared, `H` differs and is unshared (migration, §4.1) | ok + `MIGRATE` | 409 |
+| `N` legacy, holds `H` already (U2) | ok + `WOULD REJECT legacy` | 409 |
+| `N` legacy, `H` differs and is unshared (migration, §4.1) | stamp, patch, `owned` + `MIGRATE` | 409 |
+
+"Owned" and "legacy" are the stored `keyStatus` (no status reads as legacy). No row of this table
+counts holders except U1, which asks only whether *another* name holds `H`.
 
 Every refusal leaves the stored hash unchanged, so which of two refusals fires first (a short key on
 an owned name gets 400, not 409) does not matter for K8. The collapse of extra rows runs on every
@@ -413,12 +525,19 @@ accepted register, as today.
   standard setup. `m3check.mjs`'s `M3.devkey` line changes meaning (the `dev-key` resolves to no
   one), so it becomes a check that the `dev-key` is refused.
 - The local stack starts, with keys generated by `start-stack.ps1` on first run. On an existing
-  local database where alice and bob hold the `dev-key`, their first register with their own key
-  is §4.1's migration, in warn. T-056 is untouched.
+  local database where alice and bob hold the `dev-key`, their rows have no `keyStatus` and so are
+  legacy. **Each one's first register with its own key is §4.1's migration, in warn, in either
+  order.** The one that registers second is still legacy, not owned by attrition (R1's certain
+  case). Other local rows with a key of their own stay legacy (unattributed in warn) until they run
+  `--init-key`, or until someone runs `classifyAtDeploy` against local Convex. That is optional on
+  the local stack. T-056 is untouched.
 
 ---
 
-## 9. Found on the way (not ruled here, not bundled)
+## 9. Found on the way (triaged by ruling 1, not bundled)
+
+Triage: the Convex port is **T-057** (P1; a read-only tcm check first, and it gates exposure). The
+caller-asserted identities are **T-058** (P2). The bootstrap docs are in scope here (§0).
 
 - **Convex published on `3210:3210`** (`docker-compose.yml:48-49`). If tcm matches, every public
   Convex function is callable from the tailnet without the hub: `messages:markRead` with any
@@ -435,20 +554,24 @@ accepted register, as today.
 
 ## 10. For Relay
 
-**Rulings asked:**
+**Ruling 1 (`c34a792`):** U3 and the key floor were accepted. The name-format rule was struck
+(T-059). §9 was triaged (T-057, T-058, bootstrap docs in scope). R1 is answered in §1.1, §1.2,
+§4.1 and §7, and R2 in §3.6 and §4.2.
 
-1. U3 (a shared hash resolves to no one, from deploy). It changes warn behaviour for the 8 names:
-   askPolicy can only get more permissive for them, and nothing is blocked.
-2. The key floor as the structural `dev-key` refusal (§3.3), instead of a literal.
-3. The name-format rule in §6: keep or strike.
-4. §9's items: triage or drop.
+**Questions for Aaron, none blocking the design:**
 
-**Questions for Aaron, via the SIA planner (D-003), none blocking design:**
+- **Q1, via the SIA planner (D-003), sent by Relay after this revision:** the §3.5 contract
+  changes to hub-talk, with the cutover order in §3.6 and §4.2. It also asks the SIA planner for
+  SIA's part of step 9's name list: every SIA seat name, and the `HUB_URL` spelling each one uses.
+- **Q2, to Aaron directly:** migrate, release or leave each abandoned name (`clark`, `probe`,
+  `general`) (§4.3).
+- **Q3, to Aaron directly:** which name his browser client (`client/`) should use now that it has
+  no default key.
 
-- **Q1.** The §3.5 contract changes to hub-talk, which every SIA seat runs.
-- **Q2.** Per abandoned name (`clark`, `probe`, `general`): migrate, release or leave (§4.3).
-- **Q3.** Which name his browser client (`client/`) should use now that it has no default key.
-
-**Acts that need Aaron's word, in order:** the pre-deploy log read (§4.2 step 2); the deploy and the
-Convex push (step 3); each seat's `--init-key` against tcm (steps 4–6); each `release` or migration
-of an abandoned name (step 7); K7's read.
+**Acts that need Aaron's word, in order:**
+1. The pre-deploy log read (§4.2 step 2).
+2. The deploy act: the Convex push, `classifyAtDeploy`, then the hub (step 3).
+3. Each seat's `--init-key` against tcm (steps 5–7).
+4. Each `release` or migration of an abandoned name (step 8).
+5. The main-checkout update (step 9).
+6. K7's read.
