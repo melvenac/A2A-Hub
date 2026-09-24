@@ -3,7 +3,7 @@
 // prefixes only. It never prints a full hash, a key or an agentCard.
 // Usage: ... | node k7-analyzer.mjs --limit L --auth-mode <value read from the hub>
 //          [--phase deploy --expect-rows N --expect-owned N --expect-legacy N]
-//          [--expect-prefix name=abcd1234]...
+//          [--expect-prefix name=abcd1234]... [--expect-names a,b,c] [--expect-absent x,y]
 // Phase "complete" (the default) passes only on the completion conditions of design §4.4.
 // Exit 0 pass, 1 fail, 2 undetermined (nothing parsed, or the count reached the limit).
 import { createHash } from "node:crypto";
@@ -21,6 +21,8 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === "--expect-legacy") { opt.legacy = Number(v); i++; }
   else if (a === "--expect-prefix") { const [n, p] = v.split("="); opt.prefixes[n] = p; i++; }
   else if (a === "--input") { opt.input = v; i++; }
+  else if (a === "--expect-names") { opt.names = v.split(",").filter(Boolean); i++; }
+  else if (a === "--expect-absent") { opt.absent = v.split(",").filter(Boolean); i++; }
 }
 if (!opt.limit || !opt.authMode) { console.log("UNDETERMINED: --limit and --auth-mode are required"); process.exit(2); }
 
@@ -68,6 +70,12 @@ for (const [n, p] of Object.entries(opt.prefixes)) {
   if (got !== p) flags.push(`prefix mismatch for ${n}: stored ${got}, --init-key printed ${p}`);
 }
 
+if (opt.names) {
+  const have = [...byName.keys()].sort(), want = [...opt.names].sort();
+  if (have.join() !== want.join()) flags.push(`name set differs: missing ${want.filter((n) => !byName.has(n)).join(",") || "none"}; unexpected ${have.filter((n) => !want.includes(n)).join(",") || "none"}`);
+}
+for (const n of opt.absent ?? []) if (byName.has(n)) flags.push(`${n} should be absent (released) but has ${byName.get(n).length} row(s)`);
+
 console.log(`rows ${rows.length} (limit ${opt.limit}), names ${byName.size}, hashes ${byHash.size}; keyStatus owned ${counts.owned}, legacy ${counts.legacy}, none ${counts.none}; AUTH_MODE ${opt.authMode}`);
 for (const [n, l] of [...byName].sort()) { const c = canon(l); console.log(`  ${n}: ${P(c.apiKeyHash)} ${c.keyStatus ?? "(none)"} resolves=${resolves(c.apiKeyHash) === n}`); }
 console.log(`dev-key ${P(DEV)}: held by ${devHolders.length} row(s), resolves to ${resolves(DEV) ?? "no name"}`);
@@ -77,7 +85,8 @@ let pass;
 if (opt.phase === "deploy") {
   // After step 3: legacy rows are expected here; judge against the stated counts only.
   pass = rows.length === opt.rows && counts.owned === opt.owned && counts.legacy === opt.legacy && counts.none === 0
-    && !dupNames.length && !stale.length && resolves(DEV) === null && opt.authMode === "warn";
+    && !dupNames.length && !stale.length && resolves(DEV) === null && opt.authMode === "warn"
+    && !flags.some((f) => /^name set differs|should be absent|prefix mismatch/.test(f));
 } else {
   pass = flags.length === 0;
 }

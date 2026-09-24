@@ -224,22 +224,71 @@ a request, or any path makes `dev-key` resolve to a name.
 
 **Fails if:** K counts any hit, or any output carries more than an 8-hex prefix.
 
-### K7 — live, read-only, on Aaron's word for each act
+### K7 — live, read-only, on Aaron's word for each act (D-007)
 
 Run with A, read-only, after each act in design §4.2. **No request is sent to tcm with the
-`dev-key`** (N1), and nothing is written.
+`dev-key`** (N1), and nothing is written. **Under D-007 (master `e166057`), tcm does not migrate:**
+the 8 `dev-key` rows are released (`agents:release`), and each name still needed re-registers fresh
+with `--init-key`. The unused test names (`clark`, `cursor`, `general`, `probe`) may be released in
+the deploy act. Each live name (`relay`, `atlas`, `forge`, `grok`) is released together with its
+own `--init-key` at its cutover step.
 
-1. **After step 3 (deploy):** Loop 2's read repeated. Still 10 rows with the same prefixes as
-   Loop 2's report, `keyStatus` 2 `owned` (`cursor-grok`, `grok-probe`) and 8 `legacy`, and
-   `AUTH_MODE` is `warn`.
-2. **At completion (step 10):** every name has one row, every hash has exactly one holder, every row
-   is `owned` (no `legacy`, no missing status), **the `dev-key` hash (prefix `7e9f8fd1`) is held by
-   no row**, no stale hash resolves, and `AUTH_MODE` is `warn`. Each migrated name's prefix matches
-   the prefix its `--init-key` printed.
-3. **Second signal:** after step 9, the hub log has no `WOULD REJECT legacy` line for a working
+1. **After `classifyAtDeploy`, before any release:** Loop 2's read repeated. Still 10 rows with the
+   same prefixes as Loop 2's report, `keyStatus` 2 `owned` (`cursor-grok`, `grok-probe`) and 8
+   `legacy`, and `AUTH_MODE` is `warn` (`--phase deploy --expect-rows 10 --expect-owned 2
+   --expect-legacy 8`).
+2. **After the deploy act's releases** (if the test names are released there): 6 rows, 2 `owned`
+   and 4 `legacy` (`relay`, `atlas`, `forge`, `grok`). The released names are absent, and every
+   remaining prefix is unchanged from step 1 (`--expect-absent clark,cursor,general,probe`).
+3. **After each live name's release and `--init-key`:** that name has one row, it is `owned`, and its
+   prefix matches the one its `--init-key` printed. No other row changed.
+4. **At completion (step 10), the end state:** `cursor-grok` and `grok-probe` are `owned` with their
+   step 1 prefixes. **Every re-registered name is `owned`**, and its prefix matches its `--init-key`
+   print. **No row holds the `dev-key` hash (prefix `7e9f8fd1`)**, and there are **no `legacy` rows**
+   and no rows without a status. Every hash has exactly one holder, no stale hash resolves, and
+   `AUTH_MODE` is `warn`. The name set is exactly `cursor-grok`, `grok-probe` and the re-registered
+   names (`--expect-names`). Any released name not re-registered is absent (`--expect-absent`).
+5. **Second signal:** after step 9, the hub log has no `WOULD REJECT legacy` line for a working
    day. This is a read-only count of lines, on Aaron's word.
 
-**Fails if:** any condition in 2 is false, A was not re-validated, or the read wrote anything.
+**Fails if:** any condition in 4 is false, a release changed a row other than its own, A was not
+re-validated, or the read wrote anything.
+
+### REL — `agents:release` removes only the agents row (D-007; design §4.3(b))
+
+Setup (P8): `qa-rel` and `qa-rel2` share a short key `s` through the `ea9d057` hub, with no status.
+`qa-rel` is in a room with `qa-relx`. It has sent turns there, and it has a receipt mark. **Known
+positive first:** the snapshot instrument sees non-zero counts for every table below.
+
+1. **Snapshot before** (public queries and `convex data`, parsed): the `agents` rows for `qa-rel`
+   (1), its `peers` row (whole row), and every `sessions`, `sessionPeers` and `messages` row that
+   involves `qa-rel`, whole rows, with counts.
+2. **`agents:release({ name: "qa-rel" })`** with the scratch admin key (`convex run`).
+3. **Snapshot after, both directions:** the `agents` rows for `qa-rel` go from 1 to **0**. The
+   `peers` row and every `sessions`, `sessionPeers` and `messages` row are **deep-equal** to
+   before, with the same counts. No other name's `agents` row changed.
+4. **Stamping:** `qa-rel2`, now the only holder of `s`, reads `legacy`, not `owned`. It was not
+   promoted by the release. `whoami(s)` has no name on both hubs.
+5. **Release is admin-only:** the same call through the public Convex API (`/api/mutation`) is
+   refused, and a snapshot shows nothing changed. Releasing a name with no row changes no row.
+6. **Fresh re-registration:** `qa-rel --init-key` from the candidate client exits 0. Its row is
+   **inserted `owned`**, and its prefix matches the printed one. `whoami(key) = qa-rel`. The `peers`
+   row is still the same row (same `_id`, same `type`), and the room's history is readable and
+   receipts work: `qa-rel --session <room> --inbox` exits 0 and the mark moves.
+7. **Observed and reported, then matched to the design once it is stated:** between the release and
+   the `--init-key`, what the `ea9d057` client (`dev-key`) sees on the released name. Its peer row
+   still exists, but it has no agents row. D-007's sequencing keeps this window closed on tcm.
+
+**Fails if:** release removes or alters anything but the name's `agents` row, promotes another
+holder, can be called publicly, or the fresh `--init-key` does not insert an owned row that works
+in the old room.
+
+### H-AARON — a key for the browser client's human peer, peer type unchanged — PENDING
+
+Rivet is designing a key for `aaron`, the browser client's human peer (D-007 follow-on, Q3). The
+criterion is written when the design lands. **Fixed now, from Relay:** the `peers` row for `aaron`
+keeps its peer type (human) through every step. Both directions: the type is read before and after
+the key is given.
 
 ### K8 — a migrated name keeps its key (C7, O1)
 
