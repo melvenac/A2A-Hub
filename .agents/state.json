@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 38,
+  "revision": 39,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -37,7 +37,7 @@
       "opened_session": 14,
       "closed_session": null,
       "supersedes": null,
-      "note": "deprecate the shared `dev-key`. (The 'bootstrap key' this note used to name was refuted by Rivet in the Loop 3 design §0: no code has ever read HUB_BOOTSTRAP_KEY; it survives only in 7 doc/config sites, repaired in Loop 3.) Step 2 of the remote sequence. After T-003, add the reader === req.agentName check to POST /read (T-049's limit L2). MEASURED ON TCM 2026-09-24 (Loop 2, V-003): 8 of 10 names hold the dev-key hash, which resolves to `atlas` for all 8. LOOP 3: brief docs/loops/loop-3-per-agent-keys-brief.md (+ Amendment 1); design loop/3-per-agent-keys FINAL a2e1562 (rev 3: D-007 releases, migration = delete legacy + insert owned in one transaction, browser section 12); rulings docs/loops/loop-3-ruling-1.md and loop-3-ruling-2.md: APPROVED TO BUILD. Criteria ACCEPTED: qa/loop-3-harness-keys f09cb01 (MIG, REL, K7.0-K7.3 with askPolicy fingerprints, H-AARON, H4.2 clipboard rule: never read or restore Aaron's clipboard; warn him via Relay before the step; blank it at the end). D-006: Aaron approved the hub-talk contract and staged cutover. D-007: the 8 dev-key rows are RELEASED, not migrated; each needed name re-registers fresh. NAMES: SIA's in use = atlas, grok (SIA's live Cursor developer seat); forge used for real work via Cursor (Aaron). SIA's tcm HUB_URL = http://100.124.212.87:4000. TIMING: nothing touching grok or atlas while SIA's A7 is built or scored; the SIA planner names the window. BROWSER CLIENT: Aaron confirmed in Relay session 16, 2026-09-24, verbatim \"page should act as aaron\". It gets an owned agents row of kind human (design section 12, H1-H4), and aaron's peer type stays human."
+      "note": "deprecate the shared `dev-key`. Step 2 of the remote sequence. MEASURED ON TCM 2026-09-24 (Loop 2, V-003): 8 of 10 names hold the dev-key hash, which resolves to `atlas` for all 8. LOOP 3 BUILT AND ACCEPTED (V-004): loop/3-build-r3 fe4eb14 (v1.9.0); report docs/loops/loop-3-qa-report.md (qa/loop-3-harness-keys b6f1cef); rulings docs/loops/loop-3-ruling-1..4.md; design loop/3-per-agent-keys a2e1562 (+ build-branch sections 13-14). D-006: hub-talk contract and staged cutover approved. D-007: release the 8 dev-key rows; each needed name re-registers fresh via --init-key. Browser page acts as `aaron` (Aaron). REMAINING, each on Aaron's word: (1) merge loop/3-build-r3 and qa/loop-3-harness-keys, then tag v1.9.0; (2) live local start (N.5(b): alice/bob keys and migration; browser key for aaron); (3) tcm cutover per design section 4.2: pre-deploy read (incl. askPolicy fingerprints), deploy act (Convex push, classifyAtDeploy, release clark/cursor/general/probe, hub), relay canary, then atlas/forge/grok in a SIA-named window (never during SIA candidate A7), main-checkout update after `hub-key check`, K7 reads. SIA's tcm HUB_URL = http://100.124.212.87:4000. Close T-003 when K7's end state is read on tcm. NOTE: in v1.9.0 convex/peers.ts also reads the agents table (error text only); D-007's 'only agents.ts' was true at ea9d057, and its conclusion still holds (REL passed)."
     },
     {
       "id": "T-004",
@@ -645,6 +645,19 @@
           "type": "live-check",
           "path": "tcm: ~/projects/a2a-hub ./node_modules/.bin/convex data agents --limit 8000 --format jsonl",
           "observation": "2026-09-24T03:27:59Z, read-only, run by Relay on Aaron's word (\"you do it, turning on manual mode\"), each command approved in manual mode. 10 rows (whole table: under the limit), 10 names, one row each; 0 stale hashes; getByName .first() = canonical row for every name. Local analyzer printed counts and 8-char prefixes only; validated first on a synthetic known positive (stale, shared, misresolving, getByName mismatch all flagged) and on the live dev-key positive. AUTH_MODE=warn (docker exec a2a-hub printenv AUTH_MODE). /health ok at 03:27:17Z and 03:28:29Z. Full command log: docs/loops/loop-2-revocation-report.md."
+        }
+      ],
+      "since_session": 16,
+      "status": "verified"
+    },
+    {
+      "id": "V-004",
+      "claim": "Loop 3 (T-003, per-agent keys, v1.9.0) passes acceptance on loop/3-build-r3 fe4eb14",
+      "evidence": [
+        {
+          "type": "qa-report",
+          "path": "docs/loops/loop-3-qa-report.md (qa/loop-3-harness-keys b6f1cef); runs in docs/loops/loop-3-qa/runs/",
+          "observation": "Gauge, 2026-09-24, every row run on fe4eb14 itself on fresh throwaway deployments (non-default ports; 16 ports proven free at the end). Rows A-F 122/122 (R1, K1, K2, K4, K8, B2.1, U3, DK, MIG, REL, H1-H3, B1, B2.2-6, N.1-3, N.5a, K5, F1, F2, DEMOTE); H1 after restart and H3.2 3/3; K3 m3check 3/3 with the mutant killed; N.4 Loop 1 rows 50/50 + selftest 9/9 + a6 4/4 (A4 replaced by B2/N, recorded); K6 clean except the granted RETIRED_SHARED_KEY_HASH exception; P1-P10 ok. H4 clipboard step ran once, 21:36:31Z-21:36:34Z, on Relay's go after Aaron's \"yes\". H4.2's exact-string wording corrected by Relay (docs/loops/loop-3-ruling-4.md): the protective properties held. Three findings were fixed before the verdict SHA: F1, F2 (ruling 3) and F3 (a docs rule)."
         }
       ],
       "since_session": 16,
