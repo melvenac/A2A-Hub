@@ -40,6 +40,14 @@ seeds in `git archive` scratch copies), **receipts read with a parser**. Added f
 - **P9 Log capture.** The stdout and stderr of every hub, daemon, proxy and client process go to
   separate files under `QA_TMP`. K6 scans them, and the log-line assertions below read them.
 
+- **P10 Stop and prove, around every SIA full stop** (the SIA planner's condition for the hold's
+  lift). During an SIA full suite or SIA B's Step 0 load measurement, the throwaway stack is
+  **stopped, not idle**. Scratch Convex, including `convex-local-backend.exe`, and every hub, daemon
+  and proxy process are killed **by PID**. Each PID is recorded at start, and its command line is
+  checked for a QA port before it is killed. Then every QA port is shown free in both address
+  families (`stop-stack.ps1`, below). The stack is not restarted until the SIA planner says the run
+  has finished. A row interrupted by a stop is re-run from its setup, never resumed.
+
 ## Instruments
 
 - **H — harness**, `qa/loop-3-harness-keys` @ `0ca2358` (Loop 1's harness, with per-seat
@@ -59,10 +67,19 @@ seeds in `git archive` scratch copies), **receipts read with a parser**. Added f
   known positive** before it counts. The positive has one row of each class: stale hash, shared hash,
   `legacy` row, row with no status, a `dev-key` holder, a non-JSON line, and an `AUTH_MODE` other
   than `warn`. Each must be flagged. It fails closed on zero rows parsed and on a count at the limit.
+  *Built:* `loop-3-qa/k7-analyzer.mjs`. *Validated* 2026-09-24 by `k7-analyzer.selftest.mjs`, 13/13
+  (each class flagged, a clean table passes, both fail-closed cases, the deploy phase). No output
+  carried a full hash or an `agentCard`.
 - **K — key-leak scanner** (K6). It runs **inside the harness process** that generated the keys. It
   reads every artifact and counts hits per artifact for every key used and every full sha256 of
   one. It prints counts, never values. **Known positive:** one key planted in a scratch file must
   be counted before the real scan counts.
+  *Built:* `loop-3-qa/leakscan.mjs`. *Validated* 2026-09-24 by `--selftest`, 8/8 (planted key and
+  hash counted, an 8-hex prefix and a foreign key not counted, key-shaped runs seen).
+- **T — `stop-stack.ps1`** (P10): it kills recorded PIDs and any listener on a QA port whose command
+  line names that port, then proves every QA port free. It exits non-zero while any port is taken.
+  **Validated at the lift, before the first start,** against a known positive: a dummy listener on a
+  QA port must be found, killed and shown gone.
 - **M — mutants** as in Loop 1: shown landed, `tsc --noEmit` clean, observed to fire before judged.
 
 **Both directions** means the state is asserted before the act and its opposite after, or a
