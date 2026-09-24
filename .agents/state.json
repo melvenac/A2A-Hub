@@ -1,23 +1,23 @@
 {
   "schema_version": 2,
-  "revision": 25,
+  "revision": 34,
   "project": {
     "name": "a2a-intelligent-hub"
   },
   "objective": {
-    "text": "Prove a truly remote agent can join the hub over the public internet with its own key: first verify revocation against the live database (the one unmet gate), then run the ordered remote-agent sequence — redeploy tcm with v1.7.0, per-agent keys, warn-mode soak, `AUTH_MODE=strict`, expose over HTTPS, remote registration. On-demand spawn follows.",
-    "since_session": 14
+    "text": "Prove a truly remote agent can join the hub over the public internet with its own key. Revocation of superseded keys is verified on tcm's live DB (V-003, session 16) and tcm runs v1.8.0 (V-001). Next in the ordered remote-agent sequence: per-agent keys (T-003; on tcm 8 of 10 names share the dev-key, which resolves as `atlas`, so strict means nothing until then), warn-mode soak, `AUTH_MODE=strict`, expose over HTTPS, remote registration. askPolicy on JSON-RPC (T-004) and rate limiting (T-005) also gate exposure. On-demand spawn follows.",
+    "since_session": 16
   },
   "tasks": [
     {
       "id": "T-001",
       "title": "Verify revocation against the live database",
       "priority": "P0",
-      "status": "open",
+      "status": "done",
       "opened_session": 14,
-      "closed_session": null,
+      "closed_session": 16,
       "supersedes": null,
-      "note": "`agents.register` now patches a canonical row and deletes the extras, but that has only ever run in tests. The live DB held ~39 historical rows for ~5 agents, each with its own `apiKeyHash`, and `getByKeyHash` matches any of them, so a surviving row means a superseded key still authenticates. The collapse is capped at 4000 deletes per call and self-heals across later registers. Read-only investigation first: count rows per agent name, confirm whether stale hashes remain. Do not improvise fixes against live data — report first (Session 14; roadmap v3)"
+      "note": "Read-only on tcm 2026-09-24T03:27:59Z by Relay, on Aaron's word this session, verbatim \"you do it, turning on manual mode\" (the brief assigned Rivet; the SIA hold barred launching Rivet). Report: docs/loops/loop-2-revocation-report.md. 10 names, 10 rows, no stale hash: revocation of superseded keys holds (V-003). The dev-key finding moves to T-003."
     },
     {
       "id": "T-002",
@@ -32,12 +32,12 @@
     {
       "id": "T-003",
       "title": "Per-agent key generation + rotation",
-      "priority": "P1",
+      "priority": "P0",
       "status": "open",
       "opened_session": 14,
       "closed_session": null,
       "supersedes": null,
-      "note": "deprecate the shared `dev-key` and the bootstrap key. v2 closed the validation hole; this makes key management usable. Step 2 of the remote sequence (roadmap v3). ADDED 2026-09-23 (Loop 1, Rivet's live run at cb7cda7): under the shared dev-key, req.agentName resolves to an arbitrary agent row, so a regression that makes GET /messages mark the caller read was INVISIBLE. The mutant survived, because its mark 404'd silently, and it was killed only once each seat had its own key. The shared key hides identity bugs from tests as well as from the hub, which is one more reason to do this before AUTH_MODE=strict. After T-003, add the reader === req.agentName check to POST /read (T-049's limit L2)."
+      "note": "deprecate the shared `dev-key`. (The 'bootstrap key' this note used to name was refuted by Rivet in the Loop 3 design §0: no code has ever read HUB_BOOTSTRAP_KEY; it survives only in 7 doc/config sites, repaired in Loop 3.) Step 2 of the remote sequence. After T-003, add the reader === req.agentName check to POST /read (T-049's limit L2). MEASURED ON TCM 2026-09-24 (Loop 2, V-003): 8 of 10 names hold the dev-key hash, which resolves to `atlas` for all 8. LOOP 3: brief docs/loops/loop-3-per-agent-keys-brief.md (+ Amendment 1); design loop/3-per-agent-keys (final 88a8e0f, notes a0eaa89, 12614e1); rulings docs/loops/loop-3-ruling-1.md and loop-3-ruling-2.md: APPROVED TO BUILD. Criteria: qa/loop-3-harness-keys (a522deb, 728a4e3, d4f04be). D-006: Aaron approved the hub-talk contract and staged cutover. D-007: the 8 dev-key rows are RELEASED, not migrated; each needed name re-registers fresh (supersedes the SIA planner's keep-and-migrate for forge/probe; rooms are unaffected). NAMES: SIA's in use = atlas, grok (SIA's live Cursor developer seat); forge used for real work via Cursor (Aaron). SIA's tcm HUB_URL = http://100.124.212.87:4000. TIMING: nothing touching grok or atlas while SIA's A7 is built or scored; the SIA planner names the window. BROWSER CLIENT (client/src/App.svelte): posts as the human peer `aaron` with a hardcoded dev-key; it cannot simply register `aaron` as an agent, because peers.register overwrites the type (convex/peers.ts:16-21) and the hub re-registers aaron as human at startup (src/index.ts:55). Relay's decision, for Aaron to confirm: the browser acts as `aaron`, and Rivet designs a key for a human peer that does not change its peer type."
     },
     {
       "id": "T-004",
@@ -171,13 +171,13 @@
     },
     {
       "id": "T-017",
-      "title": "`--inbox` has no opt-in `--mark-read`",
-      "priority": "P2",
+      "title": "`--inbox` then `--wait` re-delivers turns already read (two cursors disagree)",
+      "priority": "P1",
       "status": "open",
       "opened_session": 14,
       "closed_session": null,
       "supersedes": null,
-      "note": "`--inbox` is non-destructive and `--say` never moves the cursor; composed, an `--inbox` followed by `--wait` re-delivers everything just shown. Fix is an explicit `--mark-read`, not consuming by default. Noise only, never blocked anything. See ADR-013 (roadmap v2/v3 boundary)"
+      "note": "`--inbox` is non-destructive and `--say` never moves the cursor; composed, an `--inbox` followed by `--wait` re-delivers everything just shown. Fix is an explicit `--mark-read`, not consuming by default. See ADR-013 (roadmap v2/v3 boundary). UPDATE session 16 (2026-09-24), from Atlas (SIA planner, SIA record session 90, under D-039/D-003), on v1.8.0 (local hub-talk 003f57d + tcm hub): room k57frxw0ptb8tadmqdwy0khhks8ey006, ~02:35Z, `--as atlas --inbox` printed 16 turns, ending \"16 turns, 2 unread after turn 13 (cursor unchanged)\"; /reads then showed atlas lastRead 16 via inbox; the next `--wait --wait-timeout 3600` returned at once with exit 0 and re-printed turns 15 and 16. There was no new turn; grok's real reply came later as turn 18. This is DESIGNED behaviour at ea9d057: scripts/hub-talk.mjs:328-391 keeps two cursors. The hub read mark means 'delivered' and --inbox advances it; the local cursor means 'handed over by --wait' and only --wait advances it. Two consequences, and they falsify the earlier 'noise only, never blocked anything': (1) a seat that reads 'wait returned, exit 0' as 'new reply' acts on a reply it has already handled (Atlas caught it only by reading the output); (2) since v1.8.0 the two marks visibly disagree, so /reads says read through 16 while --wait re-delivers 15-16, an ADR-013 ambiguous-silence shape. Atlas's expectation, labelled as Atlas's own view and not a ruling: --wait starts from the mark --inbox just set, or --inbox advances the wait cursor. Raised P2->P1. Changes hub-talk's contract (load-bearing, shared with SIA): design pass; any question for Aaron goes via the SIA planner under D-003."
     },
     {
       "id": "T-018",
@@ -568,6 +568,36 @@
       "closed_session": null,
       "supersedes": null,
       "note": "2026-09-23 20:41Z, local stack on v1.8.0 (V-002): relay sent turn 1 to alice in 2-party room k57a620yfmampa74d1yqqw0e8n8eyysh. The room is in alice's /a2a/peer/alice/sessions (active, turn 1 of 500), the message qualifies under qualifiesAsTrigger (not group, not from alice), and alice's heartbeat is live (/a2a/agents/live). No reply after several minutes. ~20:50Z: Aaron started a human chat with alice through the test client (localhost:5173): also no reply. So it is not specific to agent senders or to ide-session peers; the daemon answers nobody while its heartbeat stays live. Not diagnosed. Relay's hypothesis, strengthened but unconfirmed: handleSessions (src/wrapper/daemon.ts ~173) walks all of alice's ~24 sessions in one try, so any error (e.g. a generateReply failure in an old demo room) aborts the whole poll and later rooms are never reached. Loop 1 did not touch daemon.ts. First step: read the 'A2A alice' window's stderr for '[alice] poll error'. Check bob as well. Same class as ADR-013 if confirmed: one failure silently mutes every room while the heartbeat says healthy."
+    },
+    {
+      "id": "T-057",
+      "title": "Convex may be reachable from the tailnet on 3210, bypassing the hub",
+      "priority": "P1",
+      "status": "open",
+      "opened_session": 16,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "Found by Rivet in the Loop 3 design (loop/3-per-agent-keys d8962da, §9): the tracked docker-compose.yml:48-49 publishes Convex on 3210:3210 (every interface). docs/redeploying-tcm.md:14 says tcm binds convex to 127.0.0.1:3210, so tcm may differ from the tracked file. UNVERIFIED on tcm. If reachable, every public Convex function can be called without the hub: messages:markRead with any reader, agents:heartbeat for any name. First step: a read-only check of tcm's live compose file and listening ports (Aaron's word, manual mode). Candidate fixes: bind 127.0.0.1:3210 in the tracked compose, and/or make hub-only functions internal. Gates exposure (T-002 step 5). Ruled in docs/loops/loop-3-ruling-1.md."
+    },
+    {
+      "id": "T-058",
+      "title": "Caller-asserted identities beyond /read (heartbeat, message from, task claim)",
+      "priority": "P2",
+      "status": "open",
+      "opened_session": 16,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "Same class as T-049's limit L2, which Loop 3 condition 5 closes for POST /read only. At ea9d057: POST /a2a/heartbeat/:agentId (any key can heartbeat any name), POST /a2a/session/:id/message `from` (src/index.ts:404), POST /a2a/task/:id/claim `agentName` (src/index.ts:249). Checking each against req.agentName becomes possible once T-003 gives each agent its own key. Found by Rivet (Loop 3 design §9), triaged in docs/loops/loop-3-ruling-1.md."
+    },
+    {
+      "id": "T-059",
+      "title": "Agent name format rule (look-alike and junk names)",
+      "priority": "P3",
+      "status": "open",
+      "opened_session": 16,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "Proposed by Rivet in the Loop 3 design §6: ^[a-z0-9][a-z0-9-]{0,62}$, 400 otherwise (all 10 tcm names match). Struck from Loop 3 by Relay (docs/loops/loop-3-ruling-1.md) because it changes what registration accepts for SIA and outside bots and the brief did not ask for it. Revisit before exposure (T-002 step 5), when look-alike names start to matter."
     }
   ],
   "verified": [
@@ -605,6 +635,19 @@
         }
       ],
       "since_session": 15,
+      "status": "verified"
+    },
+    {
+      "id": "V-003",
+      "claim": "On tcm's live DB no agent name has more than one row and no superseded key hash survives: revocation of superseded keys holds (T-001)",
+      "evidence": [
+        {
+          "type": "live-check",
+          "path": "tcm: ~/projects/a2a-hub ./node_modules/.bin/convex data agents --limit 8000 --format jsonl",
+          "observation": "2026-09-24T03:27:59Z, read-only, run by Relay on Aaron's word (\"you do it, turning on manual mode\"), each command approved in manual mode. 10 rows (whole table: under the limit), 10 names, one row each; 0 stale hashes; getByName .first() = canonical row for every name. Local analyzer printed counts and 8-char prefixes only; validated first on a synthetic known positive (stale, shared, misresolving, getByName mismatch all flagged) and on the live dev-key positive. AUTH_MODE=warn (docker exec a2a-hub printenv AUTH_MODE). /health ok at 03:27:17Z and 03:28:29Z. Full command log: docs/loops/loop-2-revocation-report.md."
+        }
+      ],
+      "since_session": 16,
       "status": "verified"
     }
   ],
@@ -717,6 +760,18 @@
       "title": "Standing push authority: A2A-Hub seats push their OWN working branches without asking; never master, never force, never another seat's branch; merges and tcm redeploys stay Aaron's",
       "date": "2026-09-23",
       "note": "Aaron, in the SIA planner session (SIA record session 81), 2026-09-23, verbatim: \"yes to  your quesition\". The question, as Atlas put it to him: \"Should A2A-Hub's seats get the same standing push authority for their own working branches?\" Relayed Atlas -> Relay by cross-session message the same day under SIA D-039 / A2A D-003. The question was Atlas's own, not relayed from an A2A-Hub seat; it is recorded as Aaron's authority because the answer is his. 'The same' refers to SIA D-038 part (1), checked against SIA origin/master aef8195: any seat may push ITS OWN working branches without asking; never master, never a force push, never a branch another seat owns; every push is read back with ls-remote and named in the commit, report or message that follows it. In A2A-Hub: Rivet's loop/* and chore/*, Gauge's qa/*, Relay's docs/*. NOT imported from SIA: D-032's docs/record merge exception, and D-038 part (2). Merging to master, tagging, tcm redeploys, updating the main checkout ~/Projects/A2A-Hub, and writes to live Convex each still need Aaron's word for that act. This amends shared.md's 'Each outward-facing act needs authority for THAT act' for own-branch pushes only."
+    },
+    {
+      "id": "D-006",
+      "title": "Aaron approves Loop 3's hub-talk key-contract change and staged cutover (T-003 Q1); each outward act still needs his word",
+      "date": "2026-09-24",
+      "note": "Aaron, in the SIA planner session (SIA record 90), 2026-09-24 ~19:57Z, verbatim: \"yes\". The question he saw was Atlas's summary of Relay's Q1, verbatim: \"A2A-Hub wants to give every agent its own hub key instead of the shared one, switching over in stages so no seat loses the hub. It won't happen while SIA has a candidate being built or tested. May it go ahead?\" Relayed Atlas -> Relay by cross-session message under SIA D-039 / A2A D-003. Relay's Q1 behind that summary: the hub-talk contract changes in the Loop 3 design section 3.5 (no default key, exit 1 before any network call; a key file per name and hub; --init-key/--rotate-key that never print the key; register failures become rc 1; hub-side refusal of shared, short or re-keyed names), and the section 3.6/4.2 cutover (deploy in warn with the main checkout untouched; per-name --init-key from a worktree; main-checkout update only after a read-only check; new names during the window only via --init-key). The design is final at loop/3-per-agent-keys 88a8e0f. LIMIT: Aaron saw the summary, not items 1-5; if a later reading of this approval turns on a detail the summary omitted, ask him. SCOPE: this approves the contract change and the cutover plan. It is NOT authority for any single outward act: the merge, the deploy, each tcm --init-key, the main-checkout update, and any release each still need his word. TIMING (SIA planner): no cutover step touching `grok` or `atlas` while SIA candidate A7 is being built or scored (grok session record 95, then QA 96); the SIA planner names the window."
+    },
+    {
+      "id": "D-007",
+      "title": "Remove every agent row that used the shared dev-key; each agent re-registers fresh and gets its own key at that point (supersedes the SIA planner's keep-and-migrate for forge/probe)",
+      "date": "2026-09-24",
+      "note": "Aaron, in Relay session 16, 2026-09-24, verbatim: \"All agent have been testing agent.  The only two agents that have used the hub for real work is Atlas and forge while using cursor.  Since each agent will get a new key let's have each agent register and assign them a new key at that point.  We can remove all agents that were using the shared key.\" APPLIES TO the 8 dev-key names on tcm (Loop 2, V-003): relay, grok, cursor, clark, general, probe, forge, atlas. Each agents row is released (Loop 3 design section 4.3(b), internalMutation agents:release), and a name that is needed again registers fresh via --init-key, which inserts it as owned with its own key. NOT covered: cursor-grok and grok-probe, which hold their own keys and were not on the shared key; they stay, classified owned at deploy. SUPERSEDES the SIA planner's ruling (2026-09-24) to keep forge and probe and migrate them. Its reason, that their rooms are SIA history, still holds under this ruling: only convex/agents.ts reads or writes the agents table (5 queries; the search was validated on that known positive), so releasing a row leaves sessions, sessionPeers, messages and peers intact. SEQUENCING (Relay): agents:release exists only after the Loop 3 deploy. The unused test names (clark, cursor, general, probe) can be released in the deploy act. Live names are released together with their fresh --init-key at their own cutover step, so no seat is left without a row: relay as canary; atlas, forge and grok in the SIA-named window, and never while SIA candidate A7 is being built or scored. grok is SIA's live Cursor developer seat right now. This is Aaron's word for the 8 releases, to be executed at those steps. The deploy, each --init-key against tcm, and the main-checkout update each still need his word (D-006)."
     }
   ],
   "handoffs": [
@@ -736,32 +791,42 @@
     },
     {
       "seat": "planner",
-      "pick_up": "ROLL HANDOFF (Relay session 15 -> fresh Relay). STATE: Loop 1 (T-049 read receipts, T-051 --peer) is accepted (Gauge report 2 on e886b6b), merged (#3-#8; master b5aa6b3), tagged v1.8.0 (34ac98b), DEPLOYED to tcm (V-001; rollback: image a2a-hub:prev de11bebd8f93, source ~/projects/a2a-hub.old = fd23eac), ~/Projects/A2A-Hub fast-forwarded to 003f57d (it is every SIA seat's hub-talk), and A6's live start verified (V-002). Receipts were confirmed from SIA's side by Atlas. The LOCAL STACK is STOPPED (all 11 processes by PID, ports free), on Aaron's word via Atlas: \"yes, stop it\" (SIA planner session, 2026-09-23), for SIA's QA runs. Restart is Aaron's and Relay's call, never while SIA QA is running a suite. A HOLD on A2A-Hub builds and tests is IN FORCE for SIA: SIA's developer has one more full suite on A4, then SIA QA (session 89) runs its suite. Keep it until the live SIA planner lifts it. FIRST ACTIONS for the fresh session: (1) ListAgents to find the live SIA planner (it is rolling too; find it by listing, not by name) and tell it you are the live Relay; (2) keep the hold; (3) do nothing on tcm. NEXT WORK, in order: T-056 (alice answers nobody on the local stack; needs the stack running, so after the hold, on Aaron's word to restart); Loop 2 = T-001 (read-only revocation check on tcm's live DB; brief first, then Aaron's word; SSH as melvenac@tcm with Aaron approving commands in manual mode); T-050's live Cursor stop-hook trial, asked for through the SIA planner under D-003 when SIA has no live Cursor session.",
+      "pick_up": "Relay session 16 (checkpoint 2, 2026-09-24 ~06:40Z). LOOP 3 (T-003, per-agent keys) IS DESIGNED AND APPROVED, waiting on the SIA hold. Design FINAL: loop/3-per-agent-keys 88a8e0f (+ a0eaa89 build note: start-stack.ps1 honours A2A_KEY_DIR). Rulings: docs/loops/loop-3-ruling-1.md (R1 stored keyStatus, R2 cutover), loop-3-ruling-2.md (approved to build; B1 new names on old client, B2 getByKeyHash stays null) -- both answered in design section 11. Gauge's criteria ACCEPTED: qa/loop-3-harness-keys a522deb (docs/loops/loop-3-qa-criteria.md; harness change 0ca2358). Relay ruled Gauge's Qs: N.5 split (a: scratch A2A_KEY_DIR in QA; b: live main-stack start on Aaron's word -- never start-stack.ps1 in the QA tree); the hold lift covers the throwaway QA stack (asked the SIA planner to confirm at the lift); instrument additions approved. GATES: build when the SIA planner lifts the local hold; merge needs Q1 (Aaron, via SIA planner, expected morning 2026-09-24) + Gauge acceptance + Aaron's word; every tcm act per design section 4.2 on Aaron's word inside a SIA-named quiet window (not yet named: grok may run an A7 session if QA 94 rejects A6). Also this session: Loop 2 = T-001 closed (V-003); T-017 P1; T-057 (Convex port, P1), T-058, T-059 opened. All on docs/session-16-t017, NOT MERGED.",
       "watch_out": [
-        "Questions for Aaron on SHARED work (anything SIA depends on: T-050, and hub transport changes) go through the live SIA planner under D-003 (mirror of SIA D-039; D-004 corrects its master status), quoted both ways, with both links of provenance recorded. Find that planner with ListAgents, not by a remembered name or pipe address. Aaron may also answer directly in this session. A2A-Hub-only work goes to Aaron directly.",
+        "SIA HOLD (narrowed ~03:25Z): no A2A-Hub local stack, builds, test runs or new seats on THIS machine (covers a2a-rivet-63, a2a-qa-5f). Reading, docs, git, hub traffic, tcm OK. FULL STOP (no commands, no git) when the SIA planner calls one; QA 94's suite is next. Grok's A6 session finished ~06:2xZ, so the no-tcm-restart condition is lifted, but grok is NOT in a quiet window for the key cutover until SIA's candidate A is decided. Lifting the hold is the SIA planner's call.",
+        "Questions for Aaron on SHARED work (anything SIA depends on: T-050, hub transport changes, hub-talk's contract) go through the live SIA planner under D-003, quoted both ways. Find it with ListAgents. A2A-Hub-only work goes to Aaron directly.",
         "D-005: seats push their OWN working branches without asking (Rivet loop/* chore/*, Gauge qa/*, Relay docs/*); never master, never force, never another seat's branch; read back with ls-remote. Merges, tags, tcm deploys, main-checkout updates, starting or stopping the local stack, and live Convex writes each need Aaron's word for that act.",
-        "SIA holds: the SIA planner calls them before SIA full-suite runs. During a hold: no builds or tests from any A2A-Hub seat, and stay idle. Confirm each hold by message. Document pushes are not covered.",
-        "tcm: `ssh melvenac@tcm` (the bare `tcm` alias logs in as the Windows user and is refused). Auto mode's classifier blocks production reads; Aaron switches to manual mode to approve each command. Deploys belong to the developer seat by role; Relay deployed v1.8.0 only on Aaron's explicit word. The next deploy must rotate a2a-hub.old first, or `mv` nests into it. tcm's source is a tar of selected paths plus node_modules, not a git tree; verify it by checksum, allowing for line endings.",
-        "T-056 diagnosis so far (read-only replay, 2026-09-23): every hub call alice's loop makes returns 200; the queue is empty; the model id is current (claude-haiku-4-5-20251001); no old room has gained a turn. The fault is in reply generation or posting. Next: rerun the replay script (session 15 scratchpad: alice-sim.mjs; it rebuilds from daemon.ts handleSessions plus one Anthropic call) or read the 'A2A alice' window for '[alice] poll error'. Needs the local stack running.",
-        "One writer for the record while the planner holds a loop; other seats send handoff text to Relay. ob_state's `session` parameter stamps EVERY set_handoff in a call. Three seats share one session counter: Rivet and Gauge both used 16.",
-        "start-stack.ps1 reuses anything listening on 3210/4000, so never run it from a seat worktree. Stopping the stack means killing the node and backend PIDs, not only closing the windows.",
-        "A3-type checks need per-seat keys: under the shared dev-key, a GET-marks-caller regression survives (T-003 note).",
-        "Relay's error shape in session 15, twice: asserting a fact about an artifact without reading it. Read first. Near-miss: opening a task id without checking the highest.",
+        "tcm: `ssh melvenac@tcm`. Auto mode blocks production reads; Aaron switches to manual mode to approve each command. The next deploy must rotate a2a-hub.old first. tcm's source is a tar, not a git tree. Reading tcm's Convex: `convex data <table>` with --limit <= ~99999; generate the admin key inside tcm's shell, never print it. SIA's seats spell tcm http://100.124.212.87:4000 -- key directories are keyed on that spelling.",
+        "T-056 diagnosis so far (read-only replay, 2026-09-23): every hub call alice's loop makes returns 200; the queue is empty; model id current. Fault is in reply generation or posting. Next: rerun docs/loops/t-056-alice-sim.mjs or read the 'A2A alice' window for '[alice] poll error'. Needs the local stack running (held).",
+        "One writer for the record while the planner holds a loop; other seats send handoff text to Relay. ob_state writes the CHECKED-OUT tree: switch to the docs branch carrying the latest revision first (session 16: detached origin/master was rev 25 while the branch held 26+).",
+        "start-stack.ps1 reuses anything listening on 3210/4000, so never run it from a seat worktree. Stopping the stack means killing the node and backend PIDs.",
+        "Relay's error shape in sessions 15-16: asserting a fact about an artifact without reading it, and reporting a line when it found a class (Loop 3 brief named 3 dev-key sites; there are 7 -- Gauge found 6, Relay the 7th). Read first; search for the class.",
         "Decisions are append-only in ob_state; a correction is a new decision pointing at the old.",
         "SIA's seats run load-sensitive test suites on this machine. Aaron's standing ruling: work normally; pause only when a SIA seat asks for a controlled rerun."
       ],
       "open_questions": [
-        "Seat transport: Claude Code cross-session messages or a hub room via scripts/hub-talk.mjs? AGENT.md allows both. Dogfooding the hub would exercise T-008 and T-017, but it makes the seats depend on the thing they are changing."
+        "Seat transport: Claude Code cross-session messages or a hub room via scripts/hub-talk.mjs? AGENT.md allows both.",
+        "What did Aaron mean by \"Relay can rebuild the tcm hub when ready\" (via Atlas, ~05:50Z)? Relay did NOT rebuild: tcm runs 003f57d and master differs only in docs/.agents. Ask Aaron directly."
       ],
-      "session": 15,
+      "session": 16,
       "loop_state": {
         "open_prs": [],
         "frozen_sha": null,
-        "questions_for_aaron": [],
+        "questions_for_aaron": [
+          "Q1 via SIA planner (queued there): may hub-talk's key contract change as in Loop 3 design section 3.5, with the section 3.6/4.2 cutover?",
+          "Q2 direct: clark, cursor, general -- migrate, release, or leave each? (forge/probe: SIA ruled keep + migrate)",
+          "Q3 direct: which name should the browser client (client/) use?",
+          "Direct: what was the tcm rebuild for?",
+          "Direct: merge docs/session-16-t017 (record rev 26-32, Loop 2 report, Loop 2/3 briefs, Loop 3 rulings 1-2)?"
+        ],
         "rulings": [
-          "Loop 1 closed: accepted on e886b6b, merged, tagged v1.8.0, deployed to tcm server-first, checkout updated; A6 verified (V-001, V-002).",
-          "Local stack stopped 2026-09-23 on Aaron's word via Atlas, verbatim \"yes, stop it\" (SIA planner session, SIA record session 81), relayed under SIA D-039 / A2A D-003; executed by Relay on the SIA planner's STOP NOW after SIA's developer run ended.",
-          "Roll prepared on Aaron's word via Atlas, verbatim \"Have relay write it's handoff first and prep for a roll. Ask all agents to make sure a clean roll will get picked up where we left off\"."
+          "Loop 2 (T-001) run by Relay on Aaron's word in session 16, verbatim \"you do it, turning on manual mode\"; read-only; closed with V-003.",
+          "tcm rebuild NOT performed despite Aaron's go-ahead relayed by Atlas (\"Relay can rebuild the tcm hub when ready\", ~05:50Z): nothing to ship.",
+          "Loop 3 brief Amendment 1: all 6 of Gauge's objections accepted (fe0ef05).",
+          "Loop 3 ruling 1 (c34a792): R1 + R2 required; name format struck (T-059); T-057, T-058 opened.",
+          "Loop 3 ruling 2 (e709329): approved to build subject to B1, B2; rev 2 (88a8e0f) accepted without further ruling.",
+          "SIA planner ruled forge/probe: keep and migrate, never release.",
+          "Gauge's Loop 3 criteria (a522deb) accepted; N.5 split; hold lift to cover throwaway QA stack (confirm at lift)."
         ]
       }
     },
