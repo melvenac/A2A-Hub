@@ -32,10 +32,13 @@ Loop 2 measured tcm on 2026-09-24. **8 of 10 names hold the one `dev-key` hash, 
 
 What the code does today, derived:
 
-- **Keys are chosen by the client** (`docs/joining-the-hub.md:19`: "Pick a key"). `hub-talk`,
-  `daemon.ts` and `ask-agent.mjs` default to `"dev-key"` when `AGENT_KEY` is unset
-  (`scripts/hub-talk.mjs:65`, `src/wrapper/daemon.ts:89`, `scripts/ask-agent.mjs:25`). **A seat
-  that forgets its key silently becomes the shared identity.** That is ADR-013's shape.
+- **Keys are chosen by the client** (`docs/joining-the-hub.md:19`: "Pick a key"). **Seven** client
+  sites fall back to or hardcode `"dev-key"`. Defaults when `AGENT_KEY` is unset:
+  `scripts/hub-talk.mjs:65`, `src/wrapper/daemon.ts:89`, `scripts/ask-agent.mjs:25` and
+  `scripts/a2a-compliance-probe.mjs:20`. Hardcoded: `scripts/demo-loop.mjs:15`,
+  `scripts/verify-client-stack.mjs:65` and `client/src/App.svelte:8`. *(Amendment 1: this list
+  first said three.)* **A seat that forgets its key silently becomes the shared identity.** That
+  is ADR-013's shape.
 - **Registration is open** (no key required) and stores `sha256(apiKey)` (`src/index.ts:340-372`).
 - **There is no rotation path under strict.** Re-registering a name with a new key is a name claim.
   `evaluateNameClaim` returns `reject` (409) in strict (`src/identity.ts:5-12`), so an agent cannot
@@ -114,3 +117,48 @@ Rivet proposes. Relay rules on the result, not on the implementation.
 - `askPolicy` on JSON-RPC (T-004).
 - Agent `status` never going offline (observation in Loop 2's report; not triaged).
 - T-017's two cursors. Also a `hub-talk` contract change, but a separate one. Do not bundle them.
+
+---
+
+## Amendment 1 — Relay's ruling on Gauge's objections (2026-09-24, session 16)
+
+Gauge (a2a-qa-5f) read the brief at `3f46b97` against `ea9d057` and raised six objections and two
+notes. Relay checked O1 and O4 in the code before ruling. **All are accepted.** Where this section
+and the text above disagree, this section holds.
+
+**Relay's error, recorded.** The brief named three `dev-key` sites. There are seven: Gauge found
+six, and Relay's re-check found the seventh (`client/src/App.svelte:8`). The brief reported a line
+when it had found a class, which is a known failure shape of the planner seat. It reached this
+artifact and both seats.
+
+- **O1 (blocking, accepted). In warn, `register` re-keys any name.** On a name claim,
+  `evaluateNameClaim` returns `warn`, and `agents.register` then patches the canonical row to the
+  presented hash (`convex/agents.ts:55-62`). A stale client re-registering with the `dev-key` would
+  undo a migration, so K7 could pass and regress within the hour. **New condition 7: once a name
+  holds a key of its own, a register presenting a different hash must not replace it, in warn as
+  well as in strict.** Rotation (condition 2) is the only way to change it. How it is enforced is
+  Rivet's call. **New K8:** in warn, re-registering a migrated name with its old key, or with the
+  `dev-key`, leaves the stored hash unchanged. Assert both directions: the name's own key still
+  resolves to it.
+- **O2 (accepted).** K2 also asserts: after a rotation, a second live instance holding the old key
+  fails (403 in strict, `WOULD REJECT` in warn), and cannot restore the old key by re-registering.
+- **O3 (accepted).** K2 gains two negative cases. A rotation that does not prove the current key
+  (a wrong key, or none) does not rotate. A rotation to a hash another name already holds follows
+  condition 1.
+- **O4 (accepted, widened to seven sites).** Condition 3 and K5 cover all seven. **K5's check is a
+  search of `src/`, `scripts/` and `client/` that finds no `dev-key` fallback or literal.** The
+  search is validated first against a known positive, for example the current tree.
+- **O5 (accepted). "Or visibly flagged" is struck from K5.** Warning and carrying on would re-key
+  names in warn (O1). The design picks one: the defaults go, or `register` refuses the `dev-key`
+  hash in both modes. Either way the objective holds: the `dev-key` resolves to no name.
+- **O6 (accepted).** K6 covers transcripts as well as files, commits and logs. A hub-issued key goes
+  straight to storage, never to stdout. **Definition:** in K6, a "key" is any key that
+  authenticates on tcm or the main local stack. Keys a QA harness generates at run time for a
+  throwaway stack are not keys under K6. Literal keys in tracked test files are allowed only if
+  nothing registers them outside a throwaway stack.
+- **N1 (accepted).** Condition 4 also says what happens to names nobody migrates (for example
+  `clark`, last seen 2026-09-20). Deleting or re-keying a row on tcm is a live Convex write and
+  needs Aaron's word for that act. K7 stays data-level: a read-only check, with no request sent to
+  tcm using the `dev-key`.
+- **N2 (noted).** Under the SIA hold, only K7's preparation can happen. K1-K6 and K8 wait for the
+  hold to lift.
