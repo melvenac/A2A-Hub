@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 25 by open-brain v1.8.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 26 by open-brain v1.8.0 — do not edit; change state via ob_state -->
 
 # Inbox
 
@@ -19,6 +19,7 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-006** On-demand spawn
 - [ ] **T-007** Two cheap repo-peer measurements
 - [ ] **T-008** `hub-talk` exit code 1 means two opposite things
+- [ ] **T-017** `--inbox` then `--wait` re-delivers turns already read (two cursors disagree)
 - [ ] **T-050** Wake an idle IDE seat that has an unread turn in its room
 
 ## P2
@@ -31,7 +32,6 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-014** Vague questions get sloppy citations
 - [ ] **T-015** Repo → peer discovery
 - [ ] **T-016** Decide the entrance shape
-- [ ] **T-017** `--inbox` has no opt-in `--mark-read`
 - [ ] **T-018** `start-stack.ps1`: Convex window loses its title
 - [ ] **T-019** `start-stack.ps1`: clean up orphaned A2A windows
 - [ ] **T-020** Raise `start-stack.ps1`'s Convex readiness wait

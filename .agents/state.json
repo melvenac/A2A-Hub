@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 25,
+  "revision": 26,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -171,13 +171,13 @@
     },
     {
       "id": "T-017",
-      "title": "`--inbox` has no opt-in `--mark-read`",
-      "priority": "P2",
+      "title": "`--inbox` then `--wait` re-delivers turns already read (two cursors disagree)",
+      "priority": "P1",
       "status": "open",
       "opened_session": 14,
       "closed_session": null,
       "supersedes": null,
-      "note": "`--inbox` is non-destructive and `--say` never moves the cursor; composed, an `--inbox` followed by `--wait` re-delivers everything just shown. Fix is an explicit `--mark-read`, not consuming by default. Noise only, never blocked anything. See ADR-013 (roadmap v2/v3 boundary)"
+      "note": "`--inbox` is non-destructive and `--say` never moves the cursor; composed, an `--inbox` followed by `--wait` re-delivers everything just shown. Fix is an explicit `--mark-read`, not consuming by default. See ADR-013 (roadmap v2/v3 boundary). UPDATE session 16 (2026-09-24), from Atlas (SIA planner, SIA record session 90, under D-039/D-003), on v1.8.0 (local hub-talk 003f57d + tcm hub): room k57frxw0ptb8tadmqdwy0khhks8ey006, ~02:35Z, `--as atlas --inbox` printed 16 turns, ending \"16 turns, 2 unread after turn 13 (cursor unchanged)\"; /reads then showed atlas lastRead 16 via inbox; the next `--wait --wait-timeout 3600` returned at once with exit 0 and re-printed turns 15 and 16. There was no new turn; grok's real reply came later as turn 18. This is DESIGNED behaviour at ea9d057: scripts/hub-talk.mjs:328-391 keeps two cursors. The hub read mark means 'delivered' and --inbox advances it; the local cursor means 'handed over by --wait' and only --wait advances it. Two consequences, and they falsify the earlier 'noise only, never blocked anything': (1) a seat that reads 'wait returned, exit 0' as 'new reply' acts on a reply it has already handled (Atlas caught it only by reading the output); (2) since v1.8.0 the two marks visibly disagree, so /reads says read through 16 while --wait re-delivers 15-16, an ADR-013 ambiguous-silence shape. Atlas's expectation, labelled as Atlas's own view and not a ruling: --wait starts from the mark --inbox just set, or --inbox advances the wait cursor. Raised P2->P1. Changes hub-talk's contract (load-bearing, shared with SIA): design pass; any question for Aaron goes via the SIA planner under D-003."
     },
     {
       "id": "T-018",
