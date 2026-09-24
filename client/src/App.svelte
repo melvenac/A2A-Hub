@@ -5,7 +5,20 @@
   // Humans are peers — you chat inside sessions as HUMAN (default "aaron").
   const HUMAN = "aaron";
   let hubUrl = "http://127.0.0.1:4000";
-  let agentKey = "dev-key";
+  // aaron's own key (T-003, Loop 3 §12). There is no default: get it with
+  // `node scripts/hub-key.mjs copy --as aaron` (clipboard only) and paste it
+  // into connection → Key. Kept in this browser's localStorage; the page works
+  // without storage, you just paste again.
+  const KEY_STORE = "a2a-hub:aaron-key";
+  let agentKey = "";
+  try {
+    agentKey = localStorage.getItem(KEY_STORE) ?? "";
+  } catch {}
+  $: {
+    try {
+      if (agentKey) localStorage.setItem(KEY_STORE, agentKey);
+    } catch {}
+  }
   let health = "checking...";
 
   const hdrs = () => ({ "Content-Type": "application/json", "X-Agent-Key": agentKey });
@@ -314,7 +327,7 @@
     <details class="config">
       <summary>connection</summary>
       <label>Hub <input bind:value={hubUrl} on:change={checkHealth} /></label>
-      <label>Key <input bind:value={agentKey} /></label>
+      <label>Key <input type="password" autocomplete="off" placeholder="hub-key.mjs copy --as aaron" bind:value={agentKey} /></label>
     </details>
   </aside>
 

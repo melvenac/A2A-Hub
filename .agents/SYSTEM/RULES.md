@@ -54,7 +54,6 @@ convex/
 | `GITHUB_PAT` | Git push for approved fixes |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot access |
 | `TELEGRAM_GROUP_ID` | Target Telegram group |
-| `HUB_BOOTSTRAP_KEY` | Admin key for agent registration |
 | `HUB_URL` | Public URL of this hub |
 | `REPO_PATH` | Local repo path for fix drafting |
 | `CLASSIFIER_MODEL` | LLM model for classification (default: `claude-haiku-4-5-20251001`) |

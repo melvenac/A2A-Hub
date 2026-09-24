@@ -159,7 +159,6 @@ Built into Hub process (not separate service). Uses existing bot token.
 | `TELEGRAM_BOT_TOKEN` | Mirror bot |
 | `TELEGRAM_GROUP_ID` | Target group for broadcasting |
 | `CONVEX_URL` | Self-hosted Convex (internal Docker network) |
-| `HUB_BOOTSTRAP_KEY` | Initial admin API key for first agent registration |
 | `HUB_URL` | Public URL of the Hub |
 | `REPO_PATH` | Where repo-fixer clones the repo |
 | `CONFIDENCE_THRESHOLD` | Memory confidence cutoff (default 0.85) |

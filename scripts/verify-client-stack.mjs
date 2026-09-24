@@ -5,7 +5,13 @@
 // 3. POST /a2a/message/send addressed to bob → daemon claims → responds.
 //    With a dummy ANTHROPIC key, classify fails — response must still arrive
 //    (executor best-effort fix).
+import { generateKey } from "./hub-key.mjs";
+
 const HUB = "http://127.0.0.1:4000";
+// A throwaway identity for this check (T-003: no shared default key). The key
+// is generated in memory, used for this run, and never stored or printed.
+const VERIFY_NAME = `verify-${process.pid}`;
+const VERIFY_KEY = generateKey();
 const CLIENT = "http://localhost:5173"; // vite binds ::1 — let DNS pick the family
 let failures = 0;
 
@@ -58,11 +64,21 @@ try {
 // Generous budget -- this leg waits on a real model call through the daemon.
 const start = Date.now();
 try {
+  const reg = await fetchT(`${HUB}/a2a/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: VERIFY_NAME,
+      apiKey: VERIFY_KEY,
+      agentCard: { name: VERIFY_NAME, description: "Throwaway identity for verify-client-stack" },
+    }),
+  });
+  if (!reg.ok) throw new Error(`register ${VERIFY_NAME} refused (${reg.status})`);
   const res = await fetchT(
     `${HUB}/a2a/message/send`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Agent-Key": "dev-key" },
+      headers: { "Content-Type": "application/json", "X-Agent-Key": VERIFY_KEY },
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: 1,

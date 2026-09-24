@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { computeReadState, numberTurns } from "./readLogic.js";
+import { unknownPeerError } from "./peers.js";
 
 const DEFAULT_MAX_TURNS = 16;
 
@@ -19,7 +20,7 @@ export const create = mutation({
         .query("peers")
         .withIndex("by_name", (q) => q.eq("name", name))
         .first();
-      if (!peer) throw new Error(`Unknown peer: ${name}`);
+      if (!peer) throw await unknownPeerError(ctx, name);
       peerIds.push(peer._id);
     }
 

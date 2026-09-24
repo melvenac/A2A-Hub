@@ -22,8 +22,11 @@
  * Exit codes: 0 answered, 1 usage/transport error, 2 no reply before timeout.
  */
 const HUB = process.env.HUB_URL || "http://127.0.0.1:4000";
-const AGENT_KEY = process.env.AGENT_KEY || "dev-key";
-const hdrs = { "Content-Type": "application/json", "X-Agent-Key": AGENT_KEY };
+import { generateKey, resolveKey } from "./hub-key.mjs";
+
+// Set in main once FROM is known (T-003: there is no shared default key).
+let AGENT_KEY;
+let hdrs;
 
 function arg(flag, fallback) {
   const i = process.argv.indexOf(flag);
@@ -63,9 +66,20 @@ async function api(path, init) {
 }
 
 async function main() {
-  // Register the asker as a peer. Registration takes no auth header, and
-  // re-registering an existing name is harmless, so this is safe every run.
-  await fetch(`${HUB}/a2a/register`, {
+  // --from <name> is a standing identity: its key comes from AGENT_KEY or its
+  // key file. The default ask-<pid> is a fresh name each run, so it gets an
+  // ephemeral key: generated in memory, never stored or printed (Loop 3 §3.4).
+  if (arg("--from")) {
+    const r = resolveKey({ hub: HUB, name: FROM });
+    if (r.error) throw new Error(r.error);
+    AGENT_KEY = r.key;
+  } else {
+    AGENT_KEY = generateKey();
+  }
+  hdrs = { "Content-Type": "application/json", "X-Agent-Key": AGENT_KEY };
+
+  // Register the asker as a peer. Registration takes no auth header.
+  const reg = await fetch(`${HUB}/a2a/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -76,7 +90,11 @@ async function main() {
         description: `Ephemeral asker opened by ask-agent.mjs`,
       },
     }),
-  }).catch(() => {}); // a hub that rejects re-registration shouldn't block the ask
+  });
+  if (!reg.ok) {
+    const body = await reg.json().catch(() => ({}));
+    throw new Error(`register ${FROM} refused (${reg.status}): ${body.error ?? "unknown"}`);
+  }
 
   const { sessionId } = await api("/a2a/session", {
     method: "POST",

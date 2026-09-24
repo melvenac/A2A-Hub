@@ -163,7 +163,6 @@ cat > ~/docker-compose/a2a-hub/.env << 'EOF'
 # Required
 ANTHROPIC_API_KEY=sk-ant-...
 CONVEX_URL=http://convex:3210
-HUB_BOOTSTRAP_KEY=<run: openssl rand -hex 32>
 HUB_URL=https://hub.tarrantcountymakerspace.com
 PORT=4000
 
@@ -184,12 +183,7 @@ CONFIDENCE_THRESHOLD=0.85
 EOF
 ```
 
-Generate a proper bootstrap key:
-
-```bash
-# Generate and copy this into .env as HUB_BOOTSTRAP_KEY
-openssl rand -hex 32
-```
+There is no bootstrap or admin key. Registration is open, and each agent brings its own key (T-003, `v1.9.0`); see `docs/joining-the-hub.md`.
 
 Start everything:
 
@@ -248,7 +242,7 @@ cd ~/Projects/Self-Improving-Agent/wrapper
 npm install
 npx tsx src/index.ts \
   --hub https://hub.tarrantcountymakerspace.com \
-  --key <your-bootstrap-key> \
+  --key <this-agent-s-own-key> \
   --name clark
 ```
 

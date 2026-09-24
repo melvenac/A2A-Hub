@@ -74,7 +74,6 @@ The A2A Intelligent Hub is the rendezvous point that makes this possible: a cent
 |---|---|
 | **Hub Operator** | Aaron — deploys the hub, approves repo fixes via the chat channel (a peer on the hub), manages agent keys |
 | **Wrapper Agent** | Any A2A-compliant agent (Claude Code, Gemini, Grok, OpenAI, local models) that registers with the hub and polls for tasks |
-| **Bootstrap Admin** | Uses `HUB_BOOTSTRAP_KEY` to register new agents |
 
 ---
 
@@ -85,7 +84,7 @@ The A2A Intelligent Hub is the rendezvous point that makes this possible: a cent
 | `/.well-known/agent-card.json` | GET | A2A agent card metadata |
 | `/health` | GET | Health check |
 | `/api/tasks/send` | POST | A2A protocol — receive task messages |
-| `/api/agents/register` | POST | Register a new wrapper agent (requires bootstrap key) |
+| `/api/agents/register` | POST | Register a new wrapper agent (open; the agent brings its own key) |
 | `/api/agents/:name/poll` | GET | Agent polls for assigned tasks |
 | `/api/agents/:name/report` | POST | Agent reports task results |
 
@@ -117,7 +116,7 @@ See `ENTITIES.md` for full schema documentation. Key tables:
 
 - **Availability:** Hub should run 24/7 on VPS with `restart: unless-stopped`
 - **Token Efficiency:** Hub makes minimal API calls (classifier + repo-fixer only); heavy LLM work runs on the wrapper agents themselves, powered by whatever LLM backend they use (Claude, Gemini, Grok, OpenAI, local models, etc.)
-- **Security:** Bootstrap key for agent registration, API key hashing for agents, no secrets in logs.
+- **Security:** Per-agent keys, stored only as hashes; open registration with no bootstrap key (T-003); no secrets in logs.
 
   **Single-machine work must not assume a single trust domain.** On one machine every peer, repo, and request belongs to Aaron, so the three requirements below are invisible — nothing local fails without them, and no cross-repo test can surface them. They are prerequisites for use case 2, not hardening after it, because each one is cheap to build in now and expensive to retrofit into a working system:
 

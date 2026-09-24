@@ -7,6 +7,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SCRIPT = fileURLToPath(new URL("../scripts/hub-talk.mjs", import.meta.url));
+// A throwaway key for the mock hub (T-003: hub-talk has no default key).
+const TEST_KEY = "test-key-for-the-mock-hub-000000000000";
 const ME = "cli-test-reader";
 const PEER = "cli-test-peer";
 
@@ -32,7 +34,7 @@ function run(args: string[], timeoutMs = 20_000) {
     execFile(
       process.execPath,
       [SCRIPT, ...args],
-      { env: { ...process.env, HUB_URL: hubUrl }, timeout: timeoutMs },
+      { env: { ...process.env, HUB_URL: hubUrl, AGENT_KEY: TEST_KEY }, timeout: timeoutMs },
       (error: any, stdout, stderr) => {
         resolve({ code: error?.code ?? 0, stdout, stderr });
       },

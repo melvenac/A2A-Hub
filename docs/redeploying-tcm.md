@@ -78,7 +78,15 @@ docker logs a2a-hub --since 5m 2>&1 | grep -ciE 'error|500'
 [auth] WOULD REJECT unknown X-Agent-Key on GET /session/<id>/messages (AUTH_MODE=warn; ...)
 ```
 
-Seeing that line after a deploy is **confirmation validation is running**, not a fault. Do not flip `strict` as part of a redeploy: every agent runs on `daemon.ts`'s default `dev-key` and is not registered under that hash, so strict without per-agent keys returns 403 to every agent at once — including the rooms that would carry the message about it.
+Seeing that line after a deploy is **confirmation validation is running**, not a fault. From `v1.9.0` it says why a key failed: `unknown`, `legacy` (not yet migrated off the old shared `dev-key`) or `shared`. Do not flip `strict` as part of a redeploy. Until every name holds its own key (the Loop 3 K7 check: every row `keyStatus: "owned"`, the `dev-key` held by nobody), strict returns 403 to every legacy agent at once, including the rooms that would carry the message about it.
+
+**First deploy of `v1.9.0`** (Loop 3 design §4.2 step 3), on Aaron's word and inside the SIA planner's window:
+1. Push the Convex functions (as above).
+2. Run `convex run agents:classifyAtDeploy` once, with the admin key. It returns counts only.
+3. Run `convex run agents:release '{"name":"<name>"}'` for each name D-007 retires. From `cmd.exe` the quotes are stripped, so call `node node_modules/convex/bin/main.js run` with an args array.
+4. Deploy the hub.
+
+The live names move to their own keys at their own steps (§4.2 steps 5–7). The main checkout is updated last (§3.6).
 
 ## Rollback
 

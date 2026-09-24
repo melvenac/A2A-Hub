@@ -53,18 +53,19 @@ Registered wrapper agents.
 |---|---|---|
 | `name` | `string` | Agent name (unique identifier) |
 | `apiKeyHash` | `string` | Hashed API key for authentication |
-| `agentCard` | `any` | A2A protocol agent card metadata |
+| `agentCard` | `any` | A2A protocol agent card metadata. `kind: "human"` marks a human peer's row (the browser client's `aaron`): its peer stays `human`, and `listOnline` leaves it out (Loop 3 §12) |
 | `lastSeen` | `number` | Last heartbeat timestamp |
 | `status` | `union` | One of: `online`, `offline` |
 | `activeInstanceId` | `string?` | Live daemon process id (ADR-011). Absent = legacy client |
 | `lastHeartbeatAt` | `number?` | Last instance-aware heartbeat. Absent = legacy / stale |
 | `askPolicy` | `{ allow: string[] }?` | Who may ask this peer (ADR-012). Absent = allow all |
+| `keyStatus` | `"owned" | "legacy"?` | T-003. Stored, never derived from how many names share a hash. `owned` is set when a name acquires a key under the v1.9.0 rules (insert, migration, rotate) or by `classifyAtDeploy` for a row unshared at deploy. Absent reads as `legacy`. **Only an owned row authenticates** |
 
 **Indexes:**
 - `by_name` — Lookup agent by name
 - `by_apiKeyHash` — Auth lookup from a presented key hash
 
-`agents.register` upserts on `by_name`: a second register for the same name patches the existing row (`apiKeyHash`, `agentCard`, `lastSeen`, `status: "online"`) instead of inserting a duplicate. After the upsert it collapses extras for that name, keeping **max `lastSeen`** and deleting the rest (bounded per mutation). A register with `instanceId` also sets `activeInstanceId` / `lastHeartbeatAt` (takeover). Clients that omit `instanceId` leave those fields untouched. `GET /a2a/agents/live` reports `rowCount` per name (table rows before HTTP mapping).
+`agents.register` (and `registerAgent`, which also returns what happened) decides by `convex/keyLogic.ts` `decideRegister`. A key held by another name is refused (U1). So is a key under 32 characters that the name does not already hold. On an owned name, a different key is refused (C7). A legacy name re-registering the key it holds is allowed in warn (U2). A legacy name presenting a fresh key is a **migration**: its row is deleted and a fresh owned row inserted, in one transaction (D-007). Refusals throw a `ConvexError { status, reason }`. Every refusal leaves the stored hash unchanged. `agents.rotateKey` is the only way an owned row changes its key: a compare-and-swap on the current hash. Rotation also takes the instance lease. Any write that takes a name off a hash first stamps that hash's unclassified co-holders `legacy`, so attrition never promotes a row. `agents.classifyAtDeploy` and `agents.release` are internal (admin key only). A same-key re-register patches the existing row (`agentCard`, `lastSeen`, `status: "online"`) instead of inserting a duplicate. After the upsert it collapses extras for that name, keeping **max `lastSeen`** and deleting the rest (bounded per mutation). A register with `instanceId` also sets `activeInstanceId` / `lastHeartbeatAt` (takeover). Clients that omit `instanceId` leave those fields untouched. `GET /a2a/agents/live` reports `rowCount` per name (table rows before HTTP mapping).
 
 ---
 

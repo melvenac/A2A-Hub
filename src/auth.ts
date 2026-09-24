@@ -38,6 +38,34 @@ export function hashKey(apiKey: string): string {
   return createHash("sha256").update(apiKey).digest("hex");
 }
 
+/**
+ * Why a key that did not authenticate failed, for the log line only (Loop 3
+ * §11, B2). "legacy" is a key not yet migrated (the old shared key among them),
+ * "shared" is one hash held by two names. The decision never depends on this:
+ * getByKeyHash already said null, and a failed lookup here just reads "unknown".
+ */
+async function describeKey(convex: ConvexHttpClient, apiKeyHash: string): Promise<string> {
+  try {
+    const status = await convex.query(api.agents.keyHashStatus, { apiKeyHash });
+    return status === "legacy" || status === "shared" ? status : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+/**
+ * POST /read's reader check (T-049 limit L2, Loop 3 §5). The reader must be
+ * the caller. strict: reject. warn: log and mark as before.
+ */
+export function checkReader(
+  reader: string,
+  caller: string | null | undefined,
+  mode: AuthMode = authMode
+): "ok" | "warn" | "reject" {
+  if (caller != null && caller === reader) return "ok";
+  return mode === "strict" ? "reject" : "warn";
+}
+
 export function requireAgentKey(convex: ConvexHttpClient) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const apiKey = req.headers["x-agent-key"] as string | undefined;
@@ -61,14 +89,15 @@ export function requireAgentKey(convex: ConvexHttpClient) {
 
     if (!agent) {
       const where = `${req.method} ${req.path}`;
+      const what = await describeKey(convex, hashKey(apiKey));
       if (authMode === "strict") {
-        console.warn(`[auth] REJECT unknown X-Agent-Key on ${where}`);
+        console.warn(`[auth] REJECT ${what} X-Agent-Key on ${where}`);
         return res.status(403).json({ error: "Invalid X-Agent-Key" });
       }
       // Deliberately does not echo the key or its hash — this line goes to a
       // log Aaron reads to decide when strict is safe, not to a secret store.
       console.warn(
-        `[auth] WOULD REJECT unknown X-Agent-Key on ${where} ` +
+        `[auth] WOULD REJECT ${what} X-Agent-Key on ${where} ` +
           `(AUTH_MODE=warn; set AUTH_MODE=strict to enforce)`
       );
       req.agentName = null;
