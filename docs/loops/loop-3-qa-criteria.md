@@ -245,7 +245,18 @@ a request, or any path makes `dev-key` resolve to a name.
    real key directory is read (P6). The report states this for the QA seat and asks Rivet to state it
    for the build.
 
-**Fails if:** K counts any hit, or any output carries more than an 8-hex prefix.
+5. **The one exception (Relay, 2026-09-24, granted narrowly).** Exactly one full hash may appear in
+   tracked code: `RETIRED_SHARED_KEY_HASH` in `convex/keyLogic.ts:22-23` at `84694b9`, and it must
+   equal `sha256("dev-key")`. The reasons: `dev-key` is a published, retired literal, so its hash
+   reveals nothing. Under K6's definition a key is one that authenticates on tcm or the main stack,
+   and after Loop 3 this one authenticates nowhere. It is the deterministic backstop Relay required
+   (DK). The alternative, computing it from the literal, would break K5.1. At `84694b9` the full
+   hash occurs once (a search of `convex src scripts client/src tests`; `tests/retired-key.test.ts:78`
+   carries only the 8-hex prefix, in a test title).
+
+**Fails if:** K counts any hit other than the exception in 5, the exception's constant is not
+`sha256("dev-key")`, the full hash appears a second time anywhere, or any output carries more than
+an 8-hex prefix.
 
 ### K7 — live, read-only, on Aaron's word for each act (D-007; design §4.2, §4.3 rev 3)
 
