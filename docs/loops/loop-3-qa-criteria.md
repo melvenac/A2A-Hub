@@ -1,14 +1,13 @@
 # Loop 3 — acceptance criteria (Gauge)
 
 **Date:** 2026-09-24 · **Author:** QA seat (Gauge), session 16 · **Status:** criteria, written
-before any candidate exists. Nothing has been built or run (SIA hold). **B1 and B2 are provisional**
-until Rivet writes them into the design (ruling 2). Their pass conditions are fixed here only where
-ruling 2 already fixes them.
+before any candidate exists. Nothing has been built or run (SIA hold). B1 and B2 are final against
+the design's §11 (revision 2).
 
 **Derived from:** the brief `docs/loops/loop-3-per-agent-keys-brief.md` at `fe0ef05` **with
 Amendment 1** (K1–K8), ruling 1 (`c34a792`: the R1 case, K2's warn path), ruling 2 (`e709329`: B1,
-B2), and Rivet's design `docs/loops/loop-3-design.md` at `origin/loop/3-per-agent-keys` = `24543f9`,
-**design text only**. Code references are to `ea9d057`.
+B2), and Rivet's design `docs/loops/loop-3-design.md` at `origin/loop/3-per-agent-keys` = `88a8e0f`
+(revision 2, with §11 B1/B2), **design text only**. Code references are to `ea9d057`.
 
 **Baseline** ("old"): `ea9d057` (master, v1.8.0): the hub build, its Convex functions, and its
 `hub-talk`. **Candidate:** none yet. Relay names a frozen SHA. Every observation names it. If the
@@ -290,49 +289,68 @@ promotes `qa-r1c`, or the control is not promoted.
 **Fails if:** any old-client scenario differs from its baseline, or `check` passes with a missing
 or dead key file.
 
-### B1 — a new name on the old client, between deploy and step 9 (ruling 2) — PROVISIONAL
+### B1 — a new name on the old client, between deploy and step 9 (ruling 2; design §11)
 
-The act: `ea9d057` hub-talk, no `AGENT_KEY` (so `dev-key`), `--as qa-b1-new-<tag> --say x`, against
-the candidate warn hub. Two sub-cases: while legacy rows hold `dev-key` (expect U1's 409), and
-after none do (expect the floor's 400).
+Setup: the candidate warn hub. An existing room between two registered `qa-` seats. The client
+under test is `ea9d057` hub-talk with no `AGENT_KEY` (so `dev-key`), behind X. It runs twice: while
+P8 legacy rows hold `dev-key` (register refused by U1, 409 in X's log), and after the last one has
+migrated (refused by the floor, 400).
 
-**Observed and reported in every case:** the register status (from X's log), whether an `agents` row
-and a `peers` row exist for the name afterwards, hub-talk's exit code and stderr, and what happened
-to the `--say`.
+1. **The refusal is loud, with the right cause.** `--as qa-b1-<tag> --session <room> --say x`: exit
+   1, and stderr contains `not registered on this hub`. It must not show a bare `Unknown peer`.
+   Afterwards, `agents:getByName` and `peers:getByName` for the name are both null, and the room
+   has no turn from it.
+2. **The other paths of §11's table**, each observed and matched to the design's column:
+   - `--peer <a registered seat> --say x`: exit 1, `not registered on this hub`, no session created;
+   - `--session <room> --wait` and `--inbox`: they read the room, the receipt failure is on stderr,
+     and there is no mark for the name in `/reads`;
+   - no-arg lobby mode with no peer opening it, `--join-timeout 5`: exit 1 `no live IDE peer`. This
+     is the silent path, and the design closes it by rule, not code. So **the rule is checked in
+     text:** "a new seat name is created only by `--init-key` from the new-client worktree" is in
+     `joining-the-hub.md` and in the Q1 text sent to the SIA planner (the record's copy).
+3. **The rule's remedy works.** `--init-key` for the same name from the candidate client (QA key
+   directory), then the same old-client `--say`: exit 0, a turn from the name, and the name's stored
+   prefix is unchanged by the old client's refused `dev-key` register (C7).
 
-**Pass condition: the outcome the design states for B1, asserted exactly.** It is written here when
-Rivet's B1 text lands (ruling 2 requires it before the first code commit). **Fixed now, from
-ruling 2:** the outcome must not be silent. The failure is either visible to the seat, or excluded
-by a stated rule. In the second case, the criterion also checks that the rule is in
-`joining-the-hub.md` and in the Q1 text to the SIA planner. A result where the seat carries on
-while no peer row exists passes only if the design names that exact outcome and the rule that
-keeps seats out of it.
+**Fails if:** any old-client path exits 0 without the name being registered, any refused register
+leaves an `agents` or `peers` row, the cause is not named, the rule text is missing, or the remedy
+fails.
 
-### B2 — `getByKeyHash` stays compatible with the old hub (ruling 2) — PROVISIONAL
+### B2 — the old hub against the new functions (ruling 2; design §11)
 
-Modelled on Loop 1's `skew.mjs`. There are four hubs: the `ea9d057` app on old functions (baseline),
-the **`ea9d057` app on candidate functions**, and the candidate app on candidate functions, each in
-warn, plus the old app on candidate functions in strict. There are three keys: **legacy** (a P8
-row), **unknown** (43 characters, never registered) and **owned** (registered through the
+Modelled on Loop 1's `skew.mjs`. Hubs: the `ea9d057` app on `ea9d057` functions (baseline), the
+**`ea9d057` app on candidate functions** in warn and in strict, and the candidate app on
+`ea9d057` functions (step 5 only). Keys: **legacy** (a P8 row), **shared** (a P8 hash with two
+holders), **unknown** (43 characters, never registered) and **owned** (registered through the
 candidate).
 
-1. **Function level:** `agents:getByKeyHash` returns exactly `null` (not an object) for the
-   legacy hash and the unknown hash. For the owned hash it returns an object whose `name` is the
-   owner. The owned case is the known positive that null is not inert.
-2. **Old app on candidate functions, strict:** legacy 403, unknown 403, owned 200 on a guarded
-   GET. **Warn:** legacy and unknown are 200, each with the old hub's `WOULD REJECT unknown` line;
-   owned is 200 with no line.
-3. **Every other changed return:** list every exported Convex function whose return shape differs
-   between `ea9d057` and the candidate (static diff of `convex/`), and every call to one of them
-   from `ea9d057`'s `src/`. For each such call, a route that exercises it on the old app with
-   candidate functions answers with the same status as on the old app with old functions, and never
-   500.
-4. **Old client scenario** (as N.1) with the owned key: the old app on candidate functions gives the
-   same exit codes and stdout as the old app on old functions.
+1. **Function level.** `agents:getByKeyHash` returns exactly `null`, not an object, for the legacy,
+   shared and unknown hashes. For the owned hash it returns an object whose `name` is the owner. That
+   is the known positive, and it shows the nulls are not inert. `agents:keyHashStatus` returns
+   exactly one of the strings `owned`, `legacy`, `shared` and `unknown`, each matching its key,
+   and nothing else (no name, no hash).
+2. **Old app on candidate functions, on a guarded GET:** strict gives 403 for legacy, shared and
+   unknown, and 200 for owned. Warn gives 200 for all four, with the old hub's `WOULD REJECT
+   unknown` line for the first three and no line for owned.
+3. **A refused register through the old app** (U1: a new name with the owned key; C7: the owned name
+   with a fresh key). Each is non-200, makes no `peers` row, and leaves every stored prefix
+   unchanged.
+4. **No return shape changes outside §11's table.** A static diff of every exported function in
+   `convex/` between `ea9d057` and the candidate, against every `api.*` call in `ea9d057`'s `src/`.
+   Every function the old hub calls has an unchanged argument validator (new arguments optional
+   only) and return shape, or appears in §11's table with the change stated there. The search is
+   validated on a known positive: it must list `agents.getByKeyHash` and `agents.register` as
+   called by the old hub.
+5. **The auth decision never depends on `keyHashStatus`.** On the candidate app against `ea9d057`
+   functions (the query does not exist there), an unknown key gets strict 403 or warn 200, never
+   500. The log line says `unknown`.
+6. **Old client scenario** (as N.1) with the owned key: the old app on candidate functions gives the
+   same exit codes and stdout as on `ea9d057` functions.
 
-Finalised against the design's B2 text (the name of the new reason-carrying query or field)
-when Rivet writes it. **Fixed now, from ruling 2:** every result that authenticates no one is
-`null` from `getByKeyHash`.
+**Fails if:** any non-authenticating result reaches the old hub as anything but `null`, strict on
+the old app admits a legacy, shared or unknown key, a refused register leaves a peer row or changes
+a hash, a changed return shape is missing from §11's table, or a `keyHashStatus` failure changes
+an auth decision.
 
 ---
 
