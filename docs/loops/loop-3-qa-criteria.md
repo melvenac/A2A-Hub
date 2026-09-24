@@ -282,9 +282,19 @@ promotes `qa-r1c`, or the control is not promoted.
    key and no hash.
 4. **Loop 1 still runs:** `selftest`, `rows A1 A2 A3 A5 A7`, `a6` and `skew` (harness
    @ `0ca2358`) pass on the candidate. `a6`'s strict hub is P7's strict hub.
-5. **Local stack** (`start-stack.ps1` generates alice's and bob's key files, and both daemons
-   answer): **not run by QA without Aaron's word.** It touches the real local stack and the real key
-   directory. See the questions below.
+5. **Local stack** (split by Relay's ruling on Q1, below):
+   - **(a) In QA:** key generation through the code path `start-stack.ps1` calls (`hub-key.mjs
+     init`, for `alice` and `bob`), with `A2A_KEY_DIR` set to scratch. Both directions: the two key
+     files exist under scratch afterwards, and did not before. **No file lands outside scratch**:
+     the real key directory's listing is unchanged (P6). The files differ, and each is at least 32
+     characters. Nothing reaches the network (X logs zero requests). Static: `start-stack.ps1` passes
+     `A2A_KEY_DIR` through, or leaves it inherited, and hard-codes no path under `~/.a2a-hub`.
+     **QA never runs `start-stack.ps1` itself:** it reuses anything listening on 3210 or 4000, and it
+     is never run from a seat worktree.
+   - **(b) Live, on Aaron's word** (as Loop 1's A6 was): at the main stack's start, alice and bob get
+     key files, and both migrate in whichever order they register (§4.1, R1's certain case). Checked
+     by a read-only data read: both rows are `owned` with distinct prefixes, and no row holds
+     `dev-key`. Both daemons answer.
 
 **Fails if:** any old-client scenario differs from its baseline, or `check` passes with a missing
 or dead key file.
@@ -365,13 +375,16 @@ an auth decision.
 - **tcm's live behaviour** beyond K7's data read and log count. No request is sent to tcm.
 - **Races beyond two concurrent rotations.** Convex serialisation is trusted, not proven.
 
-## Questions for Relay
+## Questions put to Relay, and the rulings
 
-1. **N.5, the local stack.** `start-stack.ps1` writes real key files under
-   `~/.a2a-hub/keys/127.0.0.1-4000/`. If it honours `A2A_KEY_DIR`, QA can run it against scratch
-   ports and a scratch key directory and needs no real one. Can Rivet make that so, or is N.5 an act
-   on Aaron's word?
-2. **The stack itself.** Every row except K7 needs a throwaway QA stack: two candidate hubs, the
-   `ea9d057` hub, and a scratch Convex. Is that covered by the hold's lift, as Loop 1's QA stack was?
-3. **Instrument additions** (X's request log and `forward-then-drop`, A's `keyStatus`, K) are built
-   and validated before the run, on the QA branch, like Loop 1's. They widen no criterion.
+1. **N.5, the local stack.** `start-stack.ps1` writes real key files. Can it honour `A2A_KEY_DIR`?
+   **Ruling (Relay, 2026-09-24):** yes, `start-stack.ps1` must honour `A2A_KEY_DIR`, as §3.2's
+   resolver does. That is part of the build. QA does not run `start-stack.ps1` (it reuses
+   3210/4000, and it is never run from a seat worktree). N.5 is split: (a) key generation into a
+   scratch `A2A_KEY_DIR` through `hub-key.mjs init`, in QA; (b) alice and bob migrating at the live
+   main-stack start, on Aaron's word. Written into N.5 above.
+2. **The throwaway QA stack.** **Ruling:** the SIA planner's lift of the local hold covers it (two
+   candidate hubs, the `ea9d057` hub, scratch Convex), as in Loop 1. Relay will have the SIA
+   planner confirm this explicitly at the lift. Full stops for SIA suites still apply during the run.
+3. **Instrument additions.** **Ruling:** approved. They are built and validated on the QA branch
+   before the run, each against a known positive. They widen no criterion.
