@@ -1,0 +1,10 @@
+PASS A6.4-control: control: old hub-talk on old hub, default lobby join works (instrument can see it)
+      observed: {"say":0,"wait":0,"got":true,"sayErr":["[hub-talk] qa-lobo2-mug1v44e session k573bmbmx1ckh1bkeme4en3xjs8f0mbg","[hub-talk] sent turn 1"],"waitErr":["[hub-talk] waiting for another ide-session peer…","[hub-talk] qa-lobo1-mug1v44e session k573bmbmx1ckh1bkeme4en3xjs8f0mbg"]}
+PASS A6.4: candidate: default lobby join (no --peer/--session): say 0, wait 0 and receives
+      observed: {"say":0,"wait":0,"got":true,"sayErr":["[hub-talk] qa-lobn2-mug1v44e session k577ydhsk70q9y2g9bdse30jeh8f0ydw","[hub-talk] sent turn 1"],"waitErr":["[hub-talk] waiting for another ide-session peer…","[hub-talk] qa-lobn1-mug1v44e session k577ydhsk70q9y2g9bdse30jeh8f0ydw"]}
+PASS A6.5-strict: strict: /read and /reads reject no key and a wrong key; accept a valid key
+      observed: {"reads-nokey":401,"read-nokey":401,"reads-wrongkey":403,"read-wrongkey":403,"reads-validkey":200,"read-validkey":200}
+PASS A6.5-warn: warn (default): a wrong key passes through on /reads
+      observed: {"reads":200}
+
+A6 dyn: 4/4; failed: none

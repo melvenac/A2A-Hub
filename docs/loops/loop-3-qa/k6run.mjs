@@ -14,8 +14,10 @@ const walk = (p) => (statSync(p).isDirectory() ? readdirSync(p).flatMap((f) => w
 // the run's keys (never printed)
 const keys = new Set();
 for (const f of readdirSync(TMP).filter((f) => /^secrets-.*\.json$/.test(f))) for (const k of JSON.parse(readFileSync(join(TMP, f), "utf8"))) keys.add(k);
-for (const dir of ["keys", "n5-keys"].map((d) => join(TMP, d)).filter(existsSync)) for (const f of walk(dir)) keys.add(readFileSync(f, "utf8").trim());
-const salts = existsSync(join(TMP, "salts.txt")) ? readFileSync(join(TMP, "salts.txt"), "utf8").split(/\s+/).filter(Boolean) : [];
+// key files and harness salts anywhere under the run dir (the Loop 1 scripts use a subdirectory)
+const everything = walk(TMP);
+for (const f of everything.filter((f) => /[\\/](keys|n5-keys)[\\/]/.test(f))) keys.add(readFileSync(f, "utf8").trim());
+const salts = everything.filter((f) => basename(f) === "salts.txt").flatMap((f) => readFileSync(f, "utf8").split(/\s+/).filter(Boolean));
 
 // artifacts: never the key records themselves
 const isRecord = (f) => /[\\/](keys|n5-keys)[\\/]/.test(f) || /secrets-.*\.json$/.test(basename(f)) || basename(f) === "salts.txt" || /^import-/.test(basename(f));

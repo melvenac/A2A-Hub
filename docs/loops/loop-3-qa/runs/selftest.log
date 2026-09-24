@@ -1,0 +1,20 @@
+PASS H.talk: --say exits 0; --wait exits 0 and prints t1
+      observed: {"say":0,"wait":0,"out":"--- qa-st-a-mug1txek ---\nt1"}
+PASS H.tmp: cursor file in QA_TMP (known positive), none in real temp
+      observed: {"qa":true,"real":0}
+PASS H.exit2: --wait with no new turn exits 2
+      observed: 2
+PASS X.pass: --inbox through the proxy == direct (stdout, stderr, exit)
+      observed: {"direct":[0,56],"proxy":[0,56]}
+PASS X.pass.turns: both turns stored once each via proxy and direct
+      observed: ["t1","t2"]
+PASS X.500: reads=500 answers 500 through proxy; direct unaffected
+      observed: {"direct":200,"proxy":500}
+PASS X.drop: read=drop destroys the socket
+      observed: socket error (UND_ERR_SOCKET)
+PASS X.delay: read=delay:2000 holds the request >= 2 s
+      observed: 2067
+PASS X.inject: read=inject lands one new turn from A before forwarding
+      observed: ["1:qa-st-a-mug1txek:t1","2:qa-st-a-mug1txek:t2","3:qa-st-a-mug1txek:qa injected turn"]
+
+selftest: 9/9 pass

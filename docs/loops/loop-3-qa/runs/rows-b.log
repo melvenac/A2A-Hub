@@ -1,0 +1,45 @@
+PASS MIG.P8: seed: one legacy row with askPolicy, no keyStatus; room has 2 turns and a mark for it
+      observed: {"rows":1,"status":"none","policy":true,"mark":1}
+PASS MIG.1: poller known positive: across a two-act replacement it sees the zero-row gap
+      observed: {"min":0,"max":1,"polls":119}
+PASS MIG.2: --init-key with the poller running: never 0, never 2 rows; after: exactly one owned row, new _id, old _id gone, MIGRATE logged
+      observed: {"code":0,"poller":{"min":1,"max":1,"polls":77},"rows":1,"status":"owned","newId":true,"oldIdGone":true,"migrateLines":1}
+PASS MIG.3: the fresh row keeps nothing: no askPolicy (present before); lease is the new instance's
+      observed: {"askPolicy":"none","lease":true,"hbAfterAct":true}
+PASS MIG.4: peers row, session, sessionPeers and messages of its room deep-equal; mig2 legacy (stamped, not promoted); sm resolves to no name
+      observed: {"counts":[[1,1,2,2],[1,1,2,2]],"equal":true,"mig2":"legacy","sm":null}
+PASS MIG.5: the room still works: --inbox exits 0 and the mark moves to the last turn
+      observed: {"code":0,"mark":3}
+PASS REL.known-positive: the snapshot sees non-zero counts in every table
+      observed: [1,1,2,2]
+PASS REL.3: release: agents rows 1 -> 0; peers, session, sessionPeers, messages deep-equal with the same counts; no other agents row changed
+      observed: {"release":{"deleted":1},"agents":[1,0],"counts":[[1,1,2,2],[1,1,2,2]],"equal":true,"othersUnchangedExceptStamp":true}
+PASS REL.4: stamping: rel2 reads legacy; sr resolves to no name on both hubs
+      observed: {"rel2":"legacy","W":null,"S":403}
+PASS REL.5: release is admin-only: a public call is refused and changes nothing; releasing an unknown name changes nothing
+      observed: {"publicRefused":true,"unknown":{"deleted":0},"unchanged":true}
+INFO REL.7: ea9d057 hub-talk (dev-key) on the released name: exit 0; its turn was delivered; agents rows for the name afterwards: 0; listed in /a2a/agents/live: false. Design §4.3 rev 3 expects: register refused, talks unattributed, missing from agents/live.
+PASS REL.6a: fresh --init-key: exit 0, inserted owned, prefix = printed, key resolves; peers row same _id and type
+      observed: {"code":0,"rows":1,"status":"owned","printedMatches":true,"who":"qa-rel-mug1mht5","peerSameId":true,"type":"agent"}
+PASS REL.6b: the old room: --inbox exits 0 and the mark moves to the last turn
+      observed: {"code":0,"mark":4,"turns":4}
+PASS H1.1: hub startup/notification registers aaron as human (known positive: the instrument reads the type)
+      observed: human
+PASS H1.2a: hub-key init --as aaron --kind human --register: exit 0; peers type still human
+      observed: {"code":0,"type":"human","shaped":false}
+PASS H2: aaron: exactly one agents row, owned, agentCard.kind human; its key resolves to aaron
+      observed: {"rows":1,"status":"owned","kind":"human","who":"aaron"}
+PASS H1.2b: a second register with aaron's own key: 200, type still human
+      observed: {"status":200,"type":"human"}
+PASS H1.3: an agent registering an existing human peer's name: type stays human, metadata unchanged; both directions: new ide-session -> agent, new human -> human
+      observed: {"reg":200,"type":"human","metadataSame":true,"newAgent":"agent","newHuman":"human"}
+PASS H1.4: an agent cannot re-register aaron: 409 (C7); type and stored hash unchanged
+      observed: {"status":409,"type":"human","hashSame":true}
+PASS H2.rotate: rotate applies to aaron like any row: hub-key rotate exit 0; new key resolves to aaron, old key does not; output carries no key
+      observed: {"code":0,"newWho":"aaron","oldWho":null,"shaped":false}
+PASS H3.1: listOnline and /a2a/agents/live leave out aaron; known positive: a qa- agent registered now is listed
+      observed: {"listOnline":{"aaron":false,"live":true},"agentsLive":{"aaron":false,"live":true}}
+PASS H3.3: the ea9d057 hub on candidate functions does not list aaron either (known positive: it lists the qa- agent)
+      observed: {"aaron":false,"live":true}
+
+rows-b: 21/21 pass; failed: none

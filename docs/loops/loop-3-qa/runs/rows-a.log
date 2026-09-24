@@ -1,0 +1,136 @@
+PASS R1.P8: seed read back: 3 rows share s's prefix, u has its own, none has keyStatus
+      observed: ["r1a:1:8684918c:none","r1b:1:8684918c:none","r1c:1:8684918c:none","r1u:1:3a3ceed6:none"]
+PASS R1.0.s: shared key s resolves to no name (warn null, strict 403)
+      observed: {"W":null,"S":403}
+PASS R1.1.r1a: --init-key exit 0; one owned row, new _id, prefix = printed; its key resolves to it on both hubs; output carries no key
+      observed: {"code":0,"rows":1,"status":"owned","newId":true,"printed":"e999993a","stored":"e999993a","who":{"W":"qa-r1a-mug1kn9d","S":"qa-r1a-mug1kn9d"},"shaped":false}
+PASS R1.1.s: shared key s resolves to no name (warn null, strict 403)
+      observed: {"W":null,"S":403}
+PASS R1.2.r1b: --init-key exit 0; one owned row, new _id, prefix = printed; its key resolves to it on both hubs; output carries no key
+      observed: {"code":0,"rows":1,"status":"owned","newId":true,"printed":"452f0ec4","stored":"452f0ec4","who":{"W":"qa-r1b-mug1kn9d","S":"qa-r1b-mug1kn9d"},"shaped":false}
+PASS R1.2.s: shared key s resolves to no name (warn null, strict 403)
+      observed: {"W":null,"S":403}
+PASS R1.2.c: c, now the only holder of s, reads legacy (not promoted by attrition)
+      observed: legacy
+PASS R1.3.u-before: control u (own key, no status) does not resolve before classify
+      observed: {"W":null,"S":403}
+PASS R1.3.classify: classifyAtDeploy ok; output is counts only (no name, no hash)
+      observed: {"demoted":0,"legacy":0,"owned":1,"untouched":4}
+PASS R1.3.c: c stays legacy after classify (the stamping layer)
+      observed: legacy
+PASS R1.3.s: shared key s resolves to no name (warn null, strict 403)
+      observed: {"W":null,"S":403}
+PASS R1.3.u: control u becomes owned and resolves (classify promotes when it should)
+      observed: {"status":"owned","who":{"W":"qa-r1u-mug1kn9d","S":"qa-r1u-mug1kn9d"}}
+PASS R1.3.idem: a second classify changes nothing (data diff empty)
+      observed: compared keyStatus of every row
+PASS R1.4.r1c: --init-key exit 0; one owned row, new _id, prefix = printed; its key resolves to it on both hubs; output carries no key
+      observed: {"code":0,"rows":1,"status":"owned","newId":true,"printed":"44b283fa","stored":"44b283fa","who":{"W":"qa-r1c-mug1kn9d","S":"qa-r1c-mug1kn9d"},"shaped":false}
+PASS R1.4.s: shared key s resolves to no name (warn null, strict 403)
+      observed: {"W":null,"S":403}
+PASS R1.4.nohold: no row holds s
+      observed: 0
+PASS R1.dirs: both directions: ka, kb, kc each resolve only to their own name
+      observed: {"a":{"W":"qa-r1a-mug1kn9d","S":"qa-r1a-mug1kn9d"},"b":{"W":"qa-r1b-mug1kn9d","S":"qa-r1b-mug1kn9d"},"c":{"W":"qa-r1c-mug1kn9d","S":"qa-r1c-mug1kn9d"}}
+PASS K1.1: distinct keys: each resolves only to its own name, from both hubs
+      observed: {"reg":[200,200],"a":{"W":"qa-k1a-mug1kn9d","S":"qa-k1a-mug1kn9d"},"b":{"W":"qa-k1b-mug1kn9d","S":"qa-k1b-mug1kn9d"}}
+PASS K1.2.warn: new name with a held key: 409; body names neither the holder nor any hash run; no agents or peers row; ka still a
+      observed: {"status":409,"err":"key held by another agent","agentRow":false,"peerRow":false,"who":"qa-k1a-mug1kn9d"}
+PASS K1.3.warn: owned name presenting another's key: 409; kb still resolves to b
+      observed: {"status":409,"who":"qa-k1b-mug1kn9d"}
+PASS K1.2.strict: new name with a held key: 409; body names neither the holder nor any hash run; no agents or peers row; ka still a
+      observed: {"status":409,"err":"key held by another agent","agentRow":false,"peerRow":false,"who":"qa-k1a-mug1kn9d"}
+PASS K1.3.strict: owned name presenting another's key: 409; kb still resolves to b
+      observed: {"status":409,"who":"qa-k1b-mug1kn9d"}
+PASS K1.4.warn: legacy name moving onto a held hash: 409, stored prefix unchanged
+      observed: {"status":409,"same":true}
+PASS K1.4.strict: legacy name moving onto a held hash: 409, stored prefix unchanged
+      observed: {"status":409,"same":true}
+PASS K1.5.warn: floor through the candidate hub: 31 chars -> 400 and no row; 32 chars -> 200, owned, resolves
+      observed: {"s31":400,"e31":"key too short (min 32)","row31":0,"s32":200,"status32":"owned","who32":"qa-k1f32w-mug1kn9d"}
+PASS K1.5.strict: floor through the candidate hub: 31 chars -> 400 and no row; 32 chars -> 200, owned, resolves
+      observed: {"s31":400,"e31":"key too short (min 32)","row31":0,"s32":200,"status32":"owned","who32":"qa-k1f32s-mug1kn9d"}
+PASS K2.1: rotate on strict: 200 {ok,name}, body carries no key or hash; after: k1 -> a both hubs, k0 -> strict 403 / warn null + a WOULD REJECT line; no row holds k0
+      observed: {"before":{"k0":{"W":"qa-k2a-mug1kn9d","S":"qa-k2a-mug1kn9d"},"k1":{"W":null,"S":403}},"status":200,"body":{"ok":true,"name":"qa-k2a-mug1kn9d"},"after":{"k1":{"W":"qa-k2a-mug1kn9d","S":"qa-k2a-mug1kn9d"},"k0":{"W":null,"S":403}},"wouldLines":1,"rowsWithK0":0}
+PASS K2.2.warn.wrong-key: negative: expected status, nothing rotated (k1 still -> a)
+      observed: {"status":403,"err":"rotation requires your current key","still":"qa-k2a-mug1kn9d"}
+PASS K2.2.warn.no-header: negative: expected status, nothing rotated (k1 still -> a)
+      observed: {"status":401,"err":"Missing X-Agent-Key","still":"qa-k2a-mug1kn9d"}
+PASS K2.2.warn.legacy-key: negative: expected status, nothing rotated (k1 still -> a)
+      observed: {"status":403,"err":"rotation requires your current key","still":"qa-k2a-mug1kn9d"}
+PASS K2.2.warn.held-by-other: negative: expected status, nothing rotated (k1 still -> a)
+      observed: {"status":409,"err":"key held by another agent","still":"qa-k2a-mug1kn9d"}
+PASS K2.2.warn.short: negative: expected status, nothing rotated (k1 still -> a)
+      observed: {"status":400,"err":"key too short (min 32)","still":"qa-k2a-mug1kn9d"}
+PASS K2.2.warn.same-as-current: negative: expected status, nothing rotated (k1 still -> a)
+      observed: {"status":400,"err":"new key must differ from the current key","still":"qa-k2a-mug1kn9d"}
+PASS K2.2.strict.wrong-key: negative: expected status, nothing rotated (k1 still -> a)
+      observed: {"status":403,"err":"Invalid X-Agent-Key","still":"qa-k2a-mug1kn9d"}
+PASS K2.2.strict.no-header: negative: expected status, nothing rotated (k1 still -> a)
+      observed: {"status":401,"err":"Missing X-Agent-Key","still":"qa-k2a-mug1kn9d"}
+PASS K2.2.strict.legacy-key: negative: expected status, nothing rotated (k1 still -> a)
+      observed: {"status":403,"err":"Invalid X-Agent-Key","still":"qa-k2a-mug1kn9d"}
+PASS K2.2.strict.held-by-other: negative: expected status, nothing rotated (k1 still -> a)
+      observed: {"status":409,"err":"key held by another agent","still":"qa-k2a-mug1kn9d"}
+PASS K2.2.strict.short: negative: expected status, nothing rotated (k1 still -> a)
+      observed: {"status":400,"err":"key too short (min 32)","still":"qa-k2a-mug1kn9d"}
+PASS K2.2.strict.same-as-current: negative: expected status, nothing rotated (k1 still -> a)
+      observed: {"status":400,"err":"new key must differ from the current key","still":"qa-k2a-mug1kn9d"}
+PASS K2.2.body-names-other: a body naming another agent rotates only the caller (or is refused); the other is untouched
+      observed: {"status":200,"caller":"qa-k2body-mug1kn9d","otherStill":"qa-k2oth-mug1kn9d"}
+PASS K2.3: two rotations race with the same current key: exactly one 200; the winner's key resolves, the loser's resolves to no name
+      observed: {"statuses":[200,409],"n1":"qa-k2race-mug1kn9d","n2":null}
+PASS K2.6.warn: old key cannot restore: register with k0 -> 409 (C7); rotate back with k0 -> 403; k1 still -> a
+      observed: {"reg":409,"rot":403,"still":"qa-k2a-mug1kn9d"}
+PASS K2.6.strict: old key cannot restore: register with k0 -> 409 (C7); rotate back with k0 -> 403; k1 still -> a
+      observed: {"reg":409,"rot":403,"still":"qa-k2a-mug1kn9d"}
+PASS K4.1: strict mismatch: 403 'reader is not the caller', B unmarked
+      observed: {"status":403,"err":"reader is not the caller","mark":null}
+PASS K4.2: strict match: 200, the mark moves
+      observed: {"status":200,"mark":1}
+PASS K4.3: warn mismatch: 200, mark moves, log names reader and caller
+      observed: {"status":200,"mark":1,"logLines":1}
+PASS K4.4.unknown: warn, unknown key: 200, mark moves, log says caller unknown
+      observed: {"status":200,"mark":1,"logLines":1}
+PASS K4.4.legacy: warn, legacy key: 200, mark moves, log says caller unknown
+      observed: {"status":200,"mark":1,"logLines":1}
+PASS K8.known-positive: migration changes the stored hash (register can move it): 200, MIGRATE logged, row owned with m's prefix
+      observed: {"status":200,"migrateLines":1,"stored":true,"status2":"owned"}
+PASS K8.warn: owned name: old key 409 (U1, co-holder remains), fresh key 409 'name holds its own key', own key 200; stored hash unchanged; m -> k8; fresh -> no name
+      observed: {"old":409,"fresh":409,"freshErr":"name holds its own key; use rotate","same":200,"stored":true,"whoM":"qa-k8-mug1kn9d","whoFresh":null}
+PASS K8.strict: owned name: old key 409 (U1, co-holder remains), fresh key 409 'name holds its own key', own key 200; stored hash unchanged; m -> k8; fresh -> no name
+      observed: {"old":409,"fresh":409,"freshErr":"name holds its own key; use rotate","same":200,"stored":true,"whoM":"qa-k8-mug1kn9d","whoFresh":403}
+PASS K8.floor: once no other name holds s8, the old short key is refused by the floor (400); stored hash unchanged
+      observed: {"status":400,"stored":true}
+PASS B2.1.getByKeyHash: exactly null (not an object) for legacy, shared, unknown; {name} for owned (known positive)
+      observed: {"owned":"qa-b2own-mug1kn9d","legacy":null,"shared":null,"unknown":null}
+PASS B2.1.keyHashStatus: exactly one of the four strings each, matching, nothing else
+      observed: {"owned":"owned","legacy":"legacy","shared":"shared","unknown":"unknown"}
+PASS B2.1.U3: U3 as accepted: same-name owned pair resolves; pair with a legacy row -> null; two names -> null
+      observed: {"pair":"qa-u3pair-mug1kn9d","mixed":null,"twoNames":null}
+PASS DK.1: static search lists every public mutation that can write apiKeyHash; known positives register, registerAgent, rotateKey all found
+      observed: {"public":["agents.register","agents.registerAgent","agents.rotateKey"],"internal":["agents.classifyAtDeploy"],"helpers":["registerCore"]}
+PASS DK.2.nolegacy.register: direct call, no hub, no keyTooShort: fresh key succeeds (known positive); dev-key hash refused (ConvexError with status), no row change, getByKeyHash(dev) null
+      observed: {"positive":true,"refused":true,"status":400,"reason":"the retired shared key cannot be registered","unchanged":true,"dev":null}
+PASS DK.2.nolegacy.registerAgent: direct call, no hub, no keyTooShort: fresh key succeeds (known positive); dev-key hash refused (ConvexError with status), no row change, getByKeyHash(dev) null
+      observed: {"positive":true,"refused":true,"status":400,"reason":"the retired shared key cannot be registered","unchanged":true,"dev":null}
+PASS DK.2.nolegacy.rotateKey: direct call, no hub, no keyTooShort: fresh key succeeds (known positive); dev-key hash refused (ConvexError with status), no row change, getByKeyHash(dev) null
+      observed: {"positive":true,"refused":true,"status":400,"reason":"the retired shared key cannot be registered","unchanged":true,"dev":null}
+PASS DK.2.withlegacy.register: direct call, no hub, no keyTooShort: fresh key succeeds (known positive); dev-key hash refused (ConvexError with status), no row change, getByKeyHash(dev) null
+      observed: {"positive":true,"refused":true,"status":400,"reason":"the retired shared key cannot be registered","unchanged":true,"dev":null}
+PASS DK.2.withlegacy.registerAgent: direct call, no hub, no keyTooShort: fresh key succeeds (known positive); dev-key hash refused (ConvexError with status), no row change, getByKeyHash(dev) null
+      observed: {"positive":true,"refused":true,"status":400,"reason":"the retired shared key cannot be registered","unchanged":true,"dev":null}
+PASS DK.2.withlegacy.rotateKey: direct call, no hub, no keyTooShort: fresh key succeeds (known positive); dev-key hash refused (ConvexError with status), no row change, getByKeyHash(dev) null
+      observed: {"positive":true,"refused":true,"status":400,"reason":"the retired shared key cannot be registered","unchanged":true,"dev":null}
+PASS DK.2.all-tested: every public mutation the search listed was tested
+      observed: {"listed":["agents.register","agents.registerAgent","agents.rotateKey"],"tested":["agents.register","agents.registerAgent","agents.rotateKey"]}
+PASS DK.3: U2 exemption: a legacy holder re-registering its dev-key through the warn hub: 200 + WOULD REJECT legacy; row stays legacy; dev-key resolves to no name
+      observed: {"status":200,"logLines":1,"keyStatus":"legacy","who":null}
+PASS DK.4.warn: skew: ea9d057 hub on candidate functions registering a new name with dev-key: non-200, no row, no peer, getByKeyHash(dev) null
+      observed: {"status":500,"row":0,"peer":false,"dev":null}
+PASS DK.4.strict: skew: ea9d057 hub on candidate functions registering a new name with dev-key: non-200, no row, no peer, getByKeyHash(dev) null
+      observed: {"status":500,"row":0,"peer":false,"dev":null}
+INFO PROBE.direct-rotate: public agents:getByName returns the full apiKeyHash (no); a direct agents:rotateKey with that hash as currentHash was refused; afterwards the attacker's key resolves to 403 and the victim's own key to "qa-hijackvictim-mug1kn9d"
+INFO PROBE.classify-dev: dev-key holders before classify: devlone:none; after classifyAtDeploy the unclassified dev-key row reads legacy and the dev-key resolves to null (lone holder: if it reads owned and resolves, classify can promote the retired key)
+
+rows-a: 66/66 pass; failed: none

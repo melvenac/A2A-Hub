@@ -1,0 +1,7 @@
+FAIL H4.2: hub-key copy --as aaron: output is exactly one 'copied key for aaron@<hub-id> (prefix xxxxxxxx)' line, prefix matches the key's hash, no key-shaped run; clipboard (read in-process after the copy, never printed) equals the key file; then cleared
+      observed: {"exit":0,"lines":1,"shape":false,"prefixMatches":true,"shaped":false,"clipboardEqualsKeyFile":true,"clearedAfter":true}
+INFO H4.clipboard: the run never read the clipboard before the copy; it read it once after the copy (compared in-process), then set it to empty; empty confirmed: true
+PASS H4.3: with no key, a guarded request (as the browser would send) gets 401
+      observed: 401
+
+rows-h4: 1/2 pass; failed: H4.2

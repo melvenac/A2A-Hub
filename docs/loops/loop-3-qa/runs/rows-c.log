@@ -1,0 +1,56 @@
+PASS B1.1.holders-present: old client, new name, dev-key: register refused; exit 1 with 'not registered on this hub' (not a bare Unknown peer); no agents or peers row; no turn
+      observed: {"register":400,"code":1,"cause":true,"agents":0,"peer":false,"turn":false}
+PASS B1.2.peer: --peer <registered> --say: exit 1 with 'not registered on this hub'; no session created
+      observed: {"code":1,"cause":true,"sessions":0}
+INFO B1.2.read-paths: --wait exit 2, --inbox exit 0; receipt failure on stderr: wait false, inbox false; the name in /reads participants: false. Design §11 table: they read the room, the receipt post fails on stderr.
+PASS B1.2.read-paths: --wait/--inbox: the name gets no mark in /reads
+      observed: {"inReads":false}
+PASS B1.2.lobby: no-arg lobby wait with no peer: exit 1 'no live IDE peer' (the silent path; closed by rule)
+      observed: {"code":1,"msg":true}
+PASS B1.1.no-holder: old client, new name, dev-key: register refused; exit 1 with 'not registered on this hub' (not a bare Unknown peer); no agents or peers row; no turn
+      observed: {"register":400,"code":1,"cause":true,"agents":0,"peer":false,"turn":false}
+PASS B1.2.rule-text: the rule 'a new seat name, or a released one, is created only by --init-key from the new-client worktree' is in joining-the-hub.md (and in the Q1 text in the record)
+      observed: {"inJoiningTheHub":true,"inRecordQ1":"master state.json: 'new names during the window only via --init-key' (new names only; released names not stated)"}
+PASS B1.3: remedy: --init-key, then the same old-client --say: exit 0, a turn from the name, stored prefix unchanged by the old client's refused dev-key register
+      observed: {"init":0,"code":0,"turn":false,"same":true}
+PASS B2.2: old app on candidate functions: strict 403 for legacy/shared/unknown, 200 owned; warn 200 all, a WOULD REJECT line for the three and none for owned
+      observed: {"legacy":{"warn":200,"line":1,"strict":403},"shared":{"warn":200,"line":1,"strict":403},"unknown":{"warn":200,"line":1,"strict":403},"owned":{"warn":200,"line":0,"strict":200}}
+PASS B2.3: refused registers through the old app (U1: new name + owned key; C7: owned name + fresh key): non-200, no peers row for the new name, every stored prefix unchanged
+      observed: {"u1":500,"c7":500,"peer":false,"prefixesSame":true}
+PASS B2.4: every function the ea9d057 hub calls: unchanged, or in §11's table; known positives getByKeyHash and register are among the calls
+      observed: {"oldHubCalls":27,"changed":["agents.getByKeyHash","agents.getByName","agents.listOnline","agents.register (args differ)","messages.send","sessions.create"],"outsideTable":[]}
+PASS B2.5: candidate app on ea9d057 functions (keyHashStatus absent): unknown key -> 200 in warn, never 500; the log line says unknown
+      observed: {"status":200,"newLines":1,"last":"[auth] WOULD REJECT unknown X-Agent-Key on GET /sessions (AUTH_MODE=warn; set AUTH_MODE=strict to enforce)"}
+PASS N.1: old client, legacy name (dev-key), candidate warn hub: exit codes and stdout equal the same client on the ea9d057 hub; WOULD REJECT legacy logged; dev-key resolves to no name
+      observed: {"codes":"say=0 wait=0 inbox-b=0 wait-timeout=2 peer-say=0 peer-wait=0","baseline":"say=0 wait=0 inbox-b=0 wait-timeout=2 peer-say=0 peer-wait=0","equal":true,"legacyLines":6,"dev":null}
+PASS N.2: old client, migrated name (dev-key), candidate warn hub: same equality; it cannot undo the migration
+      observed: {"codes":"say=0 wait=0 inbox-b=0 wait-timeout=2 peer-say=0 peer-wait=0","equal":true}
+PASS B2.6: old client with an owned key: the ea9d057 app on candidate functions gives the same exit codes and stdout as on ea9d057 functions
+      observed: {"codes":"say=0 wait=0 inbox-b=0 wait-timeout=2 peer-say=0 peer-wait=0","baseline":"say=0 wait=0 inbox-b=0 wait-timeout=2 peer-say=0 peer-wait=0","equal":true}
+PASS N.3: hub-key check: a missing file -> non-zero + 'key file: no'; a dead key -> non-zero + whoami null; all good -> 0; prints no key or hash
+      observed: {"missing":1,"missingSays":true,"dead":1,"deadSays":true,"good":0,"shaped":false}
+PASS N.5a: hub-key init (start-stack's path) for alice and bob into scratch: files absent before, present after, differ, >= 32 chars; real key dir listing unchanged; zero network requests
+      observed: {"alice":{"before":false,"code":0,"exists":true,"len":43},"bob":{"before":false,"code":0,"exists":true,"len":43},"differ":true,"realUnchanged":true,"requests":0}
+PASS N.5a.static: start-stack.ps1 code lines (comments excluded) hard-code no path under ~/.a2a-hub; the key dir comes from A2A_KEY_DIR or hub-key's default
+      observed: {"hardcodedInCode":false}
+PASS K5.2.no-key: no AGENT_KEY and an empty key dir: hub-talk exit 1 naming --init-key; daemon and compliance probe non-zero; ZERO requests reach the proxy from any
+      observed: {"hubTalk":{"code":1,"initKeyHint":true,"requests":0},"daemon":{"code":1,"requests":0},"probe":{"code":1,"requests":0}}
+PASS K5.2.ask-agent: ask-agent (ephemeral key): no request carries dev-key; its registered ask-<pid> row is owned; output carries no key-shaped run
+      observed: {"code":2,"requests":5,"devKeyRequests":0,"askRows":["owned"],"shaped":false}
+INFO K5.2.not-run: demo-loop.mjs needs two live daemons, and verify-client-stack.mjs hardcodes http://127.0.0.1:4000 (the main stack), so neither was run; both are checked statically (K5.1: no dev-key literal or fallback).
+PASS K5.3: key under 127.0.0.1-4510, HUB_URL spelled localhost:4510: exit 1, stderr names the other directory, no key contents
+      observed: {"code":1,"namesDir":true,"shaped":false}
+PASS K5.1: static (S) over src/ scripts/ client/ at the candidate: dev-key 0 and fallback 0 on code lines (S validated at ea9d057: 7 and 4)
+      observed: by rule (code lines): {"hdr":9,"str-key":5,"env":6,"apiKey":9} | known positive ok: dev-key 0, expected 0 | known positive ok: fallback 0, expected 0
+PASS K5.5/H4.1: App.svelte: key field starts empty, input type=password, every localStorage access inside try; no key literal
+      observed: {"initialEmpty":true,"password":true,"localStorage":2,"allInTry":true}
+PASS K2.4: strict: a daemon shown heartbeating first; after a rotation from another process it exits 1 (key rejected for) within two intervals, no retry loop, no key in its output
+      observed: {"heartbeating":true,"rotate":200,"exit":1,"secs":1,"message":true,"shaped":false}
+PASS K2.7: a new daemon started with k1 after the rotation registers and heartbeats (lease taken) within 60 s
+      observed: {"recentHeartbeat":true,"alive":true}
+PASS K2.5: warn: a daemon shown heartbeating first; after a rotation from another process it exits 0 (superseded) within two intervals, no retry loop, no key in its output
+      observed: {"heartbeating":true,"rotate":200,"exit":0,"secs":1,"message":true,"shaped":false}
+PASS K2.8: interrupted --rotate-key: the hub commits, the client sees a socket error, .next resolves to the name; the next command promotes it with a stderr note; .key resolves; no .next left; no key printed
+      observed: {"rotateExit":1,"nextExists":true,"nextResolves":"qa-k2int-mug1nnjr","oldResolves":null,"note":true,"keyResolves":"qa-k2int-mug1nnjr","nextLeft":false,"shaped":false}
+
+rows-c: 26/26 pass; failed: none

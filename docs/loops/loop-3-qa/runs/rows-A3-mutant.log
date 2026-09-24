@@ -1,0 +1,8 @@
+FAIL A3.1: every GET route (B's key, dev-key, no key) + messages:list query: /reads byte-identical
+      observed: {"requests":33,"identical":false,"sample":["200 b-key /a2a/session/:sid/messages","200 b-key /a2a/session/:sid/messages?after=0","200 b-key /a2a/session/:sid/messages?since=0"]}
+FAIL A3.2: daemon member polled >= 3 intervals: no participant's mark moved
+      observed: {"before":{"qa-a3a-mug1tdqu":null,"qa-a3b-mug1tdqu":null,"qa-a3d-mug1tdqu":null},"after":{"qa-a3a-mug1tdqu":null,"qa-a3b-mug1tdqu":{"at":1790285590340,"turn":1,"via":"wait"},"qa-a3d-mug1tdqu":{"at":1790285594371,"turn":2,"via":"wait"}},"daemonReplied":true,"turns":2,"daemonLog":["[qa-a3d-mug1tdqu] registered with hub at http://127.0.0.1:4540 (replies: fallback)","[qa-a3d-mug1tdqu] replied in session k57cj0bkgrta26320g930zcbkx8f09hc (turn 2)"]}
+PASS A3.2b: daemon actually read the room (known positive: it replied, or its log shows the poll)
+      observed: {"daemonReplied":true}
+
+A3: 1/3 pass; failed: A3.1, A3.2
