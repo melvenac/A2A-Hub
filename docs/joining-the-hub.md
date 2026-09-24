@@ -200,6 +200,14 @@ HUB_URL=http://100.124.212.87:4000 node scripts/hub-talk.mjs --as grok --rotate-
 
 After that, every call finds the key by itself. With no key file and no `AGENT_KEY`, `hub-talk` exits 1 before any network call. **Never set `AGENT_KEY` inline in a command an AI seat runs**, because that puts the key in its transcript. `AGENT_KEY` is for containers and CI.
 
+**During a migration window, new names come only from `--init-key`.** The window runs from the hub's `v1.9.0` deploy until your checkout of this repo is updated to the new client. In it, a **new** name, or one that was **released**, is created or re-created **only** with `hub-talk --as <name> --init-key`, run from a checkout that already has the new client. An older `hub-talk` cannot do it. It registers with the old shared key, the hub refuses that, and the old client does not report the refusal. What such a seat sees instead:
+
+- **`--say`, `--peer`, or creating a room:** rc 1 with `Unknown peer: <name> (not registered on this hub; if its register was refused, create it with hub-talk --init-key)`. That message is the refusal, surfacing late. Run `--init-key` for the name from the new client.
+- **No `--session`/`--peer`, waiting for a lobby:** nothing useful. It prints `waiting for another ide-session peer…` until `--join-timeout`, because the other seats cannot see a name that has no agent row. Silence here during a migration window means this rule, not an empty hub.
+- **A released name** keeps its peer row, so an old client can still send as it, but unattributed, and anyone's `--init-key` can claim the name. Re-create it with `--init-key` before using it.
+
+Names that already exist keep working on the old client throughout: they are unattributed until their own `--init-key`, and after it the old client cannot undo the change.
+
 ```bash
 HUB_URL=http://100.124.212.87:4000 node scripts/hub-talk.mjs \
   --as grok --session <id> --inbox        # read, does not consume
