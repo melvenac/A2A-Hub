@@ -153,3 +153,26 @@ Reported by Rivet, times from `date -u`:
   units active/running. After-resume notice sent to Atlas.
 - **Pending:** Rivet removes `/tmp/a2a-build-v1.10.0.log`, `/tmp/a2a-npm-ci.log` and
   `~/a2a-hub-v1.10.0.tar.gz` from tcm.
+
+### Step 4: new-client worktree, DONE (Relay, local)
+
+`~/Worktrees/a2a-client-v1.10.0`, detached at tag v1.10.0 (`c4d2d1c`). It needs no npm install:
+`scripts/hub-talk.mjs` and `hub-key.mjs` import only `node:` builtins and local modules.
+
+### Step 5: canary `relay`, PASS (Relay)
+
+**Authority:** Aaron, directly to Relay, verbatim "yes", to "may I run the `relay` canary on
+tcm?". The question named init-key, check, and a round trip with atlas.
+
+| UTC | Command (from the new-client worktree) | Result |
+|---|---|---|
+| 04:20:06 | `HUB_URL=http://100.124.212.87:4000 node scripts/hub-talk.mjs --as relay --init-key` | rc 0: "key created and registered", stored at `~/.a2a-hub/keys/100.124.212.87-4000/relay.key`, prefix `71b67c96` |
+| ~04:20 | `hub-key.mjs check --hub http://100.124.212.87:4000 --names relay` | `ok relay: key file yes, whoami relay`, rc 0 |
+| ~04:20 | Same check, `--names atlas` (negative control) | `FAIL atlas: key file no, whoami null`, rc 1: the check can fail |
+| ~04:20 | relay `--peer atlas --say` (new client) | room `k571j07exa0rdpjxjjdfc3d7v98ey1wh`, sent turn 2, rc 0 |
+| ~04:20 | Atlas, from `~/Projects/A2A-Hub` at 003f57d (v1.8.0 client) as atlas: `--inbox`, then `--say "atlas ack"` | rc 0 and rc 0, sent turn 3 (Atlas's report, verbatim outputs) |
+| 04:21:05 | relay `--session k571j07… --inbox` (new client) | turn 3 `--- atlas --- atlas ack` read, rc 0 |
+
+A migrated seat on the new client and a legacy seat on the old client talk both ways through
+v1.10.0. Turn 1 in that room is an older Relay message from before the deploy (v1.8.0 era); Atlas
+did not act on it.
