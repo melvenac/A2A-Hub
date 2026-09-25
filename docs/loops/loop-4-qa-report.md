@@ -142,3 +142,50 @@ No finding blocks acceptance. Each is an observation, not a diagnosis.
 - The agent path through `hub-talk` (RG1).
 - The dev-server client against a local hub, with CORS (E1).
 - Keyless 401s, and strict-mode 403 for an unknown key (C1, B6).
+
+## Addendum: PB and PD on tcm (T-003 deploy act, 2026-09-25)
+
+**Authority:** Aaron's "yes" to the deploy act, recorded in `docs/loops/t-003-cutover-log.md:81`
+(`docs/session-17-b`). Access was `ssh melvenac@tcm` from this seat's own key. Every tcm command was
+read-only. Scripts: `loop-4-qa/pb.sh` and `loop-4-qa/pd.mjs`. Logs: `runs/pb.log`, `runs/pd.log`, and
+`runs/pb-run1-void.log`.
+
+**PB: PASS** on `sha256:648ac3963dd7c0b7a7629defa6fdb4b09ed2c145bd24274878ec9cb2c0d059ac`
+(a2a-hub:latest, built by Rivet from `c4d2d1c`), run 04:11:18Z to 04:13:14Z, before the swap.
+- **PB0:** the ID matches Rivet's.
+- **PB1:** Cmd `["node","dist/src/index.js"]`, Entrypoint `["docker-entrypoint.sh"]`, ExposedPorts
+  `{"4000/tcp":{}}`, WorkingDir `/app`. All four are identical to `a2a-hub:prev`.
+- **PB2:** `/app/client` holds `[dist]` only; there is no `node_modules` or `src` under it; `dist`
+  holds `[assets, index.html]`. It ran in `docker run --rm --network none` with the CMD overridden
+  and no env, mounts or name. Afterwards `docker ps -a --filter ancestor=<id>` returned 0 rows. The
+  same filter did see the running container from `prev`, which was the detector positive.
+- **PB3:** K's selftest passed first: a planted key; a planted key inside a **gzip layer**; a
+  zstd-framed file refused as opaque. `docker save`, streamed to local scratch (Relay's
+  modification: nothing written on tcm), was 261,085,184 bytes, 22,770 tar members and **125 gzip
+  layers opened**. Result: 0 opaque, 0 hits.
+- **Cleanup:** the local save was deleted and its absence read back; tcm's `~` and `/tmp` hold no
+  QA-named file.
+- **Run 1 (04:10:39Z) is void. It failed because of my instrument, not the image:**
+  - tcm's remote shell split PB1's format string;
+  - the container read-back hit the same quoting bug, errored, and still printed "0". That was a
+    fail-open, and the check now fails closed with a detector positive;
+  - K's path did not resolve under `MSYS_NO_PATHCONV`.
+
+**PD: PASS** at 04:15:05Z, after the swap (Rivet: running `648ac3963dd7`, `AUTH_MODE=warn`).
+These were four GETs to `http://100.124.212.87:4000`, none with a key header:
+- `/ui/`: 200, `text/html`, `no-cache`.
+- `/ui/assets/index-BDybZYJ0.js`: 200, `immutable`, 55,537 bytes. **This is the same content-hashed
+  file name as the local replay build, so the bundle built on tcm is the one A to E evaluated.**
+- `/`: 404.
+- `/health`: 200, keys `[agent, convex, status]`, status ok, convex ok.
+
+**Still not observed on tcm:** O1's path disclosure on `/ui/<missing>`, because it was not in PD's
+four reads. The page with a real key, and `aaron`'s key init, remain Aaron's steps.
+
+**O1 on tcm, observed** at 04:27:25Z, folded into K7 on Aaron's "yes to both", relayed by Relay.
+This was one keyless `GET /ui/does-not-exist-o1`. Result: 404, `text/html; charset=utf-8`, 218
+bytes. The body is Express's error page, reading `Error: ENOENT: no such file or directory, stat
+'/app/client/dist/<x>'`. **It discloses the served directory's absolute path in the container. It
+has no stack trace.** The log is `runs/o1-tcm.log`, with the path redacted to its shape. This is
+still an observation, not a fix. The sibling class is the malformed-JSON error page, present since
+before Loop 4.

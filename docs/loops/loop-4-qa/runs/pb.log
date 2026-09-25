@@ -1,0 +1,29 @@
+image 648ac3963dd7 = sha256:648ac3963dd7c0b7a7629defa6fdb4b09ed2c145bd24274878ec9cb2c0d059ac
+PASS PB0: id matches Rivet's (648ac3963dd7)
+PB1 config: ["node","dist/src/index.js"]|["docker-entrypoint.sh"]|{"4000/tcp":{}}|/app
+PASS PB1: Cmd ["node","dist/src/index.js"], ExposedPorts {"4000/tcp":{}}, WorkingDir /app, Entrypoint ["docker-entrypoint.sh"]
+PB2 listing:
+dist
+---
+---
+assets
+index.html
+---
+client
+convex
+dist
+node_modules
+package-lock.json
+package.json
+PASS PB2: /app/client = [dist]; node_modules/src under it: none; dist = [assets index.html]
+PASS PB2.no-container-left: docker ps -a --filter ancestor=<id>: 0 rows
+detector positive: containers from a2a-hub:prev seen by the same filter: 1 (expect >= 1)
+K selftest: SELFTEST PASS (exit 0)
+docker save streamed: exit 0, 261085184 bytes
+PASS PB3.image-save: 1 files, 22770 tar members, 125 gzip opened, 0 opaque, 261085184 bytes, hits 0
+PASS PB3: 0 hits, no opaque layer
+PASS PB3.cleanup-local: save.tar and K scratch gone
+PASS PB3.cleanup-tcm: no QA-named file in ~ or /tmp on tcm
+PB OVERALL: PASS
+["node","dist/src/index.js"]|["docker-entrypoint.sh"]|{"4000/tcp":{}}|/app
+["node","dist/src/index.js"]|["docker-entrypoint.sh"]|{"4000/tcp":{}}|/app

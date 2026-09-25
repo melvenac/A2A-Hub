@@ -1,0 +1,1 @@
+{"at":"2026-09-25T04:27:25.532Z","url":"http://100.124.212.87:4000/ui/does-not-exist-o1","status":404,"type":"text/html; charset=utf-8","bytes":218,"containsPath":true,"pathShape":"/app/client/dist/<x>","stackTrace":false,"firstLine":"Error: ENOENT: no such file or directory, stat &#39;/app/client/dist/<x>&#39;"}
