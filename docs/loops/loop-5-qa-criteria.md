@@ -1,7 +1,20 @@
 # Loop 5: acceptance criteria (Gauge)
 
-**Date:** 2026-09-25 · **Author:** QA seat (Gauge), session 17 · **Status:** criteria, written
+**Date:** 2026-09-25 · **Author:** QA seat (Gauge), session 17 · **Status:** **ACCEPTED** by Relay
+on `0cb136a`, ruling 2 `docs/loops/loop-5-ruling-2.md` (`docs/session-17-c` `52179cf`). Written
 before a candidate is named. Nothing has been run.
+
+**Ruling 2 on the objections:**
+- **O1:** as proposed. In warn, a null caller gets today's answer plus an `unknown-caller` line.
+- **O2:** 403, `cross-owner participant`.
+- **O3: IN SCOPE.** Strict gives 403 `cross-owner to=<name>`, and warn logs it. It covers
+  `message/send` **and** the JSON-RPC equivalent (rows A19, A20).
+- **O4:** a **second `assignOwnerAtDeploy` after the swap**, not a query-time default (which would
+  fail open for Loop 6's rows). BF3 checks it. After that, **zero rows lack an owner**, read through
+  the read-only key's new owner count (RL3).
+- **O5:** required as written.
+- **O6:** as proposed.
+- **O7:** yes.
 
 **Derived from:**
 - the brief `docs/loops/loop-5-identity-and-membership-brief.md` (`origin/docs/session-17-c`):
@@ -151,6 +164,8 @@ call as itself (200, with the body equal to old's, per Preserve 5).
 | A15 | `POST /a2a/message/send` | (a) `role:"aaron"` from `qa-b1`: not refused, and the sender recorded and relayed is `qa-b1`; (b) no `to` from `qa-b1`: the escalation's task is assigned only to a B-owned agent, never an A-owned one (Q5); (c) `qa-b1`'s text does **not** reach `aaron`'s "Hub activity" room (`notifyHuman`, Q5); (d) O3's explicit cross-owner `to`, as ruled | (a) 200 with the sender = caller; (b)(c) read back; (d) as ruled |
 | A16 | JSON-RPC `tasks/get`, `tasks/cancel` | another caller's A2A task | the same error as a nonexistent id (O6); cancel leaves the task's state unchanged (read back) |
 | A17 | JSON-RPC `message/send` | the `userName` seen by the executor is the caller | observed through the task's `createdBy`, read back; `null`/"" never for a valid key |
+| A19 (O3) | `POST /a2a/message/send` | `qa-b1` with an explicit `to` = `qa-a1` (another owner's agent) | 403, `cross-owner to=qa-a1`, with no task created (read back); as itself, `to` = `qa-b2` gives 200 |
+| A20 (O3) | JSON-RPC `message/send` | `metadata.to` = `qa-a1` from `qa-b1` | refused (the JSON-RPC form of 403: a terminal `rejected` with the cross-owner reason, or the JSON-RPC error Rivet chose, stated in the report); `qa-b2` target succeeds |
 | A18 | every route above | an **unknown** key in strict | 403 from the guard (existing), no `[authz]` line |
 
 ### B: warn, the same mismatches succeed and log
@@ -235,8 +250,13 @@ call as itself (200, with the body equal to old's, per Preserve 5).
   equal to the seeded rows lacking `owner`. Every such row reads back `owner: "aaron"`, and rows that
   already had one are unchanged.
 - **BF2.** A second run returns 0 changed (idempotent).
-- **BF3 (O4).** The gap case, as ruled: a row registered through the old hub after BF1 is seen by
-  `aaron`'s view after the ruled step.
+- **BF3 (O4, as ruled).** The gap case:
+  - A row is registered through the **old** hub after BF1 (no `owner`).
+  - After the hub swap, a **second** `assignOwnerAtDeploy` run reports exactly that row (count 1),
+    and `aaron`'s view then sees its rooms.
+  - **Both directions:** before the second run, the row lacks an owner, and `aaron`'s view does
+    **not** see its rooms. That shows no query-time default hides the gap (which the ruling rejects).
+  - After the run, a parsed read of all agents shows **0 rows without `owner`**.
 
 ### A1 (ruling 1): the read-only log sees `[authz]`
 
@@ -253,6 +273,12 @@ call as itself (200, with the body equal to old's, per Preserve 5).
   N rows (all 19 refusals, rc 2) and L rows (0 secrets, planted positive first) re-run against it,
   plus the new item or header, and the script hash recorded. **This runs in the deploy act, like PB,
   not in the verdict.**
+- **RL3 (O4): the owner count.** The script's new owner count, in `agents-summary` or its own item:
+  - **On scratch:** the count logic, copied as in RL1, is fed a planted jsonl stream (rows with and
+    without `owner`). The counts must match, and it must print a `FAIL` or `UNDETERMINED` line when
+    any row lacks an owner or on 0 rows parsed.
+  - **On tcm, in the deploy act:** after the second `assignOwnerAtDeploy`, the read-only key reports
+    **0 rows without an owner**.
 
 ### T1: the author's numbers
 
@@ -274,6 +300,7 @@ call as itself (200, with the body equal to old's, per Preserve 5).
 | M8 `respond` passes no `assignedAgent` | A12 |
 | M9 the register handler honours a body `owner` | E6 |
 | M10 `notifyHuman` relays any caller | A15(c) |
+| M11 the cross-owner `to` check skipped on JSON-RPC only | A20 |
 
 ### RG: regressions
 
