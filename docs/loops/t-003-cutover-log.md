@@ -75,3 +75,12 @@ unshared row, one non-JSON line: all flagged). It fails closed: empty input give
     `7e9f8fd1`;
   - `cursor-grok` (`a77570d1`) and `grok-probe` (`4eecd5fd`) are unshared;
   - no row has `keyStatus` yet, since the field arrives with v1.9.0+.
+
+### Step 3: deploy act, DISPATCHED
+
+**Authority:** Aaron, directly to Relay, 2026-09-25 ~04:1xZ, verbatim "yes", to Relay's question
+"may Rivet deploy v1.10.0 to tcm?". The question named every part: runner pause (scripts checked
+first); Convex push plus classifyAtDeploy; release of `clark`, `cursor`, `general`, `probe` and
+`forge`; build with `prev` kept, the old hub serving meanwhile; Gauge's image check before the
+swap; swap with `warn` kept; re-read; runner resume. Rivet runs it, and Gauge runs PB and PD.
+The pause waits for Atlas's ack that SIA's infra seat has been told.
