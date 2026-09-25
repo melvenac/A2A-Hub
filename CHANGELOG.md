@@ -2,6 +2,31 @@
 
 All notable changes to the A2A Intelligent Hub.
 
+## [v1.10.0] - 2026-09-24
+
+Loop 4 (T-061): the chat page served by the hub. Brief `docs/loops/loop-4-ui-on-tcm-brief.md`, design `docs/loops/loop-4-ui-on-tcm-design.md`, rulings 1 and 2.
+
+### Added
+- **The hub serves the chat page at `/ui/`** (`src/ui.ts`). On tcm that is `http://100.124.212.87:4000/ui/`.
+  - The Dockerfile builds `client/` in its own stage, and the final stage copies only `client/dist`. The CMD, the single port 4000 and the compose file are unchanged.
+  - The mount comes after every API route and claims only `/ui`, and a missing file there is a 404, never `index.html`. `GET /` stays a 404.
+  - `index.html` is `no-cache`, and the hashed assets are cached as immutable.
+  - With no build present, nothing is mounted, so the hub behaves as v1.9.0 did.
+- **The page's hub is its own origin** when the hub serves it. The dev server still defaults to `http://127.0.0.1:4000`.
+
+### Changed
+- **The page posts only as its key's owner.** The name comes from `GET /a2a/whoami`, not from a constant.
+  - With no key, the page sends nothing under `/a2a`.
+  - A refused key (401/403) or an unrecognised one (`name: null` in warn mode) is shown as refused, and nothing is posted.
+- **New chats offer the hub's live agents** (`GET /a2a/agents/live`, minus the page's own name and `hub`). The panel says the list covers only agents seen in the last 45 s. You pick agents and can add an optional first message, sent as you.
+- **No hard-coded `alice` or `bob` remains in `client/`.** Transcript colours go by each sender's place in the session.
+
+### Removed
+- **The hands-off agent↔agent demo**, which seeded its first post as `alice` (ruling 1, Q1).
+
+### Fixed
+- **`.dockerignore` now excludes `**/node_modules` and `client/dist`.** Its patterns only matched the root folder, so a host's `client/node_modules` would have been copied into the image.
+
 ## [v1.9.0] - 2026-09-24
 
 Loop 3 (T-003, P0): per-agent keys and rotation. Brief `docs/loops/loop-3-per-agent-keys-brief.md`, design `docs/loops/loop-3-design.md` (final at `a2e1562`), rulings 1 and 2, D-006 and D-007.
