@@ -1,0 +1,26 @@
+
+ RUN  v4.1.0 C:/Users/melve/AppData/Local/Temp/claude/C--Users-melve-Worktrees-a2a-qa/f7738d58-7dcc-48fe-a18a-0c1c3ff77aa0/scratchpad/l4/t1lf
+
+ ❯ tests/repo-reply.test.ts (19 tests | 1 failed) 119ms
+     × reports branch and sha for a real git repo 63ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/repo-reply.test.ts > readRepoProvenance > reports branch and sha for a real git repo
+TypeError: .toMatch() expects to receive a string, but got object
+ ❯ tests/repo-reply.test.ts:58:15
+     56|   it("reports branch and sha for a real git repo", () => {
+     57|     const p = readRepoProvenance(process.cwd());
+     58|     expect(p).toMatch(/ @ [0-9a-f]{7,}/);
+       |               ^
+     59|   });
+     60|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 19 passed (20)
+      Tests  1 failed | 175 passed (176)
+   Start at  21:34:21
+   Duration  16.65s (transform 833ms, setup 0ms, import 3.08s, tests 27.63s, environment 4ms)
+

@@ -1,0 +1,8 @@
+﻿M1 [UI: serving C:\Users\melve\AppData\Local\Temp\claude\C--Users-melve-Worktrees-a2a-qa\f7738d58-7dcc-48fe-a18a-0c1c3ff77aa0\scratchpad\l4\mut\M1 at /ui/] :: CAUGHT M1: row fails as required :: {"session":true}
+M2 [UI: serving C:\Users\melve\AppData\Local\Temp\claude\C--Users-melve-Worktrees-a2a-qa\f7738d58-7dcc-48fe-a18a-0c1c3ff77aa0\scratchpad\l4\mut\M2 at /ui/] :: CAUGHT M2: row fails as required :: {"hubVal":"http://127.0.0.1:4620"}
+M3 [UI: serving C:\Users\melve\AppData\Local\Temp\claude\C--Users-melve-Worktrees-a2a-qa\f7738d58-7dcc-48fe-a18a-0c1c3ff77aa0\scratchpad\l4\mut\M3 at /ui/] :: CAUGHT M3: row fails as required :: {"a2a":["GET /a2a/whoami"]}
+M4 [UI: serving C:\Users\melve\AppData\Local\Temp\claude\C--Users-melve-Worktrees-a2a-qa\f7738d58-7dcc-48fe-a18a-0c1c3ff77aa0\scratchpad\l4\mut\M4 at /ui/] :: CAUGHT M4: row fails as required :: {"panel":["qa-fixed","qa-l4a"],"live":["qa-l4a"]}
+M5 [UI: serving C:\Users\melve\AppData\Local\Temp\claude\C--Users-melve-Worktrees-a2a-qa\f7738d58-7dcc-48fe-a18a-0c1c3ff77aa0\scratchpad\l4\mut\M5 at /ui/] :: CAUGHT M5: row fails as required :: {"refs":["/assets/index-BDybZYJ0.js","/assets/index-B1nU_qqJ.css"],"statuses":[404,404],"mounted":0}
+M1b :: CAUGHT M1b: row fails as required :: {"session":true,"messages":1,"firstFrom":"qa-l4a"}
+CAUGHT M6: C1 differences on neighbours: ["/nope old 404 mut 404","/uix old 404 mut 404","/ui-x old 404 mut 404","/ old 404 mut 200","/health old 200 mut 200"]
+CAUGHT (K counts it): M7.mutant-dist: 3 files, 0 tar members, 60469 bytes, hits 1

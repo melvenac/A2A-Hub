@@ -1,0 +1,10 @@
+﻿PASS RG1: hub-talk --init-key qa-rg1x-mugcicee :: {"rc":0}
+PASS RG1: hub-talk --init-key qa-rg1y-mugcicee :: {"rc":0}
+PASS RG1: whoami resolves each hub-talk key :: {"x":"qa-rg1x-mugcicee","y":"qa-rg1y-mugcicee"}
+PASS RG1: X --say :: {"rc":0}
+PASS RG1: Y --wait delivers X's turn (rc 0) :: {"rc":0,"sawTurn":true}
+PASS RG1: Y replies; X --inbox shows it :: {"say":0,"inbox":0,"saw":true}
+PASS RG1: messages parsed: senders in order :: {"from":["qa-rg1x-mugcicee","qa-rg1y-mugcicee"]}
+PASS RG1: read receipts recorded for the --wait/--inbox readers :: {"status":200,"hasY":true,"hasX":true}
+
+8 checks, 8 pass, 0 fail

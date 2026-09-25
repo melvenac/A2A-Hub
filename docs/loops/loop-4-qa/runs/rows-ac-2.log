@@ -1,0 +1,23 @@
+setup: qa-r-mugc1q75 (877cc22d), qa-r2-mugc1q75 (4af9c26f), session k577vy3m3geatnzv4zafnjbfa98f3hrm
+PASS A1.1: GET /ui/ 200 text/html with the app mount and /ui/assets refs :: {"status":200,"type":"text/html; charset=utf-8","mount":true,"asset":"index-BDybZYJ0.js","css":"index-B1nU_qqJ.css"}
+PASS A1.2: index.html Cache-Control no-cache :: {"cc":"no-cache"}
+PASS A1.2b: GET /ui/index.html also no-cache :: {"status":200,"cc":"no-cache"}
+PASS A1.3: GET /ui redirects to /ui/ :: {"status":301,"location":"/ui/"}
+PASS A1.4: asset js 200 immutable :: {"status":200,"cc":"public, max-age=31536000, immutable","type":"text/javascript; charset=utf-8"}
+PASS A1.4: asset css 200 immutable :: {"status":200,"cc":"public, max-age=31536000, immutable","type":"text/css; charset=utf-8"}
+PASS A1.5: /ui/does-not-exist 404 and not index.html (no SPA fallback) :: {"status":404,"isIndex":false,"type":"text/html; charset=utf-8","stackTrace":true,"bytes":346}
+PASS A1.5: /ui/assets/nope.js 404 and not index.html (no SPA fallback) :: {"status":404,"isIndex":false,"type":"text/html; charset=utf-8","stackTrace":true,"bytes":346}
+PASS A1.5: /ui/deep/route 404 and not index.html (no SPA fallback) :: {"status":404,"isIndex":false,"type":"text/html; charset=utf-8","stackTrace":true,"bytes":342}
+PASS A1.6: traversal /ui/..%2f..%2fpackage.json does not serve package.json :: {"status":403,"leaked":false}
+PASS A1.6: traversal /ui/%2e%2e/%2e%2e/package.json does not serve package.json :: {"status":404,"leaked":false}
+PASS A1.6: traversal /ui/../package.json does not serve package.json :: {"status":404,"leaked":false}
+PASS A1.6: traversal /ui/..\..\package.json does not serve package.json :: {"status":404,"leaked":false}
+PASS A1.7: GET / 404, identical old and new :: {"new":404,"old":404,"sameBody":true}
+PASS A1.8: both directions: old hub /ui/ is 404 (P12) :: {"old":404,"new":200}
+PASS A1.9: POST /ui/ (info): new vs old :: {"new":405,"allow":"GET, HEAD","old":404}
+PASS A5: hub with no client build: /ui/ and /ui equal cef7517's 404 :: {"noUi":[404,404],"old":[404,404],"same":true}
+PASS R.pos: R reports a known difference (warn vs strict, unknown key) :: {"diffs":24,"first":["GET /a2a [unknown] old 404 new 403","GET /a2a/ui [unknown] old 404 new 403","GET /a2a/whoami [unknown] old 200 new 403"]}
+PASS C1: old vs new (warn): identical status, parsed body and CORS headers on 37 cases x 3 key states :: {"cases":111,"diffs":0,"seen":[]}
+PASS C1: old vs new (strict): identical status, parsed body and CORS headers on 37 cases x 3 key states :: {"cases":111,"diffs":0,"seen":[]}
+
+20 checks, 20 pass, 0 fail
