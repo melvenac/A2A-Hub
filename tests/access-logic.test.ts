@@ -44,6 +44,16 @@ describe("decideAccess", () => {
     expect(decideAccess("aaron", all.get("aaron"), ["relay", "atlas"], all).ownerView).toBe(true);
   });
 
+  it("only a human gets an owner view: an agent whose name some row names as owner gets none", () => {
+    // `carol` is an agent row, yet `helper` claims carol as its owner (a bad
+    // setOwner, or a name clash). An agent must still see only its own rooms.
+    const r = rows(agent("carol", "aaron"), agent("helper", "carol"));
+    expect(decideAccess("carol", r.get("carol"), ["helper", "other"], r)).toEqual({
+      participant: false,
+      ownerView: false,
+    });
+  });
+
   it("a human does not see a second owner's rooms", () => {
     expect(decideAccess("aaron", all.get("aaron"), ["bot", "bea"], all)).toEqual({
       participant: false,
