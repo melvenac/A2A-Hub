@@ -44,3 +44,34 @@ record.
 ## Log
 
 (entries appended as each step runs: UTC time, the command, the result, and whose word it ran on)
+
+### Step 2: pre-deploy read, DONE (Relay, read-only)
+
+**Authority:** Aaron, directly to Relay, 2026-09-25 ~03:56Z, verbatim: "You have my approval".
+Relay applied it to step 2 only. Every later act gets its own word (D-006). The commands after
+03:57:30Z ran in manual mode ("manual mode on"), with Aaron approving each one.
+
+| UTC | Command (on tcm unless noted) | Result |
+|---|---|---|
+| 03:57:30 | `docker exec a2a-hub printenv AUTH_MODE` | `warn`, rc 0 |
+| 03:57:30 | `docker ps` | `a2a-hub` (a2a-hub:latest, up 31 h, started 2026-09-23T20:35:37Z) and `convex` (up 4 days); the other containers are the printer stack, not touched |
+| 03:57:30 | `docker logs a2a-hub \| grep -c "WOULD REJECT"`, and the same on `cursor-grok` / `grok-probe` | 0 and 0 |
+| ~03:58 | Detector check: `grep -rn "WOULD REJECT" /app/dist` in the container | the running code can emit it (`auth.js:35`, `index.js:311`); the whole log is 3 lines since start, 0 `[auth]` lines |
+| ~04:0x | Log driver and the 3 lines, with hex masked | `json-file`, max-size 10m and max-file 3, so it was **not rotated**. The lines are startup only: port 4000, agent card, `Auth: WARN` |
+| ~04:0x | `convex data agents --limit 8000 --format jsonl` (admin key generated inside tcm and never printed), piped to a local analyzer that prints names, counts and 8-char prefixes only; the raw rows were deleted after, and their absence read back | 10 rows, 0 unparsable |
+
+**Analyzer:** validated before use on synthetic rows (a shared hash with one askPolicy, one
+unshared row, one non-JSON line: all flagged). It fails closed: empty input gives
+`UNDETERMINED`, rc 2. `askPolicy` is the field name on `agents` (`convex/schema.ts:60`).
+
+**Findings:**
+- **No `WOULD REJECT` on `cursor-grok` or `grok-probe`** across 31 h of complete log. Neither bot
+  is seen claiming its name with a different key, so C7 binding them at deploy is not expected to
+  409 them. That is an observation over 31 h, not a guarantee.
+- **The 8 dev-key rows carry no `askPolicy`** (0 of 8). D-007's release loses no policy, so
+  nothing has to be set again.
+- The table is unchanged from V-003:
+  - `atlas`, `clark`, `cursor`, `forge`, `general`, `grok`, `probe` and `relay` share hash prefix
+    `7e9f8fd1`;
+  - `cursor-grok` (`a77570d1`) and `grok-probe` (`4eecd5fd`) are unshared;
+  - no row has `keyStatus` yet, since the field arrives with v1.9.0+.
