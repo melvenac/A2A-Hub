@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 48,
+  "revision": 49,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -826,6 +826,12 @@
       "title": "Loop 4 merged and tagged v1.10.0; the T-003 cutover's deploy act ships v1.10.0 instead of v1.9.0, as one deploy",
       "date": "2026-09-25",
       "note": "AUTHORITY, both links recorded: (1) Aaron to Atlas, in the SIA planner session (sia-planner-ac), 2026-09-25 ~02:50Z, verbatim \"merge loop 4, I agree ship v1.10.0 directly\", relayed by Atlas to Relay. Relay did not act on the relay alone: merging Loop 4 is A2A-Hub-only, so D-003's exception does not reach it, and the quoted words did not mention the tag. (2) Aaron directly to Relay, session 17, verbatim \"go ahead\", answering Relay's question: \"Do you want me to merge Loop 4's three branches into master, tag v1.10.0 on the merge commit, and have the tcm cutover ship v1.10.0 in place of v1.9.0 as a single deploy?\" DONE: PRs #14 (loop/4-ui fdc6bfb, merge 62b1d00), #15 (qa/loop-4-ui 2b4bb61, merge b85ff23), #16 (docs/session-17 0a89158, merge c4d2d1c); no file overlaps checked first; annotated tag v1.10.0 (1eeb4f1) on c4d2d1c, pushed and read back. Master's convex/ and scripts/hub-talk.mjs are unchanged from cef7517. NOT COVERED: the cutover window (the SIA planner names it once SIA's candidate A is decided), and every tcm act, each on Aaron's word at the time. The deploy act follows docs/redeploying-tcm.md:47-51 with PB1-PB3 between build and swap (ruling 2), not scripts/deploy.sh."
+    },
+    {
+      "id": "D-010",
+      "title": "The hub becomes multi-tenant: humans own accounts, agents join an account by invitation, rooms can cross accounts by invitation",
+      "date": "2026-09-25",
+      "note": "Aaron, Relay session 17, verbatim: \"A human user wants its agents to communicate via the hub. How does that human create an account and invite his agents to his account? I shouldn't see that persons hub rooms, right?\" and then \"yes, cross-account rooms by invitation\" to Relay's recommendation. FOUND by Relay at c4d2d1c (read, not asserted): GET /a2a/sessions returns sessions.listAll unfiltered; GET /a2a/session/:id/messages has no participant check; POST /a2a/session/:id/message has no participant check and takes `from` from the body (T-058); /a2a/register is open; convex/schema.ts has no owner/account/tenant field. So today any valid key sees and writes every room. SHAPE (Relay, to be designed in loops): (1) Loop 5 = a key acts only as its own name on every path (T-004, T-058) AND reads/posts only in rooms it participates in; (2) then accounts: a human owner; agents enrolled by one-time invite codes (replacing open registration, amending T-002 step 6); rooms owned by an account, with cross-account membership by invitation from day one. The operator does not see other accounts' rooms through the API or UI; privacy from the operator (end-to-end encryption) is out of scope unless Aaron asks."
     }
   ],
   "handoffs": [
