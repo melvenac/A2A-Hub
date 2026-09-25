@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 50,
+  "revision": 51,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -597,7 +597,7 @@
       "opened_session": 17,
       "closed_session": null,
       "supersedes": null,
-      "note": "Brief: docs/loops/loop-5-identity-and-membership-brief.md (Relay, session 17). Serves D-011 (Grok Bot over HTTPS) and D-010 (multi-tenant). Covers T-004 (JSON-RPC unauthenticated) and T-058 (caller-asserted identities) and adds room membership on every session route; preserves hub-talk's contract (D-003), the daemons, and Aaron's chat page view of his own agents' rooms (first piece of D-010's data model). strict refuses, warn logs. Design by Rivet, ruled by Relay, before any build."
+      "note": "Brief: docs/loops/loop-5-identity-and-membership-brief.md. Design: docs/loops/loop-5-design.md (origin/loop/5-identity 6687e7c, Rivet). RULING 1 (docs/loops/loop-5-ruling-1.md, Relay): approved to build; Q1-Q9 as recommended (Q9 parity: askPolicy was never warn-soft, since denyNamedAsk refuses in every mode; no live row holds an askPolicy); binding additions A1 (the read-only log must see [authz]) and A2 (an [authz] soak before strict, D-012). Serves D-011 and D-010. Covers T-004 and T-058, plus room membership, an agents.owner field (interim HUB_OWNER=aaron, bound to G-001 until Loop 6), same-owner agents/live and escalation, A2A tasks by creator, and assignedAgent-only /respond. Preserves hub-talk and the daemons unchanged, and Aaron's page gets a read-only owner view."
     },
     {
       "id": "T-067",
@@ -876,6 +876,12 @@
       "title": "The first outside-agent test is Aaron's Grok Bot on a cloud VM registering over HTTPS, never via his tailnet; route: Loop 5, T-064, strict, Loop 6, Funnel, test",
       "date": "2026-09-25",
       "note": "Aaron, Relay session 17, verbatim: \"We started down that road by stopped, it's my grok bot running on a vm in the cloud. I don't want to expose grok bot to my tailnet network. I want grokbot to register via https as the first outside agent test of the hub\", then \"yes, and record the important detail of this conversation so future planner agents see it\". SUPERSEDES for this test T-002's tailnet-adjacent ideas: no tailnet join, and no Tailscale node sharing (Relay had offered it; Aaron wants HTTPS). BLOCKING FINDING (Relay, src/auth.ts:95-116 at c4d2d1c): in AUTH_MODE=warn an unknown X-Agent-Key is allowed as nobody, so ANY public address before strict = an open hub (anyone reads and posts every room without a valid key). ORDER, each on Aaron's word: (1) Loop 5 (T-066): identity on every path + room membership + the owner's view (brief docs/loops/loop-5-identity-and-membership-brief.md); (2) T-064's day-long log read (after 2026-09-26 ~04:30Z); (3) AUTH_MODE=strict on tcm, its own act; (4) Loop 6 (T-067): one-time enrollment codes replacing open /a2a/register (Grok Bot joins Aaron's account; cross-account rooms come later per D-010), basic rate limiting (T-005), clean error pages (T-062); (5) Tailscale Funnel on tcm publishing only port 4000 over HTTPS at a *.ts.net name (Relay's recommendation for the TEST; hub.tarrantcountymakerspace.com stays reserved for the public launch; one command turns Funnel off; T-057's 0.0.0.0:4000 binding is reviewed before it); (6) the test (T-068): Grok Bot runs --init-key with an enrollment code against the HTTPS URL, then talks to relay in its own room and sees nothing else."
+    },
+    {
+      "id": "D-012",
+      "title": "Correction to D-011's order: strict comes only after Loop 5 is deployed in warn AND an [authz] soak; the read-only log must see [authz]",
+      "date": "2026-09-25",
+      "note": "Relay, Loop 5 ruling 1 (docs/loops/loop-5-ruling-1.md), additions A1 and A2. Reason: Loop 5 adds new checks that log `[authz] WOULD REJECT ...` in warn, and T-064's read covers only `[auth]` (key validity) on v1.10.0. Flipping strict before an [authz] soak would refuse any seat (SIA's included) acting outside its own name or rooms without warning, e.g. hub-talk --session with a pasted room id. Also, the T-065 read-only auth-log greps the literal `\\[auth\\]`, which `[authz]` lines do not match, so the soak would be blind (A1: add an `authz-log` item or widen auth-log, a tcm script change in Loop 5's deploy act on Aaron's word; a 7th item needs one more exact allow rule on his word). CORRECTED ORDER (supersedes D-011's): Loop 5 build and QA -> T-064's [auth] read -> Loop 5 deploy in warn (with assignOwnerAtDeploy) -> [authz] soak, one working day -> AUTH_MODE=strict -> Loop 6 -> Funnel -> the Grok Bot test. G-001 unchanged: no public address before strict."
     }
   ],
   "handoffs": [
