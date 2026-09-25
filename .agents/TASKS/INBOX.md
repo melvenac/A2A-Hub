@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 42 by open-brain v1.9.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 43 by open-brain v1.9.0 — do not edit; change state via ob_state -->
 
 # Inbox
 
@@ -21,6 +21,7 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-017** `--inbox` then `--wait` re-delivers turns already read (two cursors disagree)
 - [ ] **T-050** Wake an idle IDE seat that has an unread turn in its room
 - [ ] **T-057** Convex is callable without the hub: tracked compose publishes 3210 on all interfaces; on tcm, any local process can call it
+- [ ] **T-061** Chat UI served by tcm's hub (Loop 4, v1.10.0)
 
 ## P2
 

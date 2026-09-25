@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 42,
+  "revision": 43,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -538,6 +538,16 @@
       "closed_session": null,
       "supersedes": null,
       "note": "Rivet, session 17, at cef7517: start-stack.ps1:104 runs `npx convex dev --local --local-force-upgrade` with no --local-cloud-port, relying on the :101 Test-PortBusy 3210 guard. Conflicts with the port-pinning rule (convex dev --local silently takes 3210/3211 when free). Sibling of T-020 and of verify-client-stack.mjs's hardcoded :4000 (ruling 4). Fix before step 3 of T-003 (local start, D-008)."
+    },
+    {
+      "id": "T-061",
+      "title": "Chat UI served by tcm's hub (Loop 4, v1.10.0)",
+      "priority": "P1",
+      "status": "open",
+      "opened_session": 17,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "Aaron, session 17, verbatim: \"Let's get the ui on tcm next build. Can we prep that now?\" Also Aaron: https://hub.tarrantcountymakerspace.com is reserved for the public hub (T-002), not for testing or local A2A traffic on tcm. Brief: docs/loops/loop-4-ui-on-tcm-brief.md (docs/session-17). The hub image serves the built client/ at one URL on http://100.124.212.87:4000, same origin, no new port or container. Repair: the client's local-stack cast (seed post from 'alice' at App.svelte:162; alice/bob hard-coded at :153/:285/:287). Preserve: API responses, hub-talk, convex/ identical to cef7517, no key in the bundle. Deploy: if accepted before SIA names the cutover window and convex/ is unchanged, the v1.9.0 cutover's deploy act ships v1.10.0 instead (Aaron's word then); otherwise the next deploy after it. aaron's init on tcm is a live write on Aaron's word, after the deploy act. Design and build: Rivet, in its worktree."
     }
   ],
   "verified": [
