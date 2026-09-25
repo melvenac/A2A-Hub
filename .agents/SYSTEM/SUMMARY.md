@@ -1,8 +1,8 @@
 # Project Summary
 
 <!-- state:begin -->
-<!-- generated from .agents/state.json rev 45 by open-brain v1.10.0 — do not edit; change state via ob_state -->
-> **Status:** v1.10.0 — Prove a truly remote agent can join the hub over the public internet with its own key. Revocation of superseded keys is verified on tcm's live DB (V-003, session 16) and tcm runs v1.8.0 (V-001). Next in the ordered remote-agent sequence: per-agent keys (T-003; on tcm 8 of 10 names share the dev-key, which resolves as `atlas`, so strict means nothing until then), warn-mode soak, `AUTH_MODE=strict`, expose over HTTPS, remote registration. askPolicy on JSON-RPC (T-004) and rate limiting (T-005) also gate exposure. On-demand spawn follows.
+<!-- generated from .agents/state.json rev 46 by open-brain v1.10.0 — do not edit; change state via ob_state -->
+> **Status:** v1.10.0 — Prove a truly remote agent can join the hub over the public internet with its own key. Done: revocation of superseded keys (V-003); per-agent keys on tcm, where every row owns its key and the shared dev-key resolves to no one (V-006, session 17); tcm runs v1.10.0 with the chat UI at /ui/ (V-005). Next in the ordered remote-agent sequence: warn-mode soak (T-064 reads the log for legacy-key traffic), then `AUTH_MODE=strict`, then expose over HTTPS, then remote registration (T-002). askPolicy on JSON-RPC (T-004), rate limiting (T-005), error-page leaks (T-062) and the hub/Convex bindings (T-057) also gate exposure. On-demand spawn follows.
 
 ## What's working
 
@@ -11,6 +11,7 @@
 - On tcm's live DB no agent name has more than one row and no superseded key hash survives: revocation of superseded keys holds (T-001) _(V-003, 1 evidence)_
 - Loop 3 (T-003, per-agent keys, v1.9.0) passes acceptance on loop/3-build-r3 fe4eb14 _(V-004, 1 evidence)_
 - Loop 4 (T-061, chat UI served by the hub at /ui/, v1.10.0) passes acceptance on loop/4-ui fdc6bfb, on a stage replay of the Dockerfile, not the image _(V-005, 1 evidence)_
+- On tcm every agent row owns its own key and the shared dev-key resolves to no name; tcm runs v1.10.0 and the main checkout is at v1.10.0 (T-003 cutover complete, K7) _(V-006, 1 evidence)_
 
 ## What's broken
 
@@ -18,11 +19,11 @@ _Nothing open._
 
 ## What's next
 
-- [P0] T-003 Per-agent key generation + rotation
 - [P1] T-002 Onboard a truly remote agent
 - [P1] T-004 askPolicy is not enforced on the JSON-RPC path
 - [P1] T-005 Rate limiting and abuse protection
 - [P1] T-006 On-demand spawn
+- [P1] T-007 Two cheap repo-peer measurements
 
 ## Decisions
 

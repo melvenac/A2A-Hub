@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
-  "revision": 45,
+  "revision": 46,
   "project": {
     "name": "a2a-intelligent-hub"
   },
   "objective": {
-    "text": "Prove a truly remote agent can join the hub over the public internet with its own key. Revocation of superseded keys is verified on tcm's live DB (V-003, session 16) and tcm runs v1.8.0 (V-001). Next in the ordered remote-agent sequence: per-agent keys (T-003; on tcm 8 of 10 names share the dev-key, which resolves as `atlas`, so strict means nothing until then), warn-mode soak, `AUTH_MODE=strict`, expose over HTTPS, remote registration. askPolicy on JSON-RPC (T-004) and rate limiting (T-005) also gate exposure. On-demand spawn follows.",
-    "since_session": 16
+    "text": "Prove a truly remote agent can join the hub over the public internet with its own key. Done: revocation of superseded keys (V-003); per-agent keys on tcm, where every row owns its key and the shared dev-key resolves to no one (V-006, session 17); tcm runs v1.10.0 with the chat UI at /ui/ (V-005). Next in the ordered remote-agent sequence: warn-mode soak (T-064 reads the log for legacy-key traffic), then `AUTH_MODE=strict`, then expose over HTTPS, then remote registration (T-002). askPolicy on JSON-RPC (T-004), rate limiting (T-005), error-page leaks (T-062) and the hub/Convex bindings (T-057) also gate exposure. On-demand spawn follows.",
+    "since_session": 17
   },
   "tasks": [
     {
@@ -33,11 +33,11 @@
       "id": "T-003",
       "title": "Per-agent key generation + rotation",
       "priority": "P0",
-      "status": "open",
+      "status": "done",
       "opened_session": 14,
-      "closed_session": null,
+      "closed_session": 17,
       "supersedes": null,
-      "note": "deprecate the shared `dev-key`. Step 2 of the remote sequence. MEASURED ON TCM 2026-09-24 (Loop 2, V-003): 8 of 10 names hold the dev-key hash, which resolves to `atlas` for all 8. LOOP 3 BUILT AND ACCEPTED (V-004): loop/3-build-r3 fe4eb14 (v1.9.0); report docs/loops/loop-3-qa-report.md (qa/loop-3-harness-keys b6f1cef); rulings docs/loops/loop-3-ruling-1..4.md; design loop/3-per-agent-keys a2e1562 (+ build-branch sections 13-14). MERGED AND TAGGED (session 17, on Aaron's word): #11 192091d, #12 8521d90, #13 cef7517; annotated tag v1.9.0 (1b973eb) on cef7517, pushed. D-006: hub-talk contract and staged cutover approved. D-007: release the 8 dev-key rows; each needed name re-registers fresh via --init-key. Browser page acts as `aaron` (Aaron). REMAINING, in this order (D-008), each on Aaron's word: (1) tcm cutover per design section 4.2: pre-deploy read (incl. askPolicy fingerprints), deploy act (Convex push, classifyAtDeploy, release clark/cursor/general/probe, hub), relay canary, then atlas/forge/grok in a SIA-named window (never during a SIA candidate A build); (2) main-checkout update after `hub-key check` over every name that runs from ~/Projects/A2A-Hub (SIA part derived by the SIA planner; observed so far: atlas, grok); (3) live local start (N.5(b)) FROM THE MAIN CHECKOUT, so alice/bob migrate in its real DB (~/Projects/A2A-Hub/.convex/local/default, 297 MB; local Convex data is per checkout, Rivet session 17), and the browser key for aaron. SIA's tcm HUB_URL = http://100.124.212.87:4000. TCM RUNNERS (SIA D-043/D-044): two SIA GitHub Actions runners on tcm, low priority, egress-firewalled. BEFORE the deploy act: tell the SIA planner, then `sudo /usr/local/sbin/gh-runners-pause` as melvenac. It waits for any running CI job to finish (allow a few minutes of lead time), stops both units, and reads the state back. AFTER: `sudo /usr/local/sbin/gh-runners-resume`, then tell the SIA planner. Provided by SIA record 97, unverified by A2A: check that both scripts exist before relying on them. tcm has 16 GB; SIA requires OOMScoreAdjust>=500 on the runners so an OOM hits CI before Convex. Close T-003 when K7's end state is read on tcm. NOTE: in v1.9.0 convex/peers.ts also reads the agents table (error text only); D-007's 'only agents.ts' was true at ea9d057, and its conclusion still holds (REL passed)."
+      "note": "CLOSED session 17 on K7 (V-006). Cutover 2026-09-25 03:57-04:27Z inside the SIA-named window, every act on Aaron's word, log docs/loops/t-003-cutover-log.md. Order as run: pre-deploy read; runner pause (Aaron, sudo); Convex push + classifyAtDeploy (8 legacy, 2 owned); release clark/cursor/general/probe/forge; build v1.10.0 with prev kept; PB pass; swap; PD pass; re-read (5 rows); runner resume (Aaron); relay canary; atlas and grok migrated (Atlas); main checkout to v1.10.0 (Rivet); aaron created (human); K7 pass. Rollback held on tcm: ~/projects/a2a-hub.old (v1.8.0), a2a-hub:prev 13aeef206f7b. Follow-ups: T-064 (second signal), T-060 and D-008 step 3 (local start), T-057 (0.0.0.0:4000 note)."
     },
     {
       "id": "T-004",
@@ -507,7 +507,7 @@
       "opened_session": 16,
       "closed_session": null,
       "supersedes": null,
-      "note": "Found by Rivet in the Loop 3 design (§9): the tracked docker-compose.yml:48-49 publishes Convex on 3210:3210 (every interface). RELAYED EVIDENCE FROM tcm (SIA record 97, read-only, via the SIA planner, 2026-09-24): `sudo ss -ltnp '( sport = :3210 or sport = :3211 )'` gives `LISTEN 0 4096 127.0.0.1:3210 0.0.0.0:* users:((\"docker-proxy\",pid=355695,fd=8))` and nothing on 3211; `docker port convex` gives `3210/tcp -> 127.0.0.1:3210` (rc=0). Convex is also reachable from the host at 172.20.0.2:3210/3211 over the a2a docker bridge. So: (1) tcm's Convex is NOT published to the tailnet, and tcm's live compose differs from the tracked file. A deploy from the tracked compose would widen it to every interface, so FIX THE TRACKED FILE to 127.0.0.1:3210. (2) Any local process on tcm can still call every PUBLIC Convex function (agents:register/registerAgent, messages:markRead, agents:heartbeat) without the hub or a key. SIA D-043's CI runner is firewalled off it (owner-matched GH_RUNNER chain), but other local users are not. The code-level fix is making hub-only functions internal. Loop 3 closes only the dev-key part of this, with a dev-key-hash refusal in every hash-setting mutation; short keys on new names via a direct call remain this task's. Relay has not verified this on tcm itself: it is second-hand, from record 97's raw lines. Verify on Aaron's word. Gates exposure (T-002 step 5)."
+      "note": "Found by Rivet in the Loop 3 design (§9): the tracked docker-compose.yml:48-49 publishes Convex on 3210:3210 (every interface). RELAYED EVIDENCE FROM tcm (SIA record 97, read-only, via the SIA planner, 2026-09-24): Convex listens on 127.0.0.1:3210 only (`docker port convex` = 3210/tcp -> 127.0.0.1:3210); also reachable from the host at 172.20.0.2:3210/3211 over the a2a docker bridge. So: (1) tcm's Convex is NOT published to the tailnet, and tcm's live compose differs from the tracked file. A deploy from the tracked compose would widen it: FIX THE TRACKED FILE to 127.0.0.1:3210. (2) Any local process on tcm can call every PUBLIC Convex function without the hub or a key; the code-level fix is making hub-only functions internal. Loop 3 closed only the dev-key part. NEW, session 17 (Rivet, first-hand, 2026-09-25 04:14:16Z after the v1.10.0 swap): the HUB container publishes 0.0.0.0:4000->4000, every interface of tcm, not only the tailnet. v1.8.0's binding was not recorded before the recreate. With /ui/ live and keyless, anything that can reach tcm:4000 on any interface can load the page (every /a2a route still needs a key). Decide the intended binding (tailnet only?) before exposure. Relay has not verified the Convex part on tcm itself. Gates exposure (T-002 step 5)."
     },
     {
       "id": "T-058",
@@ -557,7 +557,7 @@
       "opened_session": 17,
       "closed_session": null,
       "supersedes": null,
-      "note": "Loop 4 QA O1 (docs/loops/loop-4-qa-report.md, 2b4bb61): GET /ui/<missing> returns Express's dev error page with the served dir's absolute path (ENOENT stat '<path>'); on tcm expected /app/client/dist/..., not observed. Same class pre-exists on cef7517: a malformed JSON body returns a SyntaxError page with a stack trace. Neither Dockerfile nor docker-compose.yml sets NODE_ENV (grep at cef7517). /ui/* is keyless. Fix the class, not the line: every error response the hub can send, before exposure (T-002). Not blocking Loop 4 (Relay, session 17)."
+      "note": "Loop 4 QA O1 (docs/loops/loop-4-qa-report.md, 2b4bb61): GET /ui/<missing> returns Express's dev error page with the served dir's path. CONFIRMED ON tcm by Gauge, one keyless GET 2026-09-25 04:27:25Z (qa/t003-pb, runs/o1-tcm.log): 404 text/html, 218 bytes, body 'Error: ENOENT: no such file or directory, stat '/app/client/dist/<x>'', no stack trace. Same class pre-exists: a malformed JSON body returns a SyntaxError page with a stack trace (cef7517). Neither Dockerfile nor docker-compose.yml sets NODE_ENV. /ui/* is keyless. Fix the class, not the line: every error response the hub can send (Gauge's suggestions: NODE_ENV=production in the image, or a terse error handler), before exposure (T-002). Not blocking."
     },
     {
       "id": "T-063",
@@ -568,6 +568,16 @@
       "closed_session": null,
       "supersedes": null,
       "note": "Loop 4 QA O2 (docs/loops/loop-4-qa-report.md, 2b4bb61), static read, not exercised: the page writes localStorage only when the key is non-empty (client/src/App.svelte:19-22 at fdc6bfb), so a cleared key returns on reload. The key sits in localStorage on an http origin on tcm (G3, recorded; HTTPS is T-002's)."
+    },
+    {
+      "id": "T-064",
+      "title": "Read tcm's hub log after a working day for WOULD REJECT legacy (T-003 second signal)",
+      "priority": "P2",
+      "status": "open",
+      "opened_session": 17,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "Loop 3 design section 4.4's independent signal for K7: after step 9, the hub log shows no `WOULD REJECT legacy` line for a working day. Step 9 finished 2026-09-25 04:24:57Z; K7 read the log clean after 04:23:05Z. Read `docker logs --timestamps a2a-hub | grep '\\[auth\\]'` (hex masked) no earlier than 2026-09-26 ~04:30Z, on Aaron's word (manual mode). Any legacy line names a seat still on the dev-key or without a key file: find it before AUTH_MODE=strict (T-002 step 4). The log driver is json-file 3x10m, so a busy day could rotate it: check the first timestamp."
     }
   ],
   "verified": [
@@ -641,6 +651,19 @@
           "type": "qa-report",
           "path": "docs/loops/loop-4-qa-report.md (qa/loop-4-ui 2b4bb61); runs in docs/loops/loop-4-qa/",
           "observation": "Gauge, 2026-09-25 02:08Z-02:34Z, against criteria df8a3a9 (ruling 2, 2c19450); SHA read back unchanged at the end. A1-A5 (replay), B1-B9 + R-L, C1 (37 cases x 3 key states, warn and strict, 0 diffs; the positive showed 24), C2-C4 (convex/ diff 0 lines: the fold-into-cutover condition holds), D1-D3 (K selftest first, 0 hits over bundle, replay /app, logs, console, source), E0/E1, T1 (176 reproduced; hub-key.test.ts CRLF load failure is this host's autocrlf, cef7517 too), mutants 8/8, RG1 8/8. INSTRUMENT SUBSTITUTION: W ran as Playwright headless Chromium (Claude-in-Chrome not connected), validated on a cross-origin positive; Aaron's Chrome and the clipboard path not exercised. NOT VERIFIED: the image (PB1-PB3 on tcm before the swap), tcm itself (PD), 6 early scratch keys unrecorded before K's log (scratch hubs only; bundle built from key-free source; 11 recorded keys 0 hits). Relay accepted the verdict, session 17, having read the report."
+        }
+      ],
+      "since_session": 17,
+      "status": "verified"
+    },
+    {
+      "id": "V-006",
+      "claim": "On tcm every agent row owns its own key and the shared dev-key resolves to no name; tcm runs v1.10.0 and the main checkout is at v1.10.0 (T-003 cutover complete, K7)",
+      "evidence": [
+        {
+          "type": "live-read",
+          "path": "docs/loops/t-003-cutover-log.md (docs/session-17-b 2a81352); PB/PD/O1 on qa/t003-pb",
+          "observation": "Relay, 2026-09-25 04:26:54Z, read-only on tcm: convex data agents through k7.mjs (validated both directions first; raw rows deleted, read back): 6 rows, all keyStatus owned: aaron (human), atlas, cursor-grok, grok, grok-probe, relay; one row per name, one name per hash, no hash with the dev-key prefix 7e9f8fd1, 0 unparsable. AUTH_MODE=warn; container image 648ac3963dd7 (v1.10.0, PB and PD passed). Attribution: the tcm log's [auth] lines show atlas's old-client calls at 04:20:44-51Z logged WOULD REJECT legacy/shared (positive control), MIGRATE relay 04:20:07, atlas 04:22:59, grok 04:23:05, and no [auth] line after, including atlas's turn 4 sent from the updated main checkout (served as atlas). ~/Projects/A2A-Hub at c4d2d1c (Rivet, 04:24:57Z; read back by Relay). NOT YET: the design's second signal (a working day of no WOULD REJECT legacy), T-064."
         }
       ],
       "since_session": 17,

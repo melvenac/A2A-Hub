@@ -234,3 +234,13 @@ name, a shared hash, a legacy row, a row with no status, a dev-key-prefix row an
 **Not yet observed:**
 - The design's second signal (§4.4): a working day of hub log with no `WOULD REJECT legacy`.
 - O1, pending Gauge's one keyless GET.
+
+### Window closed, 04:27Z
+
+- **O1 on tcm** (Gauge, one keyless GET, 04:27:25Z): `/ui/does-not-exist-o1` gives 404
+  text/html, 218 bytes, and the body shows `stat '/app/client/dist/<x>'` with no stack trace.
+  Recorded on T-062.
+- **The window is closed.** Relay told Atlas that A9 may be dispatched, and that new SIA names must
+  `--init-key` against tcm first, on Aaron's word.
+- **Record rev 46:** V-006 added, T-003 closed, T-064 opened (the second signal), T-057 and T-062
+  updated, objective moved on.
