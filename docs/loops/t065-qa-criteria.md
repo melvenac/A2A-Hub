@@ -1,7 +1,18 @@
 # T-065: acceptance criteria (Gauge)
 
-**Date:** 2026-09-25 · **Author:** QA seat (Gauge), session 17 · **Status:** criteria, written before
-Rivet's hand-off. Nothing has been run.
+**Date:** 2026-09-25 · **Author:** QA seat (Gauge), session 17 · **Status:** **ACCEPTED** by Relay
+(A2A, session 17, on `3e704c3`). Nothing has been run.
+
+**Relay's rulings on acceptance:**
+- G1 (pipefail) and G3 (admin key in the environment) are REQUIRED.
+- **G4 is REQUIRED.** The line's options are exactly `from="100.64.0.0/10"`, `restrict` and
+  `command="/home/melvenac/bin/a2a-readonly"`, in Rivet's order and quoted. A readonly-key login
+  from this PC still works.
+- The six allow rules stay (Aaron's direct choice). No seat but Gauge uses the readonly key before
+  the verdict. A FAIL goes to Aaron to remove the rules.
+- **Convex CLI cache:** a write made by the CLI inside agents-summary is acceptable only if W shows
+  it is the only such path, it is confined under a named `~/.cache` directory, and L finds no key in
+  it, read with the full key. Any other write is a FAIL.
 
 **Derived from:**
 - T-065's note (record rev 47, `docs/session-17-b` `b63ccec`);
@@ -59,7 +70,7 @@ I looked for more objections and found none. The mechanism (`restrict` plus a fo
 
 | Row | Required | How |
 |---|---|---|
-| **S** static | The script's source, read with the full key (`cat`, read-only):<br>- dispatches on `$SSH_ORIGINAL_COMMAND` by exact `case`<br>- no `eval`, `$@`, `$*`, `sh -c`, or unquoted expansion of the original command<br>- `pipefail` (G1), fixed `PATH`, `umask 077`<br>- no redirect to a file other than `/dev/null`<br>- the admin key only in the environment (G3), never echoed<br>- a final output mask<br>The `authorized_keys` line's options are exactly `restrict,command="/home/melvenac/bin/a2a-readonly"`. | read and quote the relevant lines |
+| **S** static | The script's source, read with the full key (`cat`, read-only):<br>- dispatches on `$SSH_ORIGINAL_COMMAND` by exact `case`<br>- no `eval`, `$@`, `$*`, `sh -c`, or unquoted expansion of the original command<br>- `pipefail` (G1), fixed `PATH`, `umask 077`<br>- no redirect to a file other than `/dev/null`<br>- the admin key only in the environment (G3), never echoed<br>- a final output mask<br>The `authorized_keys` line's options are exactly `from="100.64.0.0/10"`, `restrict` and `command="/home/melvenac/bin/a2a-readonly"`, quoted as installed (G4). | read and quote the relevant lines |
 | **AK** full key unchanged | `authorized_keys` has 2 lines. Line 1's sha256, computed on tcm, **equals** the backup's line 1, printed as `equal`/`differ` plus 8-char prefixes. `diff` against the backup shows exactly one added line. Mode is 600. A fresh full-key login runs `true`. | full key, read-only |
 | **M1** health | Exit 0, and the output parses as JSON with keys `[agent, convex, status]`. | readonly key |
 | **M2** auth-mode | Exit 0, and the output is exactly `warn` (K7 at 04:26:54Z read warn). | readonly key |
