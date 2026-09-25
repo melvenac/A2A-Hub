@@ -1,0 +1,20 @@
+rc 0
+--- stdout
+auth-lines=14 first=2026-09-25T04:14:11.315401725Z last=2026-09-25T04:27:26.426818761Z total-lines=19
+log-driver=json-file map[max-file:3 max-size:10m] started=2026-09-25T04:14:10.796854849Z first-line-within-60s-of-start=yes rotated=unknown(listing .1 needs root)
+2026-09-25T04:20:07.219031232Z [auth] MIGRATE relay: legacy row replaced by a fresh owned row
+2026-09-25T04:20:44.671862897Z [auth] WOULD REJECT legacy key on register atlas (AUTH_MODE=warn; migrate with hub-talk --init-key)
+2026-09-25T04:20:44.752485421Z [auth] WOULD REJECT shared X-Agent-Key on POST /heartbeat/atlas (AUTH_MODE=warn; set AUTH_MODE=strict to enforce)
+2026-09-25T04:20:44.802828512Z [auth] WOULD REJECT shared X-Agent-Key on POST /heartbeat/atlas (AUTH_MODE=warn; set AUTH_MODE=strict to enforce)
+2026-09-25T04:20:44.867046428Z [auth] WOULD REJECT shared X-Agent-Key on GET <masked> (AUTH_MODE=warn; set AUTH_MODE=strict to enforce)
+2026-09-25T04:20:44.896295766Z [auth] WOULD REJECT shared X-Agent-Key on POST <masked> (AUTH_MODE=warn; set AUTH_MODE=strict to enforce)
+2026-09-25T04:20:44.896875184Z [auth] WOULD REJECT reader atlas for caller unknown on POST /read (AUTH_MODE=warn; set AUTH_MODE=strict to enforce)
+2026-09-25T04:20:44.934905262Z [auth] WOULD REJECT shared X-Agent-Key on GET <masked> (AUTH_MODE=warn; set AUTH_MODE=strict to enforce)
+2026-09-25T04:20:51.058150172Z [auth] WOULD REJECT legacy key on register atlas (AUTH_MODE=warn; migrate with hub-talk --init-key)
+2026-09-25T04:20:51.161170377Z [auth] WOULD REJECT shared X-Agent-Key on POST /heartbeat/atlas (AUTH_MODE=warn; set AUTH_MODE=strict to enforce)
+2026-09-25T04:20:51.215597063Z [auth] WOULD REJECT shared X-Agent-Key on POST /heartbeat/atlas (AUTH_MODE=warn; set AUTH_MODE=strict to enforce)
+2026-09-25T04:20:51.272738151Z [auth] WOULD REJECT shared X-Agent-Key on POST <masked> (AUTH_MODE=warn; set AUTH_MODE=strict to enforce)
+2026-09-25T04:22:59.441289972Z [auth] MIGRATE atlas: legacy row replaced by a fresh owned row
+2026-09-25T04:23:05.511947341Z [auth] MIGRATE grok: legacy row replaced by a fresh owned row
+
+--- stderr

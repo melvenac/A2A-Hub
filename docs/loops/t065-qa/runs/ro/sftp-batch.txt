@@ -1,0 +1,2 @@
+ls /tmp
+put runs/ro/scp-src.txt /tmp/qa-t065-sftp

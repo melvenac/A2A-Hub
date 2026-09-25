@@ -1,0 +1,1 @@
+NF.pos full-key -L 45999->127.0.0.1:4000: {"status":200,"body":"ok"} PASS (control can detect a working tunnel)

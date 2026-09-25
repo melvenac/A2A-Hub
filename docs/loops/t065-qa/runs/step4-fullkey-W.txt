@@ -1,0 +1,16 @@
+== W: find ~ /tmp /dev/shm -xdev -newer marker (files and dirs)
+/tmp
+== named test targets
+absent /tmp/qa-t065-x
+absent /tmp/qa-t065-scp
+absent /tmp/qa-t065-sftp
+== ~/.cache top level (mtime)
+drwx------  6 melvenac melvenac 4096 2026-08-21T06:21:49 .
+drwxr-x--- 18 melvenac melvenac 4096 2026-09-25T04:50:50 ..
+drwxrwxr-x  3 melvenac melvenac 4096 2026-08-21T06:16:57 claude-cli-nodejs
+drwxr-xr-x  2 melvenac melvenac 4096 2026-08-21T06:21:49 fontconfig
+-rw-r--r--  1 melvenac melvenac    0 2026-08-21T05:34:03 motd.legal-displayed
+drwxrwxr-x  9 melvenac melvenac 4096 2026-08-21T06:21:49 ms-playwright
+drwxrwxr-x  3 melvenac melvenac 4096 2026-08-21T06:17:41 ms-playwright-mcp
+== AL: [auth] lines by direct grep
+14

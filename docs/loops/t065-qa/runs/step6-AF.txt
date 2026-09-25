@@ -1,0 +1,10 @@
+edit landed: 1 (expect 1); diff lines vs original: 2
+== AF dead port
+rc=2
+UNDETERMINED: convex rc=124
+== AF other direction: the real script, real URL
+rc=0
+PASS devKeyHeldByNone
+PASS unparsableZero
+rows=6 K7=PASS
+copy removed: /dev/shm/qa-t065-af absent

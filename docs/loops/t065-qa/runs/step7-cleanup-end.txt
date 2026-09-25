@@ -1,0 +1,8 @@
+absent /home/melvenac/.qa-t065-marker
+absent /tmp/qa-t065-pos
+absent /dev/shm/qa-t065-af
+QA-named files anywhere in ~ /tmp /dev/shm: 0
+== end hashes
+417a34dde54d /home/melvenac/bin/a2a-readonly
+de3a9c3e0cd0 /home/melvenac/bin/a2a-k7.mjs
+line1 ea0a6ce6b1bd lines 2

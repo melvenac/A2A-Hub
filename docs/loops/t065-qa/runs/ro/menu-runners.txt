@@ -1,0 +1,6 @@
+rc 0
+--- stdout
+gh-runner@1.service: active
+gh-runner@2.service: active
+
+--- stderr
