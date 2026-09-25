@@ -1,0 +1,21 @@
+PASS F1.1: class search (validated at 84694b9, where it flagged exactly getByName and listOnline): every public query called; none returns apiKeyHash
+      observed: {"queries":17,"uncalled":[],"flagged":[]}
+PASS F1.2: the takeover chain fails: no hash is obtainable from getByName or listOnline, a public rotateKey is refused, the attacker's key resolves to no one, the victim's key still resolves
+      observed: {"getByNameHash":false,"listOnlineHash":false,"publicRotate":"refused","attacker":403,"victim":"qa-f1victim-mug1r772"}
+PASS F1.3a.claim.warn: old app on candidate functions: a register presenting a different key on an owned name is still refused (the mutation's C7), stored hash unchanged
+      observed: {"status":500,"same":true}
+PASS F1.3a.claim.strict: old app on candidate functions: a register presenting a different key on an owned name is still refused (the mutation's C7), stored hash unchanged
+      observed: {"status":500,"same":true}
+PASS F1.3a.ask: old app on candidate functions: the ask gate still reads askPolicy through getByName (allowed 200, denied 403 askPolicy denied)
+      observed: {"seeded":true,"allowed":200,"denied":403,"deniedErr":"askPolicy denied"}
+PASS F1.3b.ask: candidate app on ea9d057 functions: the ask gate works on the old getByName shape (allowed 200, denied 403)
+      observed: {"seeded":true,"allowed":200,"denied":403,"deniedErr":"askPolicy denied"}
+INFO F2.1.writers: stampCoHolders -> R1.2, REL.4, MIG.4; registerCore -> K1.1, K1.5, H2; rotateKey -> K2.1, K2.3, H2.rotate; classifyAtDeploy -> R1.3, F2.2, DEMOTE
+PASS F2.1: every keyStatus writer in convex/ is listed and covered by a row (known positives: registerCore, rotateKey, classifyAtDeploy, stampCoHolders)
+      observed: {"writers":["stampCoHolders","registerCore","rotateKey","classifyAtDeploy"],"uncovered":[]}
+PASS F2.2: classify: a lone unclassified dev-key row stays legacy and whoami(dev-key) is null; control: a lone fresh-key row is promoted to owned and resolves
+      observed: {"classify":{"demoted":0,"legacy":3,"owned":2,"untouched":72},"lone":"legacy","dev":null,"ctl":"owned","ctlWho":"qa-f2ctl-mug1r772"}
+PASS DEMOTE: an owned row holding the retired hash (as 84694b9 could leave it): getByKeyHash never resolves it even before classify; classify demotes it (demoted >= 1) to legacy
+      observed: {"pre":{"status":"owned","getByKeyHash":null,"who":null},"post":{"classify":{"demoted":1,"legacy":0,"owned":0,"untouched":76},"status":"legacy","who":null}}
+
+rows-f: 9/9 pass; failed: none

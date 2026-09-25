@@ -1,11 +1,14 @@
 // Instrument X (loop-1-qa-criteria.md): a fault proxy between hub-talk and the QA hub.
 //
-// Only two routes are ever faulted: POST /a2a/session/:id/read ("read") and
-// GET /a2a/session/:id/reads ("reads"). Everything else passes through untouched.
+// Only three routes are ever faulted: POST /a2a/session/:id/read ("read"), GET /a2a/session/:id/reads
+// ("reads") and POST /a2a/rotate ("rotate", Loop 3). Everything else passes through untouched.
+// The log records whether an X-Agent-Key was present and whether it was the literal dev-key, never
+// its value, and never logs a rotate or register body (they carry keys; Loop 3 K6).
 //
 // Usage: QA_PROXY_PORT=4420 QA_UPSTREAM=http://127.0.0.1:4410 node fault-proxy.mjs
 // Control (not forwarded):
 //   POST /__qa/mode  {"read":"pass|drop|404|500|delay:<ms>|inject","reads":"pass|drop|404|500|delay:<ms>",
+//                     "rotate":"pass|forward-then-drop",
 //                     "inject":{"from":"qa-a","content":"injected"}}
 //   GET  /__qa/log   every request seen, with the rule applied
 //   POST /__qa/reset mode back to pass, log cleared
@@ -16,12 +19,14 @@ const UP = process.env.QA_UPSTREAM;
 if (!PORT || !UP) { console.error("QA_PROXY_PORT and QA_UPSTREAM must both be set"); process.exit(1); }
 if (/:(3210|4000)\b/.test(UP)) { console.error("refusing: main-stack port"); process.exit(1); }
 
-let mode = { read: "pass", reads: "pass", inject: null };
+const PASS = { read: "pass", reads: "pass", rotate: "pass", inject: null };
+let mode = { ...PASS };
 let log = [];
 
 const routeOf = (method, path) => {
   if (method === "POST" && /^\/a2a\/session\/[^/]+\/read$/.test(path)) return "read";
   if (method === "GET" && /^\/a2a\/session\/[^/]+\/reads$/.test(path)) return "reads";
+  if (method === "POST" && path === "/a2a/rotate") return "rotate";
   return null;
 };
 
@@ -43,13 +48,16 @@ const server = http.createServer(async (req, res) => {
   const buf = await body(req);
   if (path.startsWith("/__qa/")) {
     if (req.method === "POST" && path === "/__qa/mode") { mode = { ...mode, ...JSON.parse(buf.toString() || "{}") }; }
-    else if (req.method === "POST" && path === "/__qa/reset") { mode = { read: "pass", reads: "pass", inject: null }; log = []; }
+    else if (req.method === "POST" && path === "/__qa/reset") { mode = { ...PASS }; log = []; }
     res.writeHead(200, { "Content-Type": "application/json" });
     return res.end(JSON.stringify(path === "/__qa/log" ? log : mode));
   }
   const route = routeOf(req.method, path);
   const rule = route ? mode[route] : "pass";
-  const entry = { at: Date.now(), method: req.method, url: req.url, route, rule, body: route ? buf.toString() : undefined };
+  const k = req.headers["x-agent-key"];
+  const entry = { at: Date.now(), method: req.method, url: req.url, route, rule,
+    key: { present: k !== undefined, devKey: k === "dev-key" },
+    body: route === "read" || route === "reads" ? buf.toString() : undefined };
   log.push(entry);
   try {
     if (rule === "drop") { entry.status = "dropped"; return req.socket.destroy(); }
@@ -64,10 +72,18 @@ const server = http.createServer(async (req, res) => {
       const sid = path.split("/")[3];
       const inj = mode.inject || { from: "qa-a", content: "qa injected turn" };
       const r = await fetch(`${UP}/a2a/session/${sid}/message`, {
-        method: "POST", headers: { "Content-Type": "application/json", "X-Agent-Key": req.headers["x-agent-key"] || "dev-key" },
+        method: "POST", headers: { "Content-Type": "application/json", ...(req.headers["x-agent-key"] ? { "X-Agent-Key": req.headers["x-agent-key"] } : {}) },
         body: JSON.stringify(inj),
       });
       entry.injected = { status: r.status, body: await r.text() };
+    }
+    if (rule === "forward-then-drop") {
+      // The hub commits; the client never hears it (Loop 3 K2.8, an interrupted --rotate-key).
+      const headers = { ...req.headers }; delete headers.host; delete headers["content-length"];
+      const r = await fetch(UP + req.url, { method: req.method, headers, body: buf });
+      await r.arrayBuffer();
+      entry.status = `upstream ${r.status}, then dropped`;
+      return req.socket.destroy();
     }
     entry.status = await forward(req, res, buf);
   } catch (e) {

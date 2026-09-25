@@ -1,0 +1,19 @@
+{
+ "tag": "mug1stui",
+ "results": [
+  {
+   "row": "H3.2a",
+   "required": "isolated deployment, aaron (human) is the only agents row: escalation with no named target returns 'No agents are currently online' and creates no task",
+   "observed": "{\"startedEmpty\":true,\"aaronRow\":true,\"exit\":0,\"text\":true,\"tasksForAaron\":0}",
+   "pass": true,
+   "at": "2026-09-24T21:32:44.357Z"
+  },
+  {
+   "row": "H3.2b",
+   "required": "known positive: with aaron and one qa- daemon row, the escalated task's assignedAgent is the daemon (call stopped once the task exists); none to aaron",
+   "observed": "{\"tasksForDaemon\":1,\"tasksForAaron\":0}",
+   "pass": true,
+   "at": "2026-09-24T21:32:45.501Z"
+  }
+ ]
+}

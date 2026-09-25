@@ -1,0 +1,12 @@
+{
+ "tag": "mug1scg2",
+ "results": [
+  {
+   "row": "H1.2c",
+   "required": "after a restart of the warn hub, aaron is still human",
+   "observed": "human",
+   "pass": true,
+   "at": "2026-09-24T21:32:21.178Z"
+  }
+ ]
+}

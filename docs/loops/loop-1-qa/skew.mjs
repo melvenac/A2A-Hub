@@ -1,17 +1,19 @@
 // A4: version skew. New = candidate hub-talk; old = 2eb7928 hub-talk (whole scripts/ dir).
 // QA_NEW_HT, QA_OLD_HT, and hubs: QA_H_NEW(4410 new/new) QA_H_OLDAPP_NEWCVX(4430) QA_H_OLD(4431) QA_H_NEWAPP_OLDCVX(4432)
 // plus the proxy QA_HUB(4420 -> 4410) for (e)/(f).
-import { talk, hub, check, results } from "./harness.mjs";
+import { talk, hub, key, asSeat, check, results } from "./harness.mjs";
 const NEW = process.env.QA_NEW_HT, OLD = process.env.QA_OLD_HT;
 const H = { newnew: process.env.QA_H_NEW, oldApp_newCvx: process.env.QA_H_OLDAPP_NEWCVX, old: process.env.QA_H_OLD, newApp_oldCvx: process.env.QA_H_NEWAPP_OLDCVX, proxy: process.env.QA_HUB };
 for (const [k, v] of Object.entries({ NEW, OLD, ...H })) if (!v) throw new Error(`missing ${k}`);
 const tag = Date.now().toString(36);
-const key = (n) => `${n}-key`;
 
-// Known positives: each hub is what it claims to be, told apart by behaviour.
-const probe = async (base) => (await hub("GET", "/a2a/session/not-a-session/reads", undefined, { base })).status;
+// Known positives: each hub is what it claims to be, told apart by behaviour. The probes carry a
+// registered seat's key, so they reach the route rather than stopping at auth.
+const prober = `qa-sk-probe-${tag}`;
+for (const base of [H.newnew, H.oldApp_newCvx, H.old, H.newApp_oldCvx]) await hub("POST", "/a2a/register", { name: prober, apiKey: key(prober), agentCard: { name: prober, description: `QA ${prober}`, kind: "ide-session" } }, { base });
+const probe = async (base) => (await hub("GET", "/a2a/session/not-a-session/reads", undefined, { base, headers: asSeat(prober) })).status;
 const ident = { newnew: await probe(H.newnew), oldApp_newCvx: await probe(H.oldApp_newCvx), old: await probe(H.old), newApp_oldCvx: await probe(H.newApp_oldCvx) };
-const routeAbsent = async (base) => /Cannot GET/.test((await hub("GET", "/a2a/session/x/reads", undefined, { base })).text);
+const routeAbsent = async (base) => /Cannot GET/.test((await hub("GET", "/a2a/session/x/reads", undefined, { base, headers: asSeat(prober) })).text);
 const absent = { newnew: await routeAbsent(H.newnew), oldApp_newCvx: await routeAbsent(H.oldApp_newCvx), old: await routeAbsent(H.old), newApp_oldCvx: await routeAbsent(H.newApp_oldCvx) };
 check("A4.ident", "hub identities by behaviour: /reads route absent on old apps, present on new apps", { absent, status: ident },
   !absent.newnew && absent.oldApp_newCvx && absent.old && !absent.newApp_oldCvx);
@@ -61,7 +63,7 @@ for (const [row, base] of [["a-bothOld", H.old], ["b-appNew-cvxOld", H.newApp_ol
 }
 
 const oldOnNew = await scenario(OLD, H.newnew, "dn");
-const oldReads = (await hub("GET", `/a2a/session/${oldOnNew.sid}/reads`, undefined, { base: H.newnew })).json;
+const oldReads = (await hub("GET", `/a2a/session/${oldOnNew.sid}/reads`, undefined, { base: H.newnew, headers: asSeat(oldOnNew.a) })).json;
 const bOld = oldReads?.participants?.find((p) => p.name === oldOnNew.b);
 check("A4.d-oldClient-newHub", "old hub-talk on candidate hub == old hub-talk on old hub (stdout, stderr, codes)", { codes: codes(oldOnNew), diffs: diffs(oldOnNew, oldOnOld, true) }, same(oldOnNew, oldOnOld, { stderrStrict: true }));
 check("A4.d-L4", "old reader who waited + inboxed shows never-read (lastRead null) on the new hub (L4)", bOld?.lastRead ?? "missing", bOld && bOld.lastRead === null);
@@ -77,7 +79,7 @@ for (const [label, m] of [["read-drop", { read: "drop" }], ["read-404", { read: 
   const slow = f.steps.map((s, i) => ({ k: s.k, over: s.ms - pass.steps[i].ms })).filter((x) => x.over > 6000);
   const marker = label.startsWith("read-") ? /read receipt not recorded/ : /read receipts unavailable/;
   const saw = f.steps.some((s) => marker.test(s.err));
-  const rs = (await hub("GET", `/a2a/session/${f.sid}/reads`, undefined, { base: H.newnew })).json;
+  const rs = (await hub("GET", `/a2a/session/${f.sid}/reads`, undefined, { base: H.newnew, headers: asSeat(f.a) })).json;
   const bState = rs?.participants?.find((p) => p.name === f.b);
   const falseUnreadOk = label.startsWith("read-") ? bState?.lastRead === null : true;
   check(`A4.${label.startsWith("read-") ? "e" : "f"}-${label}`, "stdout + codes == pass-through; stderr carries the receipt line; <= +6 s per call; a lost mark leaves B unread (never a false read)",

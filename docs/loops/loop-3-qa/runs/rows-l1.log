@@ -1,0 +1,103 @@
+PASS A1.1a: sender's --say exits 0 and reports turn 1
+      observed: {"code":0,"err":"[hub-talk] sent turn 1"}
+PASS A1.1b: B never read: lastRead is null (not turn 0)
+      observed: null
+PASS A1.1c: B.unread has turn 1 with sentAt == createdAt from /messages
+      observed: {"unread":[{"from":"qa-a1a-mug1u4pm","sentAt":1790285625081,"turn":1}],"createdAt":1790285625081}
+PASS A1.1d: C likewise: null, turn 1 unread since createdAt
+      observed: {"lastRead":null,"name":"qa-a1c-mug1u4pm","unread":[{"from":"qa-a1a-mug1u4pm","sentAt":1790285625081,"turn":1}]}
+PASS A1.1e: sender A: own turn not unread; A's mark still null after --say
+      observed: {"lastRead":null,"name":"qa-a1a-mug1u4pm","unread":[]}
+PASS A1.2: B --wait exits 0 and prints turn 1
+      observed: {"code":0,"out":"--- qa-a1a-mug1u4pm ---\nA1 turn one"}
+PASS A1.3a: after B --wait: B.lastRead = {turn 1, via wait, at >= createdAt}
+      observed: {"at":1790285625631,"turn":1,"via":"wait"}
+PASS A1.3b: turn 1 gone from B.unread (was present before)
+      observed: []
+PASS A1.3c: C unchanged by B's mark
+      observed: {"lastRead":null,"name":"qa-a1c-mug1u4pm","unread":[{"from":"qa-a1a-mug1u4pm","sentAt":1790285625081,"turn":1}]}
+PASS A1.4: read-through-1 vs never-read distinguishable by value
+      observed: {"b":[1,[2]],"c":[null,[1,2]]}
+PASS A1.5a: every unread {turn, from, sentAt} matches /messages
+      observed: {"checked":7,"mismatches":[]}
+PASS A1.5b: no participant has its own turn unread
+      observed: []
+PASS A1.5c: turnCount equals number of messages
+      observed: {"turnCount":4,"messages":4}
+PASS A2.1: --inbox exits 0, prints whole room, stderr 'unread after turn 1 (cursor unchanged)'
+      observed: {"code":0,"cursor":"1","err":["[hub-talk] 3 turns, 2 unread after turn 1 (cursor unchanged)"]}
+PASS A2.2: B.lastRead = {turn 3, via inbox}
+      observed: {"at":1790285629132,"turn":3,"via":"inbox"}
+PASS A2.3a: cursor file byte-identical across --inbox
+      observed: {"before":"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b","after":"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"}
+PASS A2.4a: next --wait replays turns 2-3
+      observed: {"code":0,"out":"--- qa-a2a-mug1u4pm ---\nA2 t2\n--- qa-a2a-mug1u4pm ---\nA2 t3"}
+PASS A2.4b: mark unchanged by the replay (monotonic; still inbox, same at)
+      observed: {"before":{"at":1790285629132,"turn":3,"via":"inbox"},"after":{"at":1790285629132,"turn":3,"via":"inbox"}}
+PASS A2.3b: absent cursor stays absent across --inbox, mark still recorded
+      observed: {"before":"absent","after":"absent","mark":{"at":1790285630565,"turn":1,"via":"inbox"}}
+PASS A2.5-inbox: inbox: injected turn 2 landed after print; mark = 1, turn 2 unread
+      observed: {"code":0,"printedInjected":false,"turns":2,"mark":{"at":1790285631791,"turn":1,"via":"inbox"},"unread":[2]}
+PASS A2.5-wait: wait: injected turn 2 landed after print; mark = 1, turn 2 unread
+      observed: {"code":0,"printedInjected":false,"turns":2,"mark":{"at":1790285633000,"turn":1,"via":"wait"},"unread":[2]}
+PASS A2.6a: valid forward mark: 200 and the mark moves to 2
+      observed: {"status":200,"body":{"advanced":true,"ok":true,"readThroughTurn":2},"mark":{"at":1790285634406,"turn":2,"via":"wait"}}
+PASS A2.6-lower: lower: expected status, mark unchanged
+      observed: {"status":200,"body":{"advanced":false,"ok":true,"readThroughTurn":2},"mark":2}
+PASS A2.6-past-end: past-end: expected status, mark unchanged
+      observed: {"status":400,"body":{"error":"throughTurn 4 is past the room's last turn (3)"},"mark":2}
+PASS A2.6-zero: zero: expected status, mark unchanged
+      observed: {"status":400,"body":{"error":"throughTurn must be a positive integer"},"mark":2}
+PASS A2.6-negative: negative: expected status, mark unchanged
+      observed: {"status":400,"body":{"error":"throughTurn must be a positive integer"},"mark":2}
+PASS A2.6-non-integer: non-integer: expected status, mark unchanged
+      observed: {"status":400,"body":{"error":"throughTurn must be a positive integer"},"mark":2}
+PASS A2.6-string-num: string-num: expected status, mark unchanged
+      observed: {"status":400,"body":{"error":"throughTurn must be a positive integer"},"mark":2}
+PASS A2.6-bad-via: bad-via: expected status, mark unchanged
+      observed: {"status":400,"body":{"error":"via must be \"inbox\" or \"wait\""},"mark":2}
+PASS A2.6-no-reader: no-reader: expected status, mark unchanged
+      observed: {"status":400,"body":{"error":"Missing required field: reader"},"mark":2}
+PASS A2.6-non-member: non-member: expected status, mark unchanged
+      observed: {"status":404,"body":{"error":"qa-a2x-mug1u4pm is not a participant of this session"},"mark":2}
+PASS A2.6-unregistered: unregistered: expected status, mark unchanged
+      observed: {"status":404,"body":{"error":"qa-nobody-mug1u4pm is not a participant of this session"},"mark":2}
+PASS A2.6-unknown-session-other-table-id: unknown-session-other-table-id: POST /read 4xx (criterion), mark unchanged
+      observed: {"post":400,"postErr":"not a session id","reads":400}
+PASS A2.6-unknown-session-garbage: unknown-session-garbage: POST /read 4xx (criterion), mark unchanged
+      observed: {"post":400,"postErr":"not a session id","reads":400}
+PASS A3.1: every GET route (B's key, dev-key, no key) + messages:list query: /reads byte-identical
+      observed: {"requests":33,"identical":true,"sample":["200 b-key /a2a/session/:sid/messages","200 b-key /a2a/session/:sid/messages?after=0","200 b-key /a2a/session/:sid/messages?since=0"]}
+PASS A3.2: daemon member polled >= 3 intervals: no participant's mark moved
+      observed: {"before":{"qa-a3a-mug1u4pm":null,"qa-a3b-mug1u4pm":null,"qa-a3d-mug1u4pm":null},"after":{"qa-a3a-mug1u4pm":null,"qa-a3b-mug1u4pm":null,"qa-a3d-mug1u4pm":null},"daemonReplied":true,"turns":2,"daemonLog":["[qa-a3d-mug1u4pm] registered with hub at http://127.0.0.1:4510 (replies: fallback)","[qa-a3d-mug1u4pm] replied in session k572njt9k0svgr87zxmff1kz4d8f1nnd (turn 2)"]}
+PASS A3.2b: daemon actually read the room (known positive: it replied, or its log shows the poll)
+      observed: {"daemonReplied":true}
+PASS A5.0: distinctive card present BEFORE the --peer call (known positive)
+      observed: {"description":"QA distinctive card for A5","kind":"qa-distinct","name":"qa-a5b-mug1u4pm"}
+PASS A5.2: --peer (no room yet): exit 0, B's whole row + peer row + online count unchanged
+      observed: {"code":0,"changed":[],"after":{"description":"QA distinctive card for A5","kind":"qa-distinct","name":"qa-a5b-mug1u4pm"}}
+PASS A5.3: --peer with the room existing: same room reused, B unchanged
+      observed: {"code":0,"room1":"k57465kf1zqm6pxmfsqw2g36m18f0czx","room2":"k57465kf1zqm6pxmfsqw2g36m18f0czx","abRooms":1}
+PASS A5.4: --peer <unregistered>: exit 1, stderr names --as and --session, nothing created
+      observed: {"code":1,"err":"[hub-talk] peer qa-never-registered-mug1u4pm is not registered on this hub — it must run hub-talk --as qa-never-registered-mug1u4pm once, or pass --session <id>","before":{"agents":0,"peers":0,"sessions":34,"sessionPeers":71},"after":{"agents":0,"peers":0,"sessions":34,"sessionPeers":71}}
+PASS A7.R1-doc: R1 verbatim in joining-the-hub.md
+      observed: true
+PASS A7.R2-doc: R2 verbatim in joining-the-hub.md
+      observed: {"exact":true,"colonVariant":false}
+PASS A7.R1-header: R1 verbatim in hub-talk.mjs header
+      observed: true
+PASS A7.R2-header: R2 verbatim in hub-talk.mjs header
+      observed: true
+      info: header matches with comment markers + backticks stripped: R1=true R2=true
+PASS A7.L1: L1 present in the doc and in the hub-talk header
+      observed: {"doc":true,"header":true}
+PASS A7.L2: L2 present in the doc and in the hub-talk header
+      observed: {"doc":true,"header":true}
+PASS A7.L3: L3 present in the doc and in the hub-talk header
+      observed: {"doc":true,"header":true}
+PASS A7.L4: L4 present in the doc and in the hub-talk header
+      observed: {"doc":true,"header":true}
+PASS A7.L5: L5 present in the doc and in the hub-talk header
+      observed: {"doc":true,"header":true}
+
+A1,A2,A3,A5,A7: 50/50 pass; failed: none
