@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 54,
+  "revision": 59,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -437,7 +437,7 @@
       "opened_session": 15,
       "closed_session": null,
       "supersedes": null,
-      "note": "SIA requirement R-b (SIA T-160). An idle IDE seat either cannot go idle while its room holds an unread turn, or is woken with it. A Cursor agent sees hub messages only when it runs hub-talk itself. Joint acceptance with T-049 (SIA's words): a turn sent to an idle Cursor seat is either acted on without Aaron touching that window, or the sender is told it is unread by that seat, with the time. Depends on server-side read state (T-049) to know what is unread. FIRST UNKNOWN, ANSWERED FROM DOCUMENTATION ONLY (Relay, session 15, cursor.com/docs/agent/hooks read 2026-09-23; not tested on the installed Cursor, whose version is unrecorded): Cursor has a `stop` hook, called when the agent loop ends, input {status: completed|aborted|error, loop_count}. It may return {followup_message}, which Cursor auto-submits as the next USER message, so the turn lands in the agent's context (T-049's definition of read). Per-script `loop_limit` defaults to 5 auto follow-ups per conversation (null removes the cap); `timeout` is per-script in seconds with an unstated platform default; `failClosed` exists. Config in <project>/.cursor/hooks.json (checked in) or ~/.cursor/hooks.json; for followup_message the last response wins across sources. `stop` also runs in Cursor cloud agents. What this gives: a wake AT THE MOMENT THE AGENT STOPS, not after. The hook can check for unread turns, or block on a long-poll up to its timeout, and feed a turn back. What it does not give: once the hook returns empty, the seat is idle and nothing in Cursor wakes it for a turn that arrives later. The requirement's first branch ('cannot go idle') holds only for as long as the hook blocks; past that the second branch (sender told unread-since-T, T-049) carries the acceptance. LOOP CAP (SIA's requirement, Atlas as customer, 2026-09-23): the default 5 follow-ups is below SIA's real traffic (7 planner turns in one room on 2026-09-23; a full candidate round runs more), and past the cap the next wake silently does not happen. Whatever ships must either set loop_limit deliberately, stating the value and why, or make reaching the cap visible to the sender (T-049's unread-since-T is that route). Unknowns still open: the default and maximum timeout; whether followup_message is honoured when status is aborted (the user pressed stop; it should not be); whether the Grok Bot surface runs hooks at all. These need a live trial in a Cursor window, which is Aaron's machine and falls under the SIA pause."
+      "note": "SIA requirement R-b (SIA T-160). An idle IDE seat either cannot go idle while its room holds an unread turn, or is woken with it. A Cursor agent sees hub messages only when it runs hub-talk itself. Joint acceptance with T-049 (SIA's words): a turn sent to an idle Cursor seat is either acted on without Aaron touching that window, or the sender is told it is unread by that seat, with the time. Depends on server-side read state (T-049) to know what is unread. FIRST UNKNOWN, ANSWERED FROM DOCUMENTATION ONLY (Relay, session 15, cursor.com/docs/agent/hooks read 2026-09-23; not tested on the installed Cursor, whose version is unrecorded): Cursor has a `stop` hook, called when the agent loop ends, input {status: completed|aborted|error, loop_count}. It may return {followup_message}, which Cursor auto-submits as the next USER message, so the turn lands in the agent's context (T-049's definition of read). Per-script `loop_limit` defaults to 5 auto follow-ups per conversation (null removes the cap); `timeout` is per-script in seconds with an unstated platform default; `failClosed` exists. Config in <project>/.cursor/hooks.json (checked in) or ~/.cursor/hooks.json; for followup_message the last response wins across sources. `stop` also runs in Cursor cloud agents. What this gives: a wake AT THE MOMENT THE AGENT STOPS, not after. The hook can check for unread turns, or block on a long-poll up to its timeout, and feed a turn back. What it does not give: once the hook returns empty, the seat is idle and nothing in Cursor wakes it for a turn that arrives later. The requirement's first branch ('cannot go idle') holds only for as long as the hook blocks; past that the second branch (sender told unread-since-T, T-049) carries the acceptance. LOOP CAP (SIA's requirement, Atlas as customer, 2026-09-23): the default 5 follow-ups is below SIA's real traffic (7 planner turns in one room on 2026-09-23; a full candidate round runs more), and past the cap the next wake silently does not happen. Whatever ships must either set loop_limit deliberately, stating the value and why, or make reaching the cap visible to the sender (T-049's unread-since-T is that route). Unknowns still open: the default and maximum timeout; whether followup_message is honoured when status is aborted (the user pressed stop; it should not be); whether the Grok Bot surface runs hooks at all. These need a live trial in a Cursor window, which is Aaron's machine and falls under the SIA pause. LIVE EVIDENCE (session 17, docs/case-studies/2026-09-25-grokbot-marketplace-watcher.md, gap G3): in the melve-76<->grokbot room neither side woke on hub traffic; read receipts showed grokbot stalled at turn 11 until Aaron nudged it in its own chat, and a Claude Code background --wait was blocked by the auto-mode classifier. Candidate patterns named there: a routine polling --inbox on the Grok Bot side, a permission allow-rule for hub-talk --wait on the Claude Code side, or a push bridge (hub to Telegram or a CC channel)."
     },
     {
       "id": "T-051",
@@ -597,7 +597,7 @@
       "opened_session": 17,
       "closed_session": null,
       "supersedes": null,
-      "note": "Brief docs/loops/loop-5-identity-and-membership-brief.md; design docs/loops/loop-5-design.md; rulings loop-5-ruling-1.md and loop-5-ruling-2.md. BUILT (Rivet) and ACCEPTED (V-008) on ebe7747. MERGED (PRs #21-#23, master f52f6d6) and TAGGED v1.11.0 (45c168e) on Aaron's word, session 17. REMAINING, each on Aaron's word: deploy per Rivet's 11-step plan in docs/loops/rivet-handoff-session-17.md (assignOwnerAtDeploy twice; PB; PD; RL2 with a2a-readonly c7728ab751cd and a2a-k7.mjs f1de001c3435; rows-without-owner=0; stays warn), PLUS two steps Relay added (not in Rivet's plan): (12) update the main checkout ~/Projects/A2A-Hub to v1.11.0 (git merge --ff-only; hub-talk and hub-key are unchanged, so SIA's seats see no difference); (13) reindex GitNexus there with `gitnexus analyze --force --skip-agents-md --skip-skills` (1.6.12). Until (13) the index is at c4d2d1c and describes the PRE-Loop-5 hub (caught by Gauge): do not trust impact/context answers about src/authz.ts, convex/accessLogic.ts or the Loop 5 index.ts changes. Then the one-day [authz] soak (D-012) via the read-only auth-log's authz-lines header; then strict. Close T-066 at the deploy's PD+RL2 pass. Follow-ups: T-070, T-071."
+      "note": "Brief docs/loops/loop-5-identity-and-membership-brief.md; design docs/loops/loop-5-design.md; rulings loop-5-ruling-1.md and loop-5-ruling-2.md. BUILT (Rivet) and ACCEPTED (V-008) on ebe7747. MERGED (PRs #21-#23, master f52f6d6) and TAGGED v1.11.0 (45c168e). DEPLOY PLAN: docs/loops/loop-5-deploy-plan.md (Rivet, chore/loop-5-deploy-plan 936fda8; accepted by Relay with rulings at its top): step 0.5 full-key read of tcm's live compose env_file (copy .env into the new dir if it points into ~/projects/a2a-hub); `docker tag a2a-hub:prev a2a-hub:v1.8.0` before step 4; assignOwnerAtDeploy twice; PB; PD; RL2 with a2a-readonly c7728ab751cd and a2a-k7.mjs f1de001c3435; rows-without-owner=0; stays warn; step 12 main checkout ff to master; step 13 GitNexus reindex (--skip-agents-md). Until 13 the GitNexus index describes the PRE-Loop-5 hub. TIMING: only after T-064's read (>= ~04:30Z 2026-09-26), on Aaron's word. Then the one-day [authz] soak (D-012), then strict. Close T-066 at the deploy's PD+RL2 pass. Follow-ups: T-070, T-071."
     },
     {
       "id": "T-067",
@@ -617,7 +617,7 @@
       "opened_session": 17,
       "closed_session": null,
       "supersedes": null,
-      "note": "D-011 steps 5-6. Preconditions: Loop 5 and Loop 6 deployed, tcm AUTH_MODE=strict (read via the read-only key), T-057's 0.0.0.0:4000 binding reviewed. Then, each on Aaron's word: `tailscale funnel` on tcm for port 4000 only (record the *.ts.net URL); Aaron issues an enrollment code; Grok Bot runs hub-talk --init-key --invite <code> against the HTTPS URL; relay and Grok Bot talk in their own room; Grok Bot's key lists only that room; a second check from the VM without a key gets 401/403. Funnel off after, unless Aaron keeps it. Grok Bot's VM is Aaron's, in the cloud, and must never join the tailnet."
+      "note": "D-011 steps 5-6. Preconditions: Loop 5 and Loop 6 deployed, tcm AUTH_MODE=strict (read via the read-only key), T-057's 0.0.0.0:4000 binding reviewed. Then, each on Aaron's word: `tailscale funnel` on tcm for port 4000 only (record the *.ts.net URL); Aaron issues an enrollment code; Grok Bot runs hub-talk --init-key --invite <code> against the HTTPS URL; relay and Grok Bot talk in their own room; Grok Bot's key lists only that room; a second check from the VM without a key gets 401/403. Funnel off after, unless Aaron keeps it. Grok Bot's VM must never join the tailnet. REFERENCE USE CASE (session 17, 2026-09-25; Aaron: \"This is an awesome use case for the hub, cc to grokbot communication\"; FULL CASE STUDY by Clark/melve-76 at Aaron's request: docs/case-studies/2026-09-25-grokbot-marketplace-watcher.md): Aaron's Claude Code session `melve-76` and his Grok Bot `grokbot` (both created on Aaron's word via hub-talk --init-key over the TAILNET) talk in room k57d4zy8hjjvjggpc7h5fqbe7x8f39sd on tcm. melve-76 delegated a read-only Facebook Marketplace deal watcher; Aaron withdrew it (turn 6 CANCEL), grokbot confirmed teardown (turn 8), and melve-76 RESTARTED it with changes (turns 9-10). It runs 5x/day through 2026-10-02 with Telegram alerts to Aaron and a daily status line to melve-76 over the hub (27 turns by the write-up). Turn 7 crossed the cancel: a DELAYED STOP, not a refusal. LESSON: delivery is pull-based, so a cancel's latency is the agent's polling gap (T-073, T-050). HOST: grokbot's host is in or near Oregon (AWS us-west-2), egress via Cloudflare WARP; Facebook's 'near Shanghai' alert was a mislabelled WARP exit IP (Relay briefly relayed 'a server in China' before Aaron's diagnostics). HOW IT CONNECTS TODAY: grokbot's VM cannot reach the tailnet, so Grok Bot drives Aaron's desktop (DESKTOP-UGEKR74) and runs hub-talk there; from that desktop it can reach every key file in ~/.a2a-hub/keys and ~/.ssh (incl. the only full tcm key) - Aaron was told; key rotation is his open call; and the daily status depends on that PC being awake (case study G6). The HTTPS test must reproduce this conversation with grokbot on its own VM holding only its own key, no desktop in the path. Also: a stray room {aaron, grok} exists from melve-76's early ask-agent.mjs --from aaron (killed, PID 8628; SIA told); the 2026-09-20 attempt's grok-room k57bav2j... holds the released name general."
     },
     {
       "id": "T-069",
@@ -648,6 +648,36 @@
       "closed_session": null,
       "supersedes": null,
       "note": "Loop 5 QA O-4: k7.mjs (installed as ~/bin/a2a-k7.mjs, read-only agents-summary) prints FAIL lines but exits 0; the owner verdict is its own line. Pre-existing since Relay wrote it (session 17). A script or seat reading only the exit status would take a FAIL as a pass (shared.md: instruments fail closed). Fix: exit non-zero when K7=FAIL or any FAIL line; keep UNDETERMINED rc 2. A tcm script change, so it ships with a deploy on Aaron's word, re-running T-065 N and L."
+    },
+    {
+      "id": "T-072",
+      "title": "hub-talk and ask-agent input/output robustness: non-ASCII --say on Windows, output lost on kill",
+      "priority": "P2",
+      "status": "open",
+      "opened_session": 17,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "Case study docs/case-studies/2026-09-25-grokbot-marketplace-watcher.md, gaps G5 and G7. G5: non-ASCII text in `hub-talk --say` passed as a command-line argument on Windows (DESKTOP-UGEKR74) reached the hub mangled and truncated (turn 11: 116 characters ending in a mis-decoded em dash; Relay read the stored bytes on tcm, session 17). The hub stored what it received; the damage is in argv encoding before the client sends. Fix candidates: --say-file <path> or stdin for message bodies, or UTF-8 argv handling on win32. A hub-talk change is SIA-facing (D-003, via Atlas). G7: ask-agent.mjs output piped through tail was lost when the process was killed; write replies line-buffered or to a file."
+    },
+    {
+      "id": "T-073",
+      "title": "Control-message convention: CANCEL/PAUSE acknowledged by turn reference",
+      "priority": "P2",
+      "status": "open",
+      "opened_session": 17,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "Case study docs/case-studies/2026-09-25-grokbot-marketplace-watcher.md, gap G4, and T-068's lesson: hub delivery is pull-based, so a CANCEL (turn 6) crossed an in-flight report (turn 7) and both melve-76 and Relay misread it as a refusal. Convention proposed by Clark: control messages are explicitly acked by turn reference ('ack cancel @turn 6') and the reader waits for the ack before concluding. Decide whether this is a documented convention (docs/joining-the-hub.md) or a hub/hub-talk feature (D-003 if hub-talk changes). Relates to T-050 (wake)."
+    },
+    {
+      "id": "T-074",
+      "title": "Identity ergonomics: key files as ambient authority; show the agent card before the first send",
+      "priority": "P2",
+      "status": "open",
+      "opened_session": 17,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "Case study docs/case-studies/2026-09-25-grokbot-marketplace-watcher.md, gaps G1 and G2. G1: any local process can post as any name whose key file exists in ~/.a2a-hub/keys (melve-76 ran ask-agent.mjs --from aaron and posted with Aaron's real key into SIA's grok seat; Grok Bot driving DESKTOP-UGEKR74 can read every key file there). Candidates: warn or refuse when --from/--as is not a name this seat created; per-OS-user or per-session key scoping. G2: `grok` (SIA Cursor seat) vs `grokbot` (Aaron's Grok Bot) caused a wrong-recipient send; surface the target's agentCard description before a first send. Both touch hub-talk/ask-agent (D-003 for hub-talk). Relates to D-010 accounts and Loop 6 enrollment."
     }
   ],
   "verified": [
@@ -944,50 +974,35 @@
     },
     {
       "seat": "planner",
-      "pick_up": "ROLL HANDOFF (Relay session 16 -> fresh Relay, 2026-09-25 ~00:00Z; Aaron restarting VS Code). STATE: LOOP 3 (T-003, per-agent keys, v1.9.0) is BUILT and ACCEPTED (V-004, ruling 4) on loop/3-build-r3 fe4eb14. THREE PRs await Aaron's word to merge, with no file overlaps and no CI: #11 (code, head fe4eb14), #12 (QA docs, head b6f1cef), #13 (Relay's docs/session-16-b: rulings 3-4, V-004, T-057, T-003, and this handoff). Session 16's record through rev 34 is already merged (PR #10, e166057). FIRST ACTIONS: (1) ListAgents: find the live SIA planner (it rolls too) and tell it you're the live Relay; (2) ask Aaron: \"merge #11, #12, #13?\" (asked in session 16, no answer yet); (3) after the merge, Rivet tags v1.9.0 on the merge commit on Aaron's word. THEN, each on Aaron's word: the live local start (N.5(b): alice/bob key files and migration; browser key for aaron via hub-key.mjs); the tcm cutover per the Loop 3 design section 4.2 (T-003's note has the full order, including `sudo gh-runners-pause` before the deploy act and `sudo gh-runners-resume` after, telling the SIA planner before and after). grok/atlas/forge steps only in a SIA-named window after SIA's candidate A is decided (A8 is in flight). Also open: T-056 (alice silence; needs the local stack), T-057 (P1: fix the tracked compose to 127.0.0.1:3210; make hub-only Convex functions internal), T-017 (P1).",
+      "pick_up": "Relay session 17 close (2026-09-25 ~07:40Z; no /end, per Atlas, see watch-out). DONE THIS SESSION, all on Aaron's word: v1.9.0 merged+tagged; Loop 4 chat UI (v1.10.0) built, accepted (V-005), merged, tagged; the T-003 tcm cutover ran end to end, shipping v1.10.0, closed on K7 (V-006; log docs/loops/t-003-cutover-log.md); read-only tcm key (T-065, V-007); Loop 5 identity+membership (v1.11.0) accepted (V-008), merged (master f52f6d6) and tagged. Decisions D-008..D-012; gap G-001. NEXT, in order (D-012): (1) after ~04:30Z 2026-09-26, T-064: read tcm's [auth] log with the read-only key (`ssh -i C:/Users/melve/.ssh/tcm-readonly -o IdentitiesOnly=yes melvenac@100.124.212.87 auth-log`; auto mode OK) for a working day since the 04:14:10Z swap; (2) then ask Aaron for the Loop 5 deploy: Rivet follows docs/loops/loop-5-deploy-plan.md (chore/loop-5-deploy-plan 936fda8, NOT YET MERGED: ask Aaron to merge it with this record), including step 0.5 (full-key check of tcm's live compose env_file; copy .env if it points into the rotated dir), steps 12-13 (main checkout to master, GitNexus reindex); Aaron runs gh-runners-pause/resume himself (sudo); Gauge does PB, PD, RL2; (3) one-day [authz] soak via auth-log's authz-lines header; (4) AUTH_MODE=strict on Aaron's word; (5) Loop 6 brief (T-067: enrollment codes, rate limits T-005, error pages T-062; hub-talk contract change is D-003 via Atlas); (6) Funnel + the Grok Bot HTTPS test (T-068). Also queued: T-069 .gitnexusrc (before SIA T-187 makes /sync rebuild), T-070, T-071, T-060, T-057 (0.0.0.0:4000), T-017, T-050.",
       "watch_out": [
-        "SIA holds: SIA QA measurement moved to a separate PC (SIA D-045, desktop-o4egb1e) from candidate A8, so full stops of A2A seats should end. EXCEPTION: SIA B's Step 0 load test (location undecided): the SIA planner warns first; then every A2A process is killed by PID, ports are shown free, and the three confirmations are collected and sent back. No tcm step touching grok or atlas until SIA's candidate A is decided.",
-        "Questions for Aaron on SHARED work (anything SIA depends on: hub-talk's contract, transport, T-050) go through the live SIA planner under D-003, quoted both ways. A2A-only work goes to Aaron directly. Aaron wants DETAILED questions: what it is, where it lives, what changes, plus a recommendation.",
-        "D-005: seats push their OWN branches without asking (Rivet loop/* chore/*, Gauge qa/*, Relay docs/*); never master, never force. Merges, tags, tcm acts, main-checkout updates, starting or stopping the local stack, and live Convex writes each need Aaron's word for that act. D-006 approves the cutover PLAN, not its acts. D-007 is Aaron's word for the 8 releases, done at their plan steps.",
-        "tcm: `ssh melvenac@tcm`; Aaron switches to manual mode for production commands. Two SIA CI runners (tcm-1/tcm-2) are live: low priority, egress-firewalled, MemoryMax 5G each, OOMScoreAdjust 500. Before a deploy act: `sudo gh-runners-pause [timeout]` (waits for jobs; exits 1 'NOT paused' on timeout, killing nothing), then `sudo gh-runners-resume`. A pause doesn't survive a reboot. SIA's seats use http://100.124.212.87:4000 for tcm; key dirs are keyed on that spelling. tcm Convex publishes 127.0.0.1:3210 only (relayed evidence). No rebuild unless there's a new version.",
-        "Every convex dev / hub start pins its ports (convex dev --local silently takes 3210/3211 when free), and every pre-existing listener is identified BEFORE starting. start-stack.ps1 is never run from a seat worktree.",
-        "One writer for the record. ob_state writes the CHECKED-OUT tree: switch to the docs branch holding the latest revision first (the latest is on docs/session-16-b until #13 merges). A `;`-chained command after a failed commit still runs the detach, so check the branch before every ob_state call.",
-        "T-056 (alice silence): rerun docs/loops/t-056-alice-sim.mjs or read the alice window for '[alice] poll error'; needs the local stack, on Aaron's word.",
-        "Relay's error shapes: asserting without reading; reporting a line when it had found a class (the Loop 3 brief named 3 dev-key sites of 7; ruling 3 missed listOnline until checked). Read first, search for the class, validate the search on a known positive.",
-        "Decisions are append-only; a correction is a new decision pointing at the old."
+        "DO NOT run /end or ob_end, and never use ob_state's end_session op: it writes ONE shared last_session slot, so each seat's close overwrites the others' (SIA V-074; fix SIA T-163/T-179). At session end: set_handoff for your seat (dry run first, verify), commit on docs/*, let the SessionEnd hook capture. (Atlas, 2026-09-25, on Aaron's question.)",
+        "G-001: in AUTH_MODE=warn the hub admits unknown keys as nobody. NEVER a public address (Funnel, hostname, port forward) before strict. D-011/D-012 fix the order.",
+        "tcm reads: use the read-only key's 6 menu items in auto mode (V-007). Anything else on tcm (writes, compose/.env reads) needs Aaron's manual mode and his word for that act. Its sudo is Aaron's. SIA's seats use http://100.124.212.87:4000 for tcm; key dirs are keyed on that spelling.",
+        "The T-064 read MUST precede the Loop 5 deploy: the container recreate starts a fresh log and would erase the day-long window.",
+        "GitNexus: index follows ~/Projects/A2A-Hub, currently c4d2d1c (PRE-Loop-5) until deploy step 13. Rebuild with `gitnexus analyze --force --skip-agents-md --skip-skills` (1.6.12). Pass repo as the absolute path (two registrations named A2A-Hub).",
+        "Questions for Aaron on SHARED work (hub-talk contract, transport, T-050, SIA tooling) go through the live SIA planner (Atlas) under D-003; A2A-only work to Aaron directly. Aaron wants DETAILED questions with a recommendation, one at a time.",
+        "D-005: seats push their OWN branches (Rivet loop/* chore/*, Gauge qa/*, Relay docs/*); merges, tags, tcm acts, main-checkout updates, stack start/stop and live Convex writes each need Aaron's word for that act. The planner writes briefs, rulings and the record; Rivet builds and designs; Gauge accepts.",
+        "Relay's error shape, again in session 17 (four instances): asserting without reading (bundled the main-checkout update against R2; cited ruling B1 unread; 'SIA seats may never be live' before reading hub-talk; 'refresh touches no tracked file'). Each was caught before harm, twice by peers. Read the artifact a claim rests on BEFORE sending it; validate on a known positive.",
+        "Decisions are append-only; a correction is a new decision pointing at the old (D-012 corrects D-011's order)."
       ],
       "open_questions": [
-        "Seat transport: Claude Code cross-session messages or a hub room via scripts/hub-talk.mjs? AGENT.md allows both."
+        "Seat transport: Claude Code cross-session messages or a hub room via scripts/hub-talk.mjs? AGENT.md allows both. (Session 17 used cross-session messages throughout.)"
       ],
-      "session": 16,
+      "session": 17,
       "loop_state": {
-        "open_prs": [
-          {
-            "ref": "#11",
-            "qa_status": "accepted",
-            "note": "loop/3-build-r3 -> master, head fe4eb14, Loop 3 code v1.9.0 (V-004); merge + v1.9.0 tag on Aaron's word"
-          },
-          {
-            "ref": "#12",
-            "qa_status": "not_required",
-            "note": "qa/loop-3-harness-keys -> master, head b6f1cef, QA criteria/report/instruments (docs only)"
-          },
-          {
-            "ref": "#13",
-            "qa_status": "not_required",
-            "note": "docs/session-16-b -> master, Relay record revs 35+ (rulings 3-4, V-004, handoffs)"
-          }
-        ],
-        "frozen_sha": "fe4eb14",
+        "open_prs": [],
+        "frozen_sha": "",
         "questions_for_aaron": [
-          "Merge #11, #12, #13? (asked in session 16, unanswered)"
+          "Merge chore/loop-5-deploy-plan (936fda8, Rivet's plan, one doc) and this session's closing docs branch (docs/session-17-f).",
+          "After the T-064 read (>= ~04:30Z 2026-09-26): approve the Loop 5 deploy to tcm per docs/loops/loop-5-deploy-plan.md."
         ],
         "rulings": [
-          "Loop 2 (T-001) closed: V-003.",
-          "Loop 3: brief + Amendment 1; rulings 1-4 (docs/loops/loop-3-ruling-1..4.md); accepted on fe4eb14 (V-004); H4.2 exact-string wording corrected, not widened.",
-          "D-006 (hub-talk contract + staged cutover), D-007 (release the 8 dev-key rows), browser page acts as `aaron` (Aaron).",
-          "No tcm rebuild without a new version (Aaron).",
-          "tcm runners: pause/resume procedure agreed with the SIA planner (SIA D-043/D-044)."
+          "Loop 4 rulings 1-2 (design; criteria, G1 replay + PB/PD, G2).",
+          "Loop 5 rulings 1-2 (design, Q1-Q9, A1 [authz] in read-only log, A2 soak before strict; criteria, O1-O7).",
+          "T-065 W clarified (docker's runc transient is not a QA write; rule wording corrected, original verdict visible).",
+          "Rivet's Loop 5 deploy plan accepted: step 12 to master; tag prev as v1.8.0 before step 4; step 0.5 env_file check; timing after T-064.",
+          "D-008 (local start after main-checkout update), D-009 (ship v1.10.0 in cutover), D-010 (multi-tenant), D-011 (Grok Bot over HTTPS), D-012 (strict after [authz] soak)."
         ]
       }
     },

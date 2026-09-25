@@ -1,47 +1,45 @@
-<!-- generated from .agents/state.json rev 54 by open-brain v1.11.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 59 by open-brain v1.11.0 — do not edit; change state via ob_state -->
 
 # Next Session Handoff
 
-## planner _(written session 16)_
+## planner _(written session 17)_
 
 ### Pick up here
 
-ROLL HANDOFF (Relay session 16 -> fresh Relay, 2026-09-25 ~00:00Z; Aaron restarting VS Code). STATE: LOOP 3 (T-003, per-agent keys, v1.9.0) is BUILT and ACCEPTED (V-004, ruling 4) on loop/3-build-r3 fe4eb14. THREE PRs await Aaron's word to merge, with no file overlaps and no CI: #11 (code, head fe4eb14), #12 (QA docs, head b6f1cef), #13 (Relay's docs/session-16-b: rulings 3-4, V-004, T-057, T-003, and this handoff). Session 16's record through rev 34 is already merged (PR #10, e166057). FIRST ACTIONS: (1) ListAgents: find the live SIA planner (it rolls too) and tell it you're the live Relay; (2) ask Aaron: "merge #11, #12, #13?" (asked in session 16, no answer yet); (3) after the merge, Rivet tags v1.9.0 on the merge commit on Aaron's word. THEN, each on Aaron's word: the live local start (N.5(b): alice/bob key files and migration; browser key for aaron via hub-key.mjs); the tcm cutover per the Loop 3 design section 4.2 (T-003's note has the full order, including `sudo gh-runners-pause` before the deploy act and `sudo gh-runners-resume` after, telling the SIA planner before and after). grok/atlas/forge steps only in a SIA-named window after SIA's candidate A is decided (A8 is in flight). Also open: T-056 (alice silence; needs the local stack), T-057 (P1: fix the tracked compose to 127.0.0.1:3210; make hub-only Convex functions internal), T-017 (P1).
+Relay session 17 close (2026-09-25 ~07:40Z; no /end, per Atlas, see watch-out). DONE THIS SESSION, all on Aaron's word: v1.9.0 merged+tagged; Loop 4 chat UI (v1.10.0) built, accepted (V-005), merged, tagged; the T-003 tcm cutover ran end to end, shipping v1.10.0, closed on K7 (V-006; log docs/loops/t-003-cutover-log.md); read-only tcm key (T-065, V-007); Loop 5 identity+membership (v1.11.0) accepted (V-008), merged (master f52f6d6) and tagged. Decisions D-008..D-012; gap G-001. NEXT, in order (D-012): (1) after ~04:30Z 2026-09-26, T-064: read tcm's [auth] log with the read-only key (`ssh -i C:/Users/melve/.ssh/tcm-readonly -o IdentitiesOnly=yes melvenac@100.124.212.87 auth-log`; auto mode OK) for a working day since the 04:14:10Z swap; (2) then ask Aaron for the Loop 5 deploy: Rivet follows docs/loops/loop-5-deploy-plan.md (chore/loop-5-deploy-plan 936fda8, NOT YET MERGED: ask Aaron to merge it with this record), including step 0.5 (full-key check of tcm's live compose env_file; copy .env if it points into the rotated dir), steps 12-13 (main checkout to master, GitNexus reindex); Aaron runs gh-runners-pause/resume himself (sudo); Gauge does PB, PD, RL2; (3) one-day [authz] soak via auth-log's authz-lines header; (4) AUTH_MODE=strict on Aaron's word; (5) Loop 6 brief (T-067: enrollment codes, rate limits T-005, error pages T-062; hub-talk contract change is D-003 via Atlas); (6) Funnel + the Grok Bot HTTPS test (T-068). Also queued: T-069 .gitnexusrc (before SIA T-187 makes /sync rebuild), T-070, T-071, T-060, T-057 (0.0.0.0:4000), T-017, T-050.
 
 ### Watch out
 
-- SIA holds: SIA QA measurement moved to a separate PC (SIA D-045, desktop-o4egb1e) from candidate A8, so full stops of A2A seats should end. EXCEPTION: SIA B's Step 0 load test (location undecided): the SIA planner warns first; then every A2A process is killed by PID, ports are shown free, and the three confirmations are collected and sent back. No tcm step touching grok or atlas until SIA's candidate A is decided.
-- Questions for Aaron on SHARED work (anything SIA depends on: hub-talk's contract, transport, T-050) go through the live SIA planner under D-003, quoted both ways. A2A-only work goes to Aaron directly. Aaron wants DETAILED questions: what it is, where it lives, what changes, plus a recommendation.
-- D-005: seats push their OWN branches without asking (Rivet loop/* chore/*, Gauge qa/*, Relay docs/*); never master, never force. Merges, tags, tcm acts, main-checkout updates, starting or stopping the local stack, and live Convex writes each need Aaron's word for that act. D-006 approves the cutover PLAN, not its acts. D-007 is Aaron's word for the 8 releases, done at their plan steps.
-- tcm: `ssh melvenac@tcm`; Aaron switches to manual mode for production commands. Two SIA CI runners (tcm-1/tcm-2) are live: low priority, egress-firewalled, MemoryMax 5G each, OOMScoreAdjust 500. Before a deploy act: `sudo gh-runners-pause [timeout]` (waits for jobs; exits 1 'NOT paused' on timeout, killing nothing), then `sudo gh-runners-resume`. A pause doesn't survive a reboot. SIA's seats use http://100.124.212.87:4000 for tcm; key dirs are keyed on that spelling. tcm Convex publishes 127.0.0.1:3210 only (relayed evidence). No rebuild unless there's a new version.
-- Every convex dev / hub start pins its ports (convex dev --local silently takes 3210/3211 when free), and every pre-existing listener is identified BEFORE starting. start-stack.ps1 is never run from a seat worktree.
-- One writer for the record. ob_state writes the CHECKED-OUT tree: switch to the docs branch holding the latest revision first (the latest is on docs/session-16-b until #13 merges). A `;`-chained command after a failed commit still runs the detach, so check the branch before every ob_state call.
-- T-056 (alice silence): rerun docs/loops/t-056-alice-sim.mjs or read the alice window for '[alice] poll error'; needs the local stack, on Aaron's word.
-- Relay's error shapes: asserting without reading; reporting a line when it had found a class (the Loop 3 brief named 3 dev-key sites of 7; ruling 3 missed listOnline until checked). Read first, search for the class, validate the search on a known positive.
-- Decisions are append-only; a correction is a new decision pointing at the old.
+- DO NOT run /end or ob_end, and never use ob_state's end_session op: it writes ONE shared last_session slot, so each seat's close overwrites the others' (SIA V-074; fix SIA T-163/T-179). At session end: set_handoff for your seat (dry run first, verify), commit on docs/*, let the SessionEnd hook capture. (Atlas, 2026-09-25, on Aaron's question.)
+- G-001: in AUTH_MODE=warn the hub admits unknown keys as nobody. NEVER a public address (Funnel, hostname, port forward) before strict. D-011/D-012 fix the order.
+- tcm reads: use the read-only key's 6 menu items in auto mode (V-007). Anything else on tcm (writes, compose/.env reads) needs Aaron's manual mode and his word for that act. Its sudo is Aaron's. SIA's seats use http://100.124.212.87:4000 for tcm; key dirs are keyed on that spelling.
+- The T-064 read MUST precede the Loop 5 deploy: the container recreate starts a fresh log and would erase the day-long window.
+- GitNexus: index follows ~/Projects/A2A-Hub, currently c4d2d1c (PRE-Loop-5) until deploy step 13. Rebuild with `gitnexus analyze --force --skip-agents-md --skip-skills` (1.6.12). Pass repo as the absolute path (two registrations named A2A-Hub).
+- Questions for Aaron on SHARED work (hub-talk contract, transport, T-050, SIA tooling) go through the live SIA planner (Atlas) under D-003; A2A-only work to Aaron directly. Aaron wants DETAILED questions with a recommendation, one at a time.
+- D-005: seats push their OWN branches (Rivet loop/* chore/*, Gauge qa/*, Relay docs/*); merges, tags, tcm acts, main-checkout updates, stack start/stop and live Convex writes each need Aaron's word for that act. The planner writes briefs, rulings and the record; Rivet builds and designs; Gauge accepts.
+- Relay's error shape, again in session 17 (four instances): asserting without reading (bundled the main-checkout update against R2; cited ruling B1 unread; 'SIA seats may never be live' before reading hub-talk; 'refresh touches no tracked file'). Each was caught before harm, twice by peers. Read the artifact a claim rests on BEFORE sending it; validate on a known positive.
+- Decisions are append-only; a correction is a new decision pointing at the old (D-012 corrects D-011's order).
 
 ### Open questions
 
-- Seat transport: Claude Code cross-session messages or a hub room via scripts/hub-talk.mjs? AGENT.md allows both.
+- Seat transport: Claude Code cross-session messages or a hub room via scripts/hub-talk.mjs? AGENT.md allows both. (Session 17 used cross-session messages throughout.)
 
 ### Loop state
 
-**Open PRs:** 
-- #11 — QA: accepted — loop/3-build-r3 -> master, head fe4eb14, Loop 3 code v1.9.0 (V-004); merge + v1.9.0 tag on Aaron's word
-- #12 — QA: not_required — qa/loop-3-harness-keys -> master, head b6f1cef, QA criteria/report/instruments (docs only)
-- #13 — QA: not_required — docs/session-16-b -> master, Relay record revs 35+ (rulings 3-4, V-004, handoffs)
+**Open PRs:** _None._
 
-**SHA frozen for QA:** `fe4eb14`
+**SHA frozen for QA:** _None._
 
 **Questions pending for Aaron:** 
-- Merge #11, #12, #13? (asked in session 16, unanswered)
+- Merge chore/loop-5-deploy-plan (936fda8, Rivet's plan, one doc) and this session's closing docs branch (docs/session-17-f).
+- After the T-064 read (>= ~04:30Z 2026-09-26): approve the Loop 5 deploy to tcm per docs/loops/loop-5-deploy-plan.md.
 
 **Rulings made mid-loop:** 
-- Loop 2 (T-001) closed: V-003.
-- Loop 3: brief + Amendment 1; rulings 1-4 (docs/loops/loop-3-ruling-1..4.md); accepted on fe4eb14 (V-004); H4.2 exact-string wording corrected, not widened.
-- D-006 (hub-talk contract + staged cutover), D-007 (release the 8 dev-key rows), browser page acts as `aaron` (Aaron).
-- No tcm rebuild without a new version (Aaron).
-- tcm runners: pause/resume procedure agreed with the SIA planner (SIA D-043/D-044).
+- Loop 4 rulings 1-2 (design; criteria, G1 replay + PB/PD, G2).
+- Loop 5 rulings 1-2 (design, Q1-Q9, A1 [authz] in read-only log, A2 soak before strict; criteria, O1-O7).
+- T-065 W clarified (docker's runc transient is not a QA write; rule wording corrected, original verdict visible).
+- Rivet's Loop 5 deploy plan accepted: step 12 to master; tag prev as v1.8.0 before step 4; step 0.5 env_file check; timing after T-064.
+- D-008 (local start after main-checkout update), D-009 (ship v1.10.0 in cutover), D-010 (multi-tenant), D-011 (Grok Bot over HTTPS), D-012 (strict after [authz] soak).
 
 ## developer _(written session 17)_
 

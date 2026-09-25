@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 54 by open-brain v1.11.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 59 by open-brain v1.11.0 — do not edit; change state via ob_state -->
 
 # Inbox
 
@@ -56,6 +56,9 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-069** Add .gitnexusrc {"noStats": true} so GitNexus analyze stops rewriting tracked CLAUDE.md/AGENTS.md
 - [ ] **T-070** /read still distinguishes non-member from nonexistent session in strict (Q2 oracle gap)
 - [ ] **T-071** K7 analyzer exits 0 on FAIL lines (agents-summary)
+- [ ] **T-072** hub-talk and ask-agent input/output robustness: non-ASCII --say on Windows, output lost on kill
+- [ ] **T-073** Control-message convention: CANCEL/PAUSE acknowledged by turn reference
+- [ ] **T-074** Identity ergonomics: key files as ambient authority; show the agent card before the first send
 
 ## P3
 
