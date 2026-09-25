@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 47,
+  "revision": 48,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -577,17 +577,17 @@
       "opened_session": 17,
       "closed_session": null,
       "supersedes": null,
-      "note": "Loop 3 design section 4.4's independent signal for K7: after step 9, the hub log shows no `WOULD REJECT legacy` line for a working day. Step 9 finished 2026-09-25 04:24:57Z; K7 read the log clean after 04:23:05Z. Read `docker logs --timestamps a2a-hub | grep '\\[auth\\]'` (hex masked) no earlier than 2026-09-26 ~04:30Z, on Aaron's word (manual mode). Any legacy line names a seat still on the dev-key or without a key file: find it before AUTH_MODE=strict (T-002 step 4). The log driver is json-file 3x10m, so a busy day could rotate it: check the first timestamp."
+      "note": "Loop 3 design section 4.4's independent signal for K7: after step 9, the hub log shows no `WOULD REJECT legacy` line for a working day. Step 9 finished 2026-09-25 04:24:57Z. NOW RUN WITHOUT MANUAL MODE via T-065: `ssh -i C:/Users/melve/.ssh/tcm-readonly -o IdentitiesOnly=yes melvenac@100.124.212.87 auth-log` (prints auth-lines, first/last timestamps and first-line-within-60s-of-start, so rotation is visible; rotated= needs root). Run no earlier than 2026-09-26 ~04:30Z. First read (Relay, session 17, ~05:0xZ): 14 [auth] lines, last 04:23:05Z (MIGRATE grok), none after while atlas (turn 40) and grok (turn 41) posted, so both are attributed. Any legacy line later names a seat still on the dev-key or without a key file: find it before AUTH_MODE=strict (T-002 step 4)."
     },
     {
       "id": "T-065",
       "title": "Read-only ssh key for tcm, enforced by a forced command",
       "priority": "P1",
-      "status": "open",
+      "status": "done",
       "opened_session": 17,
-      "closed_session": null,
+      "closed_session": 17,
       "supersedes": null,
-      "note": "Aaron, session 17, verbatim \"set that up on tcm, manual mode is on\", answering Relay's proposal. WHY: auto mode's classifier blocks every tcm production read, so each read-only check (T-064, K7, the grok log check) needed manual mode. A broad allow rule like Bash(ssh melvenac@tcm:*) would allow any command on tcm, so it is ruled out. DESIGN (Relay's spec; the mechanism is Rivet's): (1) new ed25519 key on this PC at ~/.ssh/tcm-readonly, used only for this. (2) One tcm ~/.ssh/authorized_keys line for it: `restrict,command=\"<script>\"`. tcm enforces it; whatever the client asks, only the script runs. (3) The script dispatches on $SSH_ORIGINAL_COMMAND by EXACT match to a fixed menu, with no argument passthrough and exit 2 on anything else: auth-log ([auth] lines, timestamped, hex masked), agents-summary (the K7 analyzer run ON tcm; names, kind, keyStatus, 8-char prefixes, PASS/FAIL lines; admin key generated and used inside tcm, never printed), health, auth-mode, image, runners. No key and no full hash ever leaves tcm. (4) One narrow Claude Code allow rule for exactly that key's ssh invocation. Writes (deploys, Convex writes, restarts) keep needing manual mode and Aaron's word. ACCEPTANCE (Gauge): each menu item works; a non-menu command (e.g. `docker ps`, `touch /tmp/x`, `auth-log; id`, an empty command) is refused and writes nothing; no interactive shell and no port forwarding with the key; the full melvenac key is unchanged; a positive control shows the refusal check can fail. Installing the authorized_keys line and the script are writes on tcm, covered by Aaron's word above."
+      "note": "CLOSED session 17 (V-007). Built by Rivet on Aaron's word ('set that up on tcm, manual mode is on'), every tcm write approved by Aaron in manual mode; accepted by Gauge; W ruled by Relay (a correction of the rule's wording). Menu: health, auth-mode, image, runners, auth-log, agents-summary. Call: ssh -i C:/Users/melve/.ssh/tcm-readonly -o IdentitiesOnly=yes melvenac@100.124.212.87 <item>. Keys on this PC only; never copy ~/.ssh/tcm-readonly. On tcm by design: ~/.ssh/authorized_keys.bak-t065-20260925, .bak-t065-g4, ~/bin/a2a-readonly.bak-t065-g1. Nit left: the line-5 comment in a2a-readonly predates from=. Found in passing: the Convex CLI retries forever against a dead port (now under timeout 60 in the script)."
     }
   ],
   "verified": [
@@ -674,6 +674,19 @@
           "type": "live-read",
           "path": "docs/loops/t-003-cutover-log.md (docs/session-17-b 2a81352); PB/PD/O1 on qa/t003-pb",
           "observation": "Relay, 2026-09-25 04:26:54Z, read-only on tcm: convex data agents through k7.mjs (validated both directions first; raw rows deleted, read back): 6 rows, all keyStatus owned: aaron (human), atlas, cursor-grok, grok, grok-probe, relay; one row per name, one name per hash, no hash with the dev-key prefix 7e9f8fd1, 0 unparsable. AUTH_MODE=warn; container image 648ac3963dd7 (v1.10.0, PB and PD passed). Attribution: the tcm log's [auth] lines show atlas's old-client calls at 04:20:44-51Z logged WOULD REJECT legacy/shared (positive control), MIGRATE relay 04:20:07, atlas 04:22:59, grok 04:23:05, and no [auth] line after, including atlas's turn 4 sent from the updated main checkout (served as atlas). ~/Projects/A2A-Hub at c4d2d1c (Rivet, 04:24:57Z; read back by Relay). NOT YET: the design's second signal (a working day of no WOULD REJECT legacy), T-064."
+        }
+      ],
+      "since_session": 17,
+      "status": "verified"
+    },
+    {
+      "id": "V-007",
+      "claim": "A read-only ssh key reads tcm's hub, auth log, agents summary, image and runners and can do nothing else; seats use it in auto mode through six exact allow rules",
+      "evidence": [
+        {
+          "type": "qa-report",
+          "path": "docs/loops/t065-qa-report.md (qa/t065 fdcd000, ruling recorded at top); criteria docs/loops/t065-qa-criteria.md (3e704c3)",
+          "observation": "Gauge, 2026-09-25 04:50:50-04:56:40Z, frozen candidate ~/bin/a2a-readonly 417a34dde54d, ~/bin/a2a-k7.mjs de3a9c3e0cd0, authorized_keys line 2 `from=\"100.64.0.0/10\",restrict,command=\"/home/melvenac/bin/a2a-readonly\"`, line 1 (the full key) ea0a6ce6b1bd unchanged. PASS on S (exact case dispatch, pipefail, admin key env-only, output mask), AK, P1, M1-M4, AL (14 [auth] lines = full-key grep -c, no cap), AS (6 owned, K7 PASS), AF (a dead Convex port gives UNDETERMINED rc 124, exit 2), L (planted positive first, 0 hits), N (19 refusals rc 2; forced pty fails, nothing runs), NF (-L/-R/-D prohibited, full-key -L control 200), K (0 of 35 repos track the key). W as written FAILED on a root-owned runc exec spec in /tmp created and deleted within each docker exec; Relay ruled it a mis-specified rule, clarified to 'nothing persists after the call and nothing is written by melvenac' (every read-only docker exec does this, K7 included), so T-065 passes; the original W verdict stays visible in the report. Allow rules: six exact Bash(ssh -i C:/Users/melve/.ssh/tcm-readonly -o IdentitiesOnly=yes melvenac@100.124.212.87 <item>) entries in ~/.claude/settings.json, no wildcard (read by Relay). First real use by Relay in auto mode: auth-log, complete since start, confirmed atlas and grok served attributed after migration."
         }
       ],
       "since_session": 17,
