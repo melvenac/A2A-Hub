@@ -194,3 +194,43 @@ Atlas ran each command from `~/Worktrees/a2a-client-v1.10.0` (c4d2d1c, clean), a
 relay,atlas,grok` gave ok for all three, rc 0. `~/.a2a-hub/keys/100.124.212.87-4000/` holds
 `atlas.key`, `grok.key` and `relay.key`. **Step 9's precondition (§3.6) holds** for every name
 observed running from the main checkout against tcm.
+
+### Step 9: main-checkout update, DONE (Rivet)
+
+**Authority:** Aaron, directly to Relay, verbatim "yes", to "may Rivet update the main checkout
+(`~/Projects/A2A-Hub`) to v1.10.0?". Rivet's report:
+- 04:24:4x: no process used the checkout, and nothing listened on 3210, 3211 or 4000.
+- 04:24:49: `convex/_generated/api.d.ts` differed only in whitespace (`--ignore-all-space` diff
+  empty), so it was restored.
+- 04:24:50: `fetch --tags`, then `merge --ff-only v1.10.0`.
+- 04:24:57: HEAD `c4d2d1c`, clean, even with origin, package.json 1.10.0.
+- From the main checkout, `hub-key check --names relay,atlas,grok`: ok x3.
+- Relay read HEAD, status and version back independently.
+- No npm install and no stack started (D-008).
+- Rollback: `git checkout 003f57d`, on Aaron's word.
+
+### `aaron` on tcm (T-061), DONE (Relay)
+
+**Authority:** Aaron, directly to Relay, verbatim "yes to both" (the `aaron` key, then K7).
+- 04:25:55: `hub-key.mjs init --as aaron --kind human --register --hub
+  http://100.124.212.87:4000`, rc 0, prefix `0fdda12d`, file under
+  `~/.a2a-hub/keys/100.124.212.87-4000/`. `check --names aaron`: ok, whoami aaron.
+- `hub-key.mjs copy`: on the clipboard, never displayed.
+- Printed prefixes are sha256 prefixes (`hub-key.mjs:72`, the same hash as `src/auth.ts:38`), not
+  key characters.
+
+### Step 10: K7, PASS (Relay)
+
+**Analyzer `k7.mjs`, validated both ways before use.** It FAILs a synthetic set with a duplicate
+name, a shared hash, a legacy row, a row with no status, a dev-key-prefix row and a junk line
+(each check fails). It PASSes a clean set. Empty input is `UNDETERMINED`, rc 2.
+
+| UTC | Read (tcm, read-only) | Result |
+|---|---|---|
+| 04:26:41 | `AUTH_MODE`; container image | `warn`; `648ac3963dd7` |
+| 04:26:41 | `[auth]` log lines since the swap, timestamped, hex masked | 04:20:07 `MIGRATE relay`. 04:20:44-51: atlas on the OLD client logged `WOULD REJECT legacy/shared` on register, heartbeat, messages, read and message (**the positive control: unattributed**). 04:22:59 `MIGRATE atlas`, 04:23:05 `MIGRATE grok`. **Nothing after**: atlas's turn 4 from the updated main checkout (~04:25-04:26, rc 0) was served as `atlas` |
+| 04:26:54 | `convex data agents` through `k7.mjs`; raw rows deleted, and the deletion read back | 6 rows: `aaron` (human), `atlas`, `cursor-grok`, `grok`, `grok-probe`, `relay`, all `owned`. PASS on oneRowPerName, oneNamePerHash, allOwned, devKeyHeldByNone (no `7e9f8fd1`) and unparsableZero. **K7 = PASS** |
+
+**Not yet observed:**
+- The design's second signal (§4.4): a working day of hub log with no `WOULD REJECT legacy`.
+- O1, pending Gauge's one keyless GET.
