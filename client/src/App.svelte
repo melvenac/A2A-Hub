@@ -2,11 +2,14 @@
   import { onDestroy } from "svelte";
 
   // Chat client for the hub: Grok-style history sidebar + live transcripts.
-  // Humans are peers — you chat inside sessions as HUMAN (default "aaron").
-  const HUMAN = "aaron";
-  let hubUrl = "http://127.0.0.1:4000";
-  // aaron's own key (T-003, Loop 3 §12). There is no default: get it with
-  // `node scripts/hub-key.mjs copy --as aaron` (clipboard only) and paste it
+  // Humans are peers. You chat as whoever your key belongs to: the name comes
+  // from the hub (GET /a2a/whoami), never from this file (Loop 4, T-061).
+  //
+  // Served by the hub at /ui/, the page's hub is its own origin. Under the dev
+  // server (npm run dev, :5173) it is the local hub, as before.
+  let hubUrl = import.meta.env.DEV ? "http://127.0.0.1:4000" : window.location.origin;
+  // Your key (T-003, Loop 3 §12). There is no default: get it with
+  // `node scripts/hub-key.mjs copy --as <you>` (clipboard only) and paste it
   // into connection → Key. Kept in this browser's localStorage; the page works
   // without storage, you just paste again.
   const KEY_STORE = "a2a-hub:aaron-key";
@@ -38,11 +41,57 @@
   }
   checkHealth();
 
+  // --- Identity: who this key is, according to the hub ---
+  // Nothing under /a2a is sent until `me` is known. With no key the page sends
+  // no /a2a request at all; a key the hub does not recognise (warn mode answers
+  // whoami with name: null) never gets a guessed name to post as.
+  let me = null;
+  let authState = "nokey"; // nokey | checking | ok | error
+  let authError = "";
+  let connOpen = !agentKey;
+
+  async function identify() {
+    stopWatching();
+    me = null;
+    sessions = [];
+    activeSessionId = null;
+    livePeers = [];
+    peersLoaded = false;
+    authError = "";
+    const key = agentKey.trim();
+    if (!key) {
+      authState = "nokey";
+      connOpen = true;
+      return;
+    }
+    authState = "checking";
+    try {
+      const res = await fetch(`${hubUrl}/a2a/whoami`, { headers: hdrs() });
+      const body = await res.json().catch(() => ({}));
+      if (key !== agentKey.trim()) return; // superseded by a newer key
+      if (!res.ok) throw new Error(`${res.status}: ${body.error || "request refused"}`);
+      if (!body.name) throw new Error("this hub does not recognise that key");
+      me = body.name;
+      authState = "ok";
+      loadSessions();
+    } catch (error) {
+      authState = "error";
+      authError = error.message;
+      connOpen = true;
+    }
+  }
+
+  function reconnect() {
+    checkHealth();
+    identify();
+  }
+
   // --- Session history ---
   let sessions = [];
   let sessionsError = "";
 
   async function loadSessions() {
+    if (!me) return;
     sessionsError = "";
     try {
       const res = await fetch(`${hubUrl}/a2a/sessions`, { headers: hdrs() });
@@ -83,6 +132,7 @@
   }
 
   function openSession(id) {
+    if (!me) return;
     stopWatching();
     activeSessionId = id;
     transcript = [];
@@ -111,21 +161,67 @@
     watchTimer = setInterval(poll, 2000);
   }
 
-  // --- New chats ---
+  // --- New chat: peers come from the hub, not from this file ---
+  // GET /a2a/agents/live lists agents seen in the last 45 s, so the list is a
+  // snapshot: a seat between turns is missing from it. Existing sessions stay
+  // listed and joinable whoever is live (Loop 4 ruling 1, R-L).
+  let livePeers = [];
+  let peersLoaded = false;
+  let peersError = "";
+  let picked = [];
+  let firstMessage = "";
+  let newTurns = 24;
   let creating = false;
 
-  async function newChat(agents, title) {
-    if (creating) return;
+  async function loadPeers() {
+    if (!me) return;
+    peersError = "";
+    try {
+      const res = await fetch(`${hubUrl}/a2a/agents/live`, { headers: hdrs() });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+      livePeers = (body.agents || []).filter((a) => a.name !== me && a.name !== "hub");
+      picked = picked.filter((n) => livePeers.some((a) => a.name === n));
+    } catch (error) {
+      peersError = error.message;
+    } finally {
+      peersLoaded = true;
+    }
+  }
+
+  function onPanelToggle(e) {
+    if (e.currentTarget.open) loadPeers();
+  }
+
+  async function startChat() {
+    if (!me || creating || picked.length === 0) return;
     creating = true;
     sessionsError = "";
+    const text = firstMessage.trim();
     try {
       const res = await fetch(`${hubUrl}/a2a/session`, {
         method: "POST",
         headers: hdrs(),
-        body: JSON.stringify({ title, participants: [HUMAN, ...agents], maxTurns: 24 }),
+        body: JSON.stringify({
+          title: text ? text.slice(0, 48) : `chat with ${picked.join(", ")}`,
+          participants: [me, ...picked],
+          maxTurns: Number(newTurns) || 24,
+        }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+      if (text) {
+        const seedRes = await fetch(`${hubUrl}/a2a/session/${body.sessionId}/message`, {
+          method: "POST",
+          headers: hdrs(),
+          body: JSON.stringify({ from: me, content: text }),
+        });
+        const seedBody = await seedRes.json();
+        if (!seedRes.ok) throw new Error(seedBody.error || `HTTP ${seedRes.status}`);
+        if (seedBody.ok === false) throw new Error(seedBody.reason);
+      }
+      firstMessage = "";
+      picked = [];
       await loadSessions();
       openSession(body.sessionId);
     } catch (error) {
@@ -135,49 +231,12 @@
     }
   }
 
-  // --- Agent ↔ agent demo (seeded as alice, hands-off) ---
-  let seed = "";
-  let seedTurns = 8;
-  let seeding = false;
-
-  async function startDemo() {
-    if (!seed.trim() || seeding) return;
-    seeding = true;
-    sessionsError = "";
-    try {
-      const res = await fetch(`${hubUrl}/a2a/session`, {
-        method: "POST",
-        headers: hdrs(),
-        body: JSON.stringify({
-          title: seed.trim().slice(0, 48),
-          participants: ["alice", "bob"],
-          maxTurns: Number(seedTurns) || 8,
-        }),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
-      const seedRes = await fetch(`${hubUrl}/a2a/session/${body.sessionId}/message`, {
-        method: "POST",
-        headers: hdrs(),
-        body: JSON.stringify({ from: "alice", content: seed.trim() }),
-      });
-      if (!seedRes.ok) throw new Error((await seedRes.json()).error || `HTTP ${seedRes.status}`);
-      seed = "";
-      await loadSessions();
-      openSession(body.sessionId);
-    } catch (error) {
-      sessionsError = error.message;
-    } finally {
-      seeding = false;
-    }
-  }
-
-  // --- Composer: continue any session as the human peer ---
+  // --- Composer: continue any session as yourself ---
   let chatText = "";
   let sendingChat = false;
 
   async function sendChat() {
-    if (!chatText.trim() || sendingChat || !activeSessionId) return;
+    if (!me || !chatText.trim() || sendingChat || !activeSessionId) return;
     const content = chatText.trim();
     sendingChat = true;
     sessionsError = "";
@@ -185,7 +244,7 @@
       const res = await fetch(`${hubUrl}/a2a/session/${activeSessionId}/message`, {
         method: "POST",
         headers: hdrs(),
-        body: JSON.stringify({ from: HUMAN, content }),
+        body: JSON.stringify({ from: me, content }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
@@ -210,7 +269,7 @@
   let extending = false;
 
   async function extendSession() {
-    if (!activeSessionId || extending) return;
+    if (!me || !activeSessionId || extending) return;
     extending = true;
     sessionsError = "";
     try {
@@ -243,7 +302,7 @@
     const id = renamingId;
     const title = renameText.trim();
     renamingId = null;
-    if (!id || !title) return;
+    if (!me || !id || !title) return;
     try {
       const res = await fetch(`${hubUrl}/a2a/session/${id}/rename`, {
         method: "POST",
@@ -257,20 +316,22 @@
     }
   }
 
-  $: agentPeers = (activeSession?.participants || []).filter((n) => n !== HUMAN && n !== "hub");
+  $: agentPeers = (activeSession?.participants || []).filter((n) => n !== me && n !== "hub");
 
   function insertMention(name) {
     const mention = `@${name} `;
     if (!chatText.includes(mention.trim())) chatText = mention + chatText;
   }
 
+  // You are "human"; every other sender gets one of four colours by its place
+  // in the session's participant list, so no peer name is special here.
   function roleOf(name) {
-    if (name === HUMAN) return "human";
-    if (name === "alice") return "alice";
-    return "bob";
+    if (name === me) return "human";
+    const i = agentPeers.indexOf(name);
+    return `agent c${(i < 0 ? agentPeers.length : i) % 4}`;
   }
 
-  loadSessions();
+  identify();
   onDestroy(stopWatching);
 </script>
 
@@ -280,23 +341,43 @@
       <h1>A2A Hub</h1>
       <span class="health">{health}</span>
     </div>
-
-    <div class="new-chat">
-      <button on:click={() => newChat(["alice"], "chat with alice")} disabled={creating}>+ alice</button>
-      <button on:click={() => newChat(["bob"], "chat with bob")} disabled={creating}>+ bob</button>
-      <button on:click={() => newChat(["alice", "bob"], "group chat")} disabled={creating}>+ both</button>
+    <div class="whoami">
+      {#if authState === "ok"}you are <strong>{me}</strong>
+      {:else if authState === "checking"}checking key…
+      {:else if authState === "error"}<span class="error-text">key refused — {authError}</span>
+      {:else}no key — paste yours under connection{/if}
     </div>
 
-    <form class="seed" on:submit|preventDefault={startDemo} title="Seed a hands-off agent↔agent conversation">
-      <input bind:value={seed} placeholder="agent↔agent seed (as alice, to bob)…" disabled={seeding} />
-      <input class="turns" type="number" bind:value={seedTurns} min="2" max="32" title="max turns" />
-      <button type="submit" disabled={seeding || !seed.trim()}>▶</button>
-    </form>
+    {#if me}
+      <details class="new-chat" on:toggle={onPanelToggle}>
+        <summary>+ new chat</summary>
+        <div class="panel-head">
+          <span class="hint-inline">agents seen on this hub in the last 45 s</span>
+          <button class="ghost" on:click={loadPeers} title="refresh">↻</button>
+        </div>
+        {#if peersError}
+          <p class="error-text">{peersError}</p>
+        {:else if peersLoaded && livePeers.length === 0}
+          <p class="hint-inline">no agents are live on this hub right now — existing chats below still open</p>
+        {/if}
+        {#each livePeers as a (a.name)}
+          <label class="peer">
+            <input type="checkbox" value={a.name} bind:group={picked} />
+            {a.name}{#if a.kind}<span class="kind">{a.kind}</span>{/if}
+          </label>
+        {/each}
+        <form class="start" on:submit|preventDefault={startChat}>
+          <input bind:value={firstMessage} placeholder="first message (optional, sent as {me})…" disabled={creating} />
+          <input class="turns" type="number" bind:value={newTurns} min="2" max="64" title="max turns" />
+          <button type="submit" disabled={creating || picked.length === 0}>Start</button>
+        </form>
+      </details>
+    {/if}
 
     <div class="history">
       <div class="history-head">
         <span>History</span>
-        <button class="ghost" on:click={loadSessions}>↻</button>
+        <button class="ghost" on:click={loadSessions} disabled={!me}>↻</button>
       </div>
       {#each groups as g}
         <div class="day">{g.label}</div>
@@ -324,17 +405,27 @@
       {/each}
     </div>
 
-    <details class="config">
+    <details class="config" bind:open={connOpen}>
       <summary>connection</summary>
-      <label>Hub <input bind:value={hubUrl} on:change={checkHealth} /></label>
-      <label>Key <input type="password" autocomplete="off" placeholder="hub-key.mjs copy --as aaron" bind:value={agentKey} /></label>
+      <label>Hub <input bind:value={hubUrl} on:change={reconnect} /></label>
+      <label>Key <input type="password" autocomplete="off" placeholder="hub-key.mjs copy --as <you>" bind:value={agentKey} on:change={identify} /></label>
     </details>
   </aside>
 
   <section class="pane">
-    {#if !activeSession}
+    {#if !me}
       <div class="placeholder">
-        <p>Pick a conversation from the history, start a chat with an agent, or seed an agent↔agent demo.</p>
+        {#if authState === "error"}
+          <p>This hub refused the key ({authError}). Paste the key for your name under connection.</p>
+        {:else if authState === "checking"}
+          <p>Checking the key…</p>
+        {:else}
+          <p>No key yet. Get yours with <code>node scripts/hub-key.mjs copy --as &lt;you&gt;</code> and paste it under connection → Key.</p>
+        {/if}
+      </div>
+    {:else if !activeSession}
+      <div class="placeholder">
+        <p>Pick a conversation from the history, or start a new chat with the agents live on this hub.</p>
       </div>
     {:else}
       <div class="pane-head">
@@ -371,7 +462,7 @@
       <form class="composer" on:submit|preventDefault={sendChat}>
         <input
           bind:value={chatText}
-          placeholder="Message as {HUMAN}… (no @mention = every agent replies; use @name to target one)"
+          placeholder="Message as {me}… (no @mention = every agent replies; use @name to target one)"
           disabled={sendingChat}
         />
         <button type="submit" disabled={sendingChat || !chatText.trim()}>Send</button>
@@ -409,12 +500,17 @@
   .side-head { display: flex; justify-content: space-between; align-items: baseline; }
   h1 { font-size: 1rem; margin: 0; }
   .health { font-size: 0.72rem; color: #8b93a7; }
-  .new-chat { display: flex; gap: 0.4rem; }
-  .new-chat button { flex: 1; font-size: 0.8rem; padding: 0.4rem 0; }
-  .seed { display: flex; gap: 0.3rem; }
-  .seed input { flex: 1; min-width: 0; }
-  .seed .turns { flex: 0 0 3rem; }
-  .seed button { padding: 0.4rem 0.6rem; }
+  .whoami { font-size: 0.78rem; color: #8b93a7; }
+  .whoami strong { color: #e6e8ee; }
+  .new-chat { font-size: 0.85rem; }
+  .new-chat summary { cursor: pointer; color: #b7bdcc; }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; margin: 0.4rem 0; }
+  .peer { display: flex; align-items: center; gap: 0.4rem; padding: 0.15rem 0; }
+  .kind { font-size: 0.68rem; color: #8b93a7; margin-left: 0.3rem; }
+  .start { display: flex; gap: 0.3rem; margin-top: 0.4rem; }
+  .start input { flex: 1; min-width: 0; }
+  .start .turns { flex: 0 0 3rem; }
+  .start button { padding: 0.4rem 0.6rem; }
   .history { flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
   .history-head {
     display: flex;
@@ -485,8 +581,10 @@
     border-left: 3px solid #4a5268;
   }
   .entry.human { border-left-color: #5b8def; }
-  .entry.alice { border-left-color: #b58ae0; }
-  .entry.bob { border-left-color: #e0a84a; }
+  .entry.c0 { border-left-color: #b58ae0; }
+  .entry.c1 { border-left-color: #e0a84a; }
+  .entry.c2 { border-left-color: #5bc0a0; }
+  .entry.c3 { border-left-color: #d07a7a; }
   .entry strong { font-size: 0.7rem; text-transform: uppercase; color: #8b93a7; }
   .entry pre {
     margin: 0.25rem 0 0;
