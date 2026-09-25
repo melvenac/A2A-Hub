@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 43 by open-brain v1.9.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 44 by open-brain v1.9.0 — do not edit; change state via ob_state -->
 
 # Inbox
 
@@ -49,6 +49,7 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-056** alice daemon did not answer a relay turn on the local stack
 - [ ] **T-058** Caller-asserted identities beyond /read (heartbeat, message from, task claim)
 - [ ] **T-060** `start-stack.ps1` starts local Convex without --local-cloud-port
+- [ ] **T-062** Express development error pages leak paths and stacks (no NODE_ENV on tcm)
 
 ## P3
 
@@ -66,6 +67,7 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-039** Buzz is parked
 - [ ] **T-054** Committed convex/_generated is stale (no instanceLogic); `convex dev` dirties the tree
 - [ ] **T-059** Agent name format rule (look-alike and junk names)
+- [ ] **T-063** Chat page: clearing the key box does not clear the stored key
 
 ## Done (last 3 sessions)
 

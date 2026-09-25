@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 43,
+  "revision": 44,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -547,7 +547,27 @@
       "opened_session": 17,
       "closed_session": null,
       "supersedes": null,
-      "note": "Aaron, session 17, verbatim: \"Let's get the ui on tcm next build. Can we prep that now?\" Also Aaron: https://hub.tarrantcountymakerspace.com is reserved for the public hub (T-002), not for testing or local A2A traffic on tcm. Brief: docs/loops/loop-4-ui-on-tcm-brief.md (docs/session-17). The hub image serves the built client/ at one URL on http://100.124.212.87:4000, same origin, no new port or container. Repair: the client's local-stack cast (seed post from 'alice' at App.svelte:162; alice/bob hard-coded at :153/:285/:287). Preserve: API responses, hub-talk, convex/ identical to cef7517, no key in the bundle. Deploy: if accepted before SIA names the cutover window and convex/ is unchanged, the v1.9.0 cutover's deploy act ships v1.10.0 instead (Aaron's word then); otherwise the next deploy after it. aaron's init on tcm is a live write on Aaron's word, after the deploy act. Design and build: Rivet, in its worktree."
+      "note": "Aaron, session 17, verbatim: \"Let's get the ui on tcm next build. Can we prep that now?\" hub.tarrantcountymakerspace.com is reserved for the public hub (T-002). Brief docs/loops/loop-4-ui-on-tcm-brief.md; rulings loop-4-ruling-1.md (design approved; Q1-Q4; R-L) and loop-4-ruling-2.md (criteria accepted; G1 replay + PB/PD; G2 no main-stack contact); design on loop/4-ui 60a4cff. BUILT AND ACCEPTED (V-005): loop/4-ui fdc6bfb (v1.10.0), report qa/loop-4-ui 2b4bb61, on a stage replay, not the image. URL: http://100.124.212.87:4000/ui/. convex/ unchanged from cef7517, so the fold-into-cutover rule applies: the v1.9.0 cutover's deploy act may ship v1.10.0 instead, on Aaron's word. REMAINING, each on Aaron's word: merge loop/4-ui and qa/loop-4-ui; tag v1.10.0; at the deploy act follow docs/redeploying-tcm.md:47-51 (NOT scripts/deploy.sh, which stops the hub before building) with PB1-PB3 between build and swap (inspect, /app/client dist only, K over docker save with a planted positive; delete the scratch tar and save output and read back; any PB failure means no swap); PD after the swap (keyless reads); then aaron's init on tcm (hub-key.mjs init --as aaron --kind human) and hub-key.mjs copy. Follow-ups: T-062 (dev error pages), T-063 (key box clearing)."
+    },
+    {
+      "id": "T-062",
+      "title": "Express development error pages leak paths and stacks (no NODE_ENV on tcm)",
+      "priority": "P2",
+      "status": "open",
+      "opened_session": 17,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "Loop 4 QA O1 (docs/loops/loop-4-qa-report.md, 2b4bb61): GET /ui/<missing> returns Express's dev error page with the served dir's absolute path (ENOENT stat '<path>'); on tcm expected /app/client/dist/..., not observed. Same class pre-exists on cef7517: a malformed JSON body returns a SyntaxError page with a stack trace. Neither Dockerfile nor docker-compose.yml sets NODE_ENV (grep at cef7517). /ui/* is keyless. Fix the class, not the line: every error response the hub can send, before exposure (T-002). Not blocking Loop 4 (Relay, session 17)."
+    },
+    {
+      "id": "T-063",
+      "title": "Chat page: clearing the key box does not clear the stored key",
+      "priority": "P3",
+      "status": "open",
+      "opened_session": 17,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "Loop 4 QA O2 (docs/loops/loop-4-qa-report.md, 2b4bb61), static read, not exercised: the page writes localStorage only when the key is non-empty (client/src/App.svelte:19-22 at fdc6bfb), so a cleared key returns on reload. The key sits in localStorage on an http origin on tcm (G3, recorded; HTTPS is T-002's)."
     }
   ],
   "verified": [
@@ -611,6 +631,19 @@
         }
       ],
       "since_session": 16,
+      "status": "verified"
+    },
+    {
+      "id": "V-005",
+      "claim": "Loop 4 (T-061, chat UI served by the hub at /ui/, v1.10.0) passes acceptance on loop/4-ui fdc6bfb, on a stage replay of the Dockerfile, not the image",
+      "evidence": [
+        {
+          "type": "qa-report",
+          "path": "docs/loops/loop-4-qa-report.md (qa/loop-4-ui 2b4bb61); runs in docs/loops/loop-4-qa/",
+          "observation": "Gauge, 2026-09-25 02:08Z-02:34Z, against criteria df8a3a9 (ruling 2, 2c19450); SHA read back unchanged at the end. A1-A5 (replay), B1-B9 + R-L, C1 (37 cases x 3 key states, warn and strict, 0 diffs; the positive showed 24), C2-C4 (convex/ diff 0 lines: the fold-into-cutover condition holds), D1-D3 (K selftest first, 0 hits over bundle, replay /app, logs, console, source), E0/E1, T1 (176 reproduced; hub-key.test.ts CRLF load failure is this host's autocrlf, cef7517 too), mutants 8/8, RG1 8/8. INSTRUMENT SUBSTITUTION: W ran as Playwright headless Chromium (Claude-in-Chrome not connected), validated on a cross-origin positive; Aaron's Chrome and the clipboard path not exercised. NOT VERIFIED: the image (PB1-PB3 on tcm before the swap), tcm itself (PD), 6 early scratch keys unrecorded before K's log (scratch hubs only; bundle built from key-free source; 11 recorded keys 0 hits). Relay accepted the verdict, session 17, having read the report."
+        }
+      ],
+      "since_session": 17,
       "status": "verified"
     }
   ],
