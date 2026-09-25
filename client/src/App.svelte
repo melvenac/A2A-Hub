@@ -236,7 +236,7 @@
   let sendingChat = false;
 
   async function sendChat() {
-    if (!me || !chatText.trim() || sendingChat || !activeSessionId) return;
+    if (!me || !inRoom || !chatText.trim() || sendingChat || !activeSessionId) return;
     const content = chatText.trim();
     sendingChat = true;
     sessionsError = "";
@@ -269,7 +269,7 @@
   let extending = false;
 
   async function extendSession() {
-    if (!me || !activeSessionId || extending) return;
+    if (!me || !inRoom || !activeSessionId || extending) return;
     extending = true;
     sessionsError = "";
     try {
@@ -317,6 +317,9 @@
   }
 
   $: agentPeers = (activeSession?.participants || []).filter((n) => n !== me && n !== "hub");
+  // A human sees his agents' rooms too (T-066 §4), but that view is read-only
+  // (Q1): only a participant posts, extends or renames.
+  $: inRoom = !!me && (activeSession?.participants || []).includes(me);
 
   function insertMention(name) {
     const mention = `@${name} `;
@@ -398,7 +401,9 @@
                   {s.participants?.join(", ")} · {s.turnCount}/{s.maxTurns}{s.isActive ? "" : " · closed"}
                 </span>
               </button>
-              <button class="ghost pencil" title="rename" on:click={() => beginRename(s)}>✎</button>
+              {#if s.participants?.includes(me)}
+                <button class="ghost pencil" title="rename" on:click={() => beginRename(s)}>✎</button>
+              {/if}
             </div>
           {/if}
         {/each}
@@ -431,8 +436,10 @@
       <div class="pane-head">
         <strong>{activeSession.title || "(untitled)"}</strong>
         <span class="extend-controls">
-          <input class="turns" type="number" bind:value={extendBy} min="1" max="32" title="turns to add" />
-          <button class="ghost" on:click={extendSession} disabled={extending}>+ extend</button>
+          {#if inRoom}
+            <input class="turns" type="number" bind:value={extendBy} min="1" max="32" title="turns to add" />
+            <button class="ghost" on:click={extendSession} disabled={extending}>+ extend</button>
+          {/if}
           <span class="health">
             {#if converged}converged (DONE){:else if activeSession.isActive === false}closed{:else}live · {Math.max(transcript.length, activeSession.turnCount)}/{activeSession.maxTurns}{/if}
           </span>
@@ -451,22 +458,26 @@
         {/each}
       </div>
 
-      {#if agentPeers.length > 1}
-        <div class="mention-chips">
-          <span class="hint-inline">target one agent:</span>
-          {#each agentPeers as name}
-            <button class="ghost" on:click={() => insertMention(name)}>@{name}</button>
-          {/each}
-        </div>
+      {#if !inRoom}
+        <p class="read-only">you are not in this room — you see it because your agents are</p>
+      {:else}
+        {#if agentPeers.length > 1}
+          <div class="mention-chips">
+            <span class="hint-inline">target one agent:</span>
+            {#each agentPeers as name}
+              <button class="ghost" on:click={() => insertMention(name)}>@{name}</button>
+            {/each}
+          </div>
+        {/if}
+        <form class="composer" on:submit|preventDefault={sendChat}>
+          <input
+            bind:value={chatText}
+            placeholder="Message as {me}… (no @mention = every agent replies; use @name to target one)"
+            disabled={sendingChat}
+          />
+          <button type="submit" disabled={sendingChat || !chatText.trim()}>Send</button>
+        </form>
       {/if}
-      <form class="composer" on:submit|preventDefault={sendChat}>
-        <input
-          bind:value={chatText}
-          placeholder="Message as {me}… (no @mention = every agent replies; use @name to target one)"
-          disabled={sendingChat}
-        />
-        <button type="submit" disabled={sendingChat || !chatText.trim()}>Send</button>
-      </form>
     {/if}
     {#if sessionsError}
       <p class="error-text">{sessionsError}</p>
@@ -596,6 +607,7 @@
   .empty { color: #5c6478; font-size: 0.85rem; }
   .mention-chips { display: flex; gap: 0.4rem; align-items: center; }
   .hint-inline { font-size: 0.72rem; color: #5c6478; }
+  .read-only { color: #8b93a7; font-size: 0.85rem; margin: 0; }
   .composer { display: flex; gap: 0.5rem; }
   .composer input { flex: 1; }
   input {
