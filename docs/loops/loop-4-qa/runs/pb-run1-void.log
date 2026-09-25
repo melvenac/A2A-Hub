@@ -1,0 +1,33 @@
+image 648ac3963dd7 = sha256:648ac3963dd7c0b7a7629defa6fdb4b09ed2c145bd24274878ec9cb2c0d059ac
+PASS PB0: id matches Rivet's (648ac3963dd7)
+bash: line 1: {{json: command not found
+bash: line 1: {{json: command not found
+bash: line 1: {{.Config.WorkingDir}}: command not found
+template parsing error: template: :1: unclosed action
+PB1 config: 
+FAIL PB1: Cmd , ExposedPorts , WorkingDir , Entrypoint 
+PB2 listing:
+dist
+---
+---
+assets
+index.html
+---
+client
+convex
+dist
+node_modules
+package-lock.json
+package.json
+PASS PB2: /app/client = [dist]; node_modules/src under it: none; dist = [assets index.html]
+docker: 'docker ps' accepts no arguments
+
+Usage:  docker ps [OPTIONS]
+
+Run 'docker ps --help' for more information
+containers from this image after PB2 (expect none; --rm): 0
+K selftest: Node.js v22.23.2 (exit 1)
+FAIL PB3: K selftest failed; no scan counts
+PASS PB3.cleanup-local: save.tar and K scratch gone
+PASS PB3.cleanup-tcm: no QA-named file in ~ or /tmp on tcm
+PB OVERALL: FAIL

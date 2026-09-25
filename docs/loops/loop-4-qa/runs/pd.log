@@ -1,0 +1,6 @@
+PD against http://100.124.212.87:4000 at 2026-09-25T04:15:05.733Z
+PASS PD.1 GET /ui/: {"status":200,"type":"text/html; charset=utf-8","cc":"no-cache","asset":"/ui/assets/index-BDybZYJ0.js"}
+PASS PD.2 GET asset: {"path":"/ui/assets/index-BDybZYJ0.js","status":200,"type":"text/javascript; charset=utf-8","cc":"public, max-age=31536000, immutable","bytes":55537}
+PASS PD.3 GET /: {"status":404,"body":"<!DOCTYPE html> <html lang=\"en\"> <head> <meta charset=\"utf-8\"> <title>Error</tit"}
+PASS PD.4 GET /health: {"status":200,"keys":["agent","convex","status"],"statusField":"ok","agent":"Intelligent-Hub","convex":"ok"}
+PD PASS (4 reads, 0 keys sent)
