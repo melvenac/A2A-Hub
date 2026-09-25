@@ -60,12 +60,13 @@ Registered wrapper agents.
 | `lastHeartbeatAt` | `number?` | Last instance-aware heartbeat. Absent = legacy / stale |
 | `askPolicy` | `{ allow: string[] }?` | Who may ask this peer (ADR-012). Absent = allow all |
 | `keyStatus` | `"owned" | "legacy"?` | T-003. Stored, never derived from how many names share a hash. `owned` is set when a name acquires a key under the v1.9.0 rules (insert, migration, rotate) or by `classifyAtDeploy` for a row unshared at deploy. Absent reads as `legacy`. **Only an owned row authenticates** |
+| `owner` | `string?` | T-066 (Loop 5 §4). The human who owns the row. A human-kind row owns itself. Set at register by the hub, never from the request body: a human's own name, otherwise `HUB_OWNER` (default `aaron`) until Loop 6's enrollment. Rows present at deploy get one from `agents:assignOwnerAtDeploy` (internal, run before and after the hub swap). No query-time default: a row without an owner gives no one an owner view. **An owner sees the rooms his agents are in** (`convex/accessLogic.ts`). The join key for Loop 6's accounts (D-010) |
 
 **Indexes:**
 - `by_name` — Lookup agent by name
 - `by_apiKeyHash` — Auth lookup from a presented key hash
 
-`agents.register` (and `registerAgent`, which also returns what happened) decides by `convex/keyLogic.ts` `decideRegister`. A key held by another name is refused (U1). So is a key under 32 characters that the name does not already hold. On an owned name, a different key is refused (C7). A legacy name re-registering the key it holds is allowed in warn (U2). A legacy name presenting a fresh key is a **migration**: its row is deleted and a fresh owned row inserted, in one transaction (D-007). Refusals throw a `ConvexError { status, reason }`. Every refusal leaves the stored hash unchanged. `agents.rotateKey` is the only way an owned row changes its key: a compare-and-swap on the current hash. Rotation also takes the instance lease. Any write that takes a name off a hash first stamps that hash's unclassified co-holders `legacy`, so attrition never promotes a row. `agents.classifyAtDeploy` and `agents.release` are internal (admin key only). A same-key re-register patches the existing row (`agentCard`, `lastSeen`, `status: "online"`) instead of inserting a duplicate. After the upsert it collapses extras for that name, keeping **max `lastSeen`** and deleting the rest (bounded per mutation). A register with `instanceId` also sets `activeInstanceId` / `lastHeartbeatAt` (takeover). Clients that omit `instanceId` leave those fields untouched. `GET /a2a/agents/live` reports `rowCount` per name (table rows before HTTP mapping).
+`agents.register` (and `registerAgent`, which also returns what happened) decides by `convex/keyLogic.ts` `decideRegister`. A key held by another name is refused (U1). So is a key under 32 characters that the name does not already hold. On an owned name, a different key is refused (C7). A legacy name re-registering the key it holds is allowed in warn (U2). A legacy name presenting a fresh key is a **migration**: its row is deleted and a fresh owned row inserted, in one transaction (D-007). Refusals throw a `ConvexError { status, reason }`. Every refusal leaves the stored hash unchanged. `agents.rotateKey` is the only way an owned row changes its key: a compare-and-swap on the current hash. Rotation also takes the instance lease. Any write that takes a name off a hash first stamps that hash's unclassified co-holders `legacy`, so attrition never promotes a row. `agents.classifyAtDeploy` and `agents.release` are internal (admin key only). A same-key re-register patches the existing row (`agentCard`, `lastSeen`, `status: "online"`) instead of inserting a duplicate. After the upsert it collapses extras for that name, keeping **max `lastSeen`** and deleting the rest (bounded per mutation). A register with `instanceId` also sets `activeInstanceId` / `lastHeartbeatAt` (takeover). Clients that omit `instanceId` leave those fields untouched. `GET /a2a/agents/live` reports `rowCount` per name (table rows before HTTP mapping). From T-066 it lists only the caller's owner's agents. `getByName` and `listOnline` also return `owner` (and `getByName` returns `human`); neither ever returns `apiKeyHash`. `agents:assignOwnerAtDeploy({owner})` fills rows with no owner (a human-kind row gets itself) and returns counts. `agents:setOwner({name, owner})` sets one name's owner. Both are internal.
 
 ---
 
@@ -78,11 +79,12 @@ A2A protocol tasks (the spec's Task lifecycle), stored whole. This is separate f
 | `contextId` | `string` | A2A context id |
 | `task` | `any` | The spec `Task` object, whole (owned by the SDK) |
 | `updatedAt` | `number` | Timestamp of the last save |
+| `createdBy` | `string?` | T-066 (Loop 5 §6). The JSON-RPC caller that created the task, written on insert only. Only it may load the task by id (`tasks/get`, `tasks/cancel`); another caller gets the same error as a nonexistent id in strict. Absent on tasks saved before Loop 5 (loads for anyone) |
 
 **Indexes:**
 - `by_taskId` — Lookup by A2A task id
 
-`a2aTasks.save` upserts on `by_taskId`, deliberately unlike an insert-only write. `a2aTasks.load` reads by `taskId`.
+`a2aTasks.save` upserts on `by_taskId`, deliberately unlike an insert-only write. A later save never changes `createdBy`. `a2aTasks.load` reads by `taskId`; `a2aTasks.loadFor` also returns `createdBy`.
 
 ---
 
@@ -112,6 +114,8 @@ Conversations — 1:1 or multi-participant, with turn-cap termination so autonom
 | `maxTurns` | `number` | Cap (default 16); reaching it auto-closes the session |
 | `metadata` | `any?` | Arbitrary session data |
 | `createdAt` | `number` | Timestamp |
+
+**Access (T-066):** no new field. `sessions.access({sessionId, caller})` answers `{exists, participant, ownerView}`. `sessions.listVisibleTo({name})` is `listAll`'s entry shape filtered to the rooms a caller is in plus, for a human, the rooms his agents are in. `sessions.createCheck({caller, participantNames})` names the first participant another owner owns. `listAll`, `get` and `listForPeer` are unchanged.
 
 ---
 

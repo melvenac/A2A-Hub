@@ -12,7 +12,7 @@ process.stdin.on("data", (c) => (buf += c)).on("end", () => {
     byHash.set(r.apiKeyHash, (byHash.get(r.apiKeyHash) ?? 0) + 1);
   }
   for (const r of [...rows].sort((a, b) => a.name.localeCompare(b.name)))
-    console.log(`${r.name}\tkind=${r.agentCard?.kind ?? "-"}\tkeyStatus=${r.keyStatus ?? "NONE"}\thash=${String(r.apiKeyHash ?? "none").slice(0, 8)}`);
+    console.log(`${r.name}\tkind=${r.agentCard?.kind ?? "-"}\tkeyStatus=${r.keyStatus ?? "NONE"}\thash=${String(r.apiKeyHash ?? "none").slice(0, 8)}\towner=${r.owner ?? "NONE"}`);
   const checks = {
     oneRowPerName: [...byName.values()].every((n) => n === 1),
     oneNamePerHash: [...byHash.values()].every((n) => n === 1),
@@ -22,4 +22,8 @@ process.stdin.on("data", (c) => (buf += c)).on("end", () => {
   };
   for (const [k, v] of Object.entries(checks)) console.log(`${v ? "PASS" : "FAIL"} ${k}`);
   console.log(`rows=${rows.length} K7=${Object.values(checks).every(Boolean) ? "PASS" : "FAIL"}`);
+  // T-066 (O4): every row has an owner after the second assignOwnerAtDeploy. A
+  // separate verdict, so K7's own five checks and its line stay as accepted.
+  const ownerless = rows.filter((r) => !r.owner).length;
+  console.log(`${ownerless === 0 ? "PASS" : "FAIL"} ownerAssigned rows-without-owner=${ownerless}`);
 });

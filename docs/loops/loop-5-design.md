@@ -116,8 +116,9 @@ today.
   - `registerAgent` takes an optional `owner`. The hub passes a human's own name for a human
     registration, and `HUB_OWNER` (env, default `HUMAN_PEER`, i.e. `aaron`) otherwise.
   - This is interim until Loop 6's enrollment code decides the owner.
-  - It is safe while `register` stays open, because nothing is public before strict and Loop 6
-    (G-001, D-011) (Q3).
+  - **This interim `HUB_OWNER` is safe only because nothing is public before strict and Loop 6
+    (G-001, D-011).** While `register` stays open, anyone who can reach the hub becomes `aaron`'s
+    agent. It must not outlive the public address it would otherwise open (Q3, bound by ruling 1).
 - **Backfill.** `agents:assignOwnerAtDeploy({ owner })` is an internal mutation, run once at deploy
   like `classifyAtDeploy`. It sets `owner` on rows that have none, and returns counts.
   - `agents:setOwner({ name, owner })` is internal. It makes the scratch second-owner row that
@@ -255,3 +256,47 @@ today.
     current 6 rows aren't read for it here, so a `agents-summary`-style count confirms "nothing live
     changes" before the build.
   - The alternative is log-only in warn.
+
+## 12. Rulings, and what the build decided
+
+**Ruling 1** (`docs/loops/loop-5-ruling-1.md`, `fd4b369`):
+- Q1 to Q8 were ruled as recommended.
+- Q3 is bound to G-001 (§4).
+- Q9: parity. askPolicy is an existing rule, not a new check.
+- Siblings #4, #9, #10 and #19 are in scope.
+- A1: the read-only log must see `[authz]`.
+- A2: strict comes after a one-day `[authz]` soak in warn (D-012).
+
+**Ruling 2** (`docs/loops/loop-5-ruling-2.md`, `52179cf`), on Gauge's objections:
+- O1: in warn, an unknown caller on `/sessions` and `/agents/live` gets today's full answer plus an
+  `unknown-caller` line.
+- O2: a create with another owner's participant gets 403 `cross-owner participant=<name>`.
+- O3: an explicit `to` naming another owner's agent gets 403 `cross-owner to=<name>`, on
+  `/message/send` and JSON-RPC.
+- O4: `assignOwnerAtDeploy` runs before and after the swap. There is no query-time default.
+- O5: a register body cannot choose an owner.
+- O6: another caller's A2A task gets the same error as a nonexistent one.
+- O7: an owner-view post via the API is logged and allowed in warn, and the page is read-only in both
+  modes.
+
+**Decided in the build:**
+- **A1: `auth-log` widened, no 7th item.**
+  - It counts `[auth]` and `[authz]` apart (`auth-lines=N authz-lines=M`) and prints both sets in
+    log order, with the same masks and no cap.
+  - `agents-summary` adds `owner=` per row and a separate `PASS|FAIL ownerAssigned
+    rows-without-owner=N` line. K7's five checks and its verdict line are unchanged.
+  - So no new allow rule is needed.
+  - Both scripts are now in the repo under `scripts/tcm/`, pinned to LF by `.gitattributes`, since
+    a CRLF bash script does not run on tcm. They were committed first at their T-065-accepted
+    hashes (`417a34dde54d`, `de3a9c3e0cd0`), so the A1 change is its own diff.
+- **Ids in `[authz]` lines are 8-character prefixes** (`session=k57frxw0…`). A Convex id is 32
+  characters, the same as the key-like runs that are masked and that Gauge's B4 rejects. A prefix
+  still finds the room.
+- **`/read` keeps its codes and texts (criteria A6):**
+  - the `reader` check stays a 403;
+  - a non-member reader is still answered by `markRead`'s own 404, and the hub only logs the
+    membership line.
+- **A missing session or task in strict gets the same 404 as a forbidden one** (Q2, A2, A12).
+  **In warn it behaves as before.**
+- **A create's cross-owner check skips names with no agents row.** `sessions.create` answers those
+  with its own "Unknown peer" error, which hub-talk reads (Preserve 1).

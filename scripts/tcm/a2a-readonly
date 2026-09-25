@@ -1,8 +1,8 @@
 #!/bin/bash
 # a2a-readonly - the only thing the tcm-readonly ssh key can run (T-065).
 #
-# Installed as a forced command: authorized_keys has
-#   restrict,command="/home/melvenac/bin/a2a-readonly" ssh-ed25519 ... tcm-readonly
+# Installed as a forced command, tailnet only: authorized_keys has
+#   from="100.64.0.0/10",restrict,command="/home/melvenac/bin/a2a-readonly" ssh-ed25519 ... tcm-readonly
 # so whatever the client asks for, sshd runs this script, with the request in
 # $SSH_ORIGINAL_COMMAND. It is matched EXACTLY against a fixed menu. Nothing
 # from the request is passed on, and anything else is refused with exit 2.
@@ -50,22 +50,26 @@ case "${SSH_ORIGINAL_COMMAND-}" in
     ;;
 
   auth-log)
-    # The whole [auth] set, never a silent tail: a truncated log would read as clean.
+    # The whole [auth] and [authz] sets, never a silent tail: a truncated log
+    # would read as clean. [auth] is key validity (T-003); [authz] is a key
+    # acting as another name or outside its rooms (T-066), which the strict
+    # soak reads (D-012). They are counted apart; the lines print in log order.
     logs=$(docker logs -t a2a-hub 2>&1) || undetermined "docker logs" $?
     total=$(printf '%s\n' "$logs" | grep -c .)
     first=$(printf '%s\n' "$logs" | head -n 1 | cut -d' ' -f1)
     last=$(printf '%s\n' "$logs" | tail -n 1 | cut -d' ' -f1)
     n=$(printf '%s\n' "$logs" | grep -c '\[auth\]')
+    z=$(printf '%s\n' "$logs" | grep -c '\[authz\]')
     started=$(docker inspect -f '{{.State.StartedAt}}' a2a-hub) || undetermined "docker inspect" $?
     driver=$(docker inspect -f '{{.HostConfig.LogConfig.Type}} {{.HostConfig.LogConfig.Config}}' a2a-hub) || undetermined "docker inspect" $?
     # A .1 file can only be listed as root. What matters is whether lines were
     # lost, so report whether the first line reaches back to the container start.
     complete=no
     if [ -n "$first" ] && [ "$(( $(date -d "$first" +%s) - $(date -d "$started" +%s) ))" -le 60 ]; then complete=yes; fi
-    echo "auth-lines=$n first=$first last=$last total-lines=$total"
+    echo "auth-lines=$n authz-lines=$z first=$first last=$last total-lines=$total"
     echo "log-driver=$driver started=$started first-line-within-60s-of-start=$complete rotated=unknown(listing .1 needs root)"
     # grep exits 1 on no match; under pipefail that would fail a clean log.
-    if [ "$n" -gt 0 ]; then printf '%s\n' "$logs" | grep '\[auth\]' | maskhex | mask; fi
+    if [ "$((n + z))" -gt 0 ]; then printf '%s\n' "$logs" | grep -E '\[authz?\]' | maskhex | mask; fi
     ;;
 
   agents-summary)
