@@ -17,6 +17,7 @@ import { DefaultRequestHandler } from "@a2a-js/sdk/server";
 import { jsonRpcHandler, UserBuilder } from "@a2a-js/sdk/server/express";
 import { ConvexTaskStore } from "./task-store.js";
 import { HubAgentExecutor } from "./a2a-executor.js";
+import { mountUi } from "./ui.js";
 
 const app = express();
 app.use(express.json());
@@ -525,6 +526,9 @@ app.get("/a2a/session/:sessionId/reads", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// The chat client, after every API route so it can never shadow one.
+mountUi(app, process.env.UI_DIR || "client/dist");
 
 const port = parseInt(process.env.PORT || "4000");
 app.listen(port, () => {

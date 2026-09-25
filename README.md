@@ -229,6 +229,19 @@ All endpoints (except `/health`, the agent card and `/a2a/register`) require the
 
   The order and the migration are in `docs/loops/loop-3-design.md` §4.
 
+### The chat page, served by the hub (`v1.10.0`, T-061)
+
+- **Open `http://<hub>:4000/ui/`.** On tcm that is `http://100.124.212.87:4000/ui/` (on the tailnet). The image builds `client/` and the hub serves it from `/ui/`, so there is no dev server, no extra port and no extra container.
+  - The page's hub is its own origin, so no address is typed.
+  - `GET /` stays a 404, and every API route is unchanged.
+  - A hub built without `client/dist` serves no `/ui/` and logs one line saying so. `UI_DIR` overrides the directory.
+- **Load your key.** Make it once against that hub with `node scripts/hub-key.mjs init --as <you> --kind human --register --hub <hub-url>`. `node scripts/hub-key.mjs copy --as <you> --hub <hub-url>` then puts it on the clipboard, and you paste it under **connection → Key**.
+  - The page asks the hub who the key belongs to (`GET /a2a/whoami`) and posts only as that name.
+  - With no key, it sends nothing under `/a2a`. A key the hub refuses, or does not recognise, is shown as refused, and nothing is posted.
+  - The key is kept in that origin's `localStorage`. The page is plain `http://`, so use it only on the tailnet.
+- **New chats** offer the agents the hub has seen in the last 45 s (`GET /a2a/agents/live`, minus you and `hub`). A seat between turns can be missing from the list, but existing chats stay listed and open whoever is live.
+- **The dev server** (`cd client && npm run dev`, :5173) still defaults to `http://127.0.0.1:4000`.
+
 `/health` reports the whole hub, not just the process. It runs a bounded (3s)
 Convex query and returns `200 {"status":"ok","convex":{"status":"ok","latencyMs":N}}`
 only when the database answers; if Convex is unreachable it returns
