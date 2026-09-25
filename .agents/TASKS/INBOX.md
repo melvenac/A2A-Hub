@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 46 by open-brain v1.10.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 47 by open-brain v1.10.0 — do not edit; change state via ob_state -->
 
 # Inbox
 
@@ -18,6 +18,7 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-050** Wake an idle IDE seat that has an unread turn in its room
 - [ ] **T-057** Convex is callable without the hub: tracked compose publishes 3210 on all interfaces; on tcm, any local process can call it
 - [ ] **T-061** Chat UI served by tcm's hub (Loop 4, v1.10.0)
+- [ ] **T-065** Read-only ssh key for tcm, enforced by a forced command
 
 ## P2
 
