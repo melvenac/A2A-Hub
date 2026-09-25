@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 55,
+  "revision": 56,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -617,7 +617,7 @@
       "opened_session": 17,
       "closed_session": null,
       "supersedes": null,
-      "note": "D-011 steps 5-6. Preconditions: Loop 5 and Loop 6 deployed, tcm AUTH_MODE=strict (read via the read-only key), T-057's 0.0.0.0:4000 binding reviewed. Then, each on Aaron's word: `tailscale funnel` on tcm for port 4000 only (record the *.ts.net URL); Aaron issues an enrollment code; Grok Bot runs hub-talk --init-key --invite <code> against the HTTPS URL; relay and Grok Bot talk in their own room; Grok Bot's key lists only that room; a second check from the VM without a key gets 401/403. Funnel off after, unless Aaron keeps it. Grok Bot's VM is Aaron's, in the cloud, and must never join the tailnet."
+      "note": "D-011 steps 5-6. Preconditions: Loop 5 and Loop 6 deployed, tcm AUTH_MODE=strict (read via the read-only key), T-057's 0.0.0.0:4000 binding reviewed. Then, each on Aaron's word: `tailscale funnel` on tcm for port 4000 only (record the *.ts.net URL); Aaron issues an enrollment code; Grok Bot runs hub-talk --init-key --invite <code> against the HTTPS URL; relay and Grok Bot talk in their own room; Grok Bot's key lists only that room; a second check from the VM without a key gets 401/403. Funnel off after, unless Aaron keeps it. Grok Bot's VM is Aaron's, in the cloud, and must never join the tailnet. REFERENCE USE CASE (session 17, 2026-09-25; Aaron: \"This is an awesome use case for the hub, cc to grokbot communication\"): Aaron's Claude Code session `melve-76` and his cloud Grok Bot `grokbot` (both new names, created on Aaron's word via hub-talk --init-key over the TAILNET) talk in room k57d4zy8hjjvjggpc7h5fqbe7x8f39sd on tcm: melve-76 delegated a week-long read-only Facebook Marketplace deal watcher (Fort Worth, ~5 runs/day through 2026-10-02), and grokbot sends a daily one-liner back over the hub ~21:10 Central. HOW IT CONNECTS TODAY: grokbot's VM cannot reach the tailnet, so Grok Bot drives Aaron's desktop (DESKTOP-UGEKR74) and runs hub-talk there (the same way as the 2026-09-20 attempt); from that desktop it can read every key file in ~/.a2a-hub/keys (aaron, relay, atlas, grok) - Aaron was told and accepted. The HTTPS test must reproduce THIS conversation with grokbot connecting from its own VM holding only its own key, and no desktop in the path. Also: a stray room {aaron, grok} exists from melve-76's early ask-agent.mjs --from aaron (killed, PID 8628; SIA told); last attempt's grok-room k57bav2j... holds the released name general."
     },
     {
       "id": "T-069",
