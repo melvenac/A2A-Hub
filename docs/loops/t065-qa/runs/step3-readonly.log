@@ -1,0 +1,32 @@
+PASS L.pos: {"hex/base64url run >= 32":2,"convex admin key prefix":1,"ssh public/private key":1,"64-hex run":1}
+PASS M1 health: {"rc":0,"keys":["agent","convex","status"],"status":"ok"}
+PASS M2 auth-mode: {"rc":0,"out":"warn"}
+PASS M3 image: {"rc":0,"has648":true,"lines":["container=/a2a-hub image=a2a-hub:latest status=running started=2026-09-25T04:14:10.796854849Z","container-image-id=648ac3963dd7","a2a-hub:latest 648ac3963dd7 2026-09-25 04:09:56 +0000 UTC","a2a-hub:prev 13aeef206f7b 2026-09-23 20:34:32 +0000 UTC"]}
+PASS M4 runners: {"rc":0,"lines":["gh-runner@1.service: active","gh-runner@2.service: active"]}
+PASS AL auth-log (shape; count checked against full key separately): {"rc":0,"authLinesPrinted":14,"headerLines":["auth-lines=14 first=2026-09-25T04:14:11.315401725Z last=2026-09-25T04:27:26.426818761Z total-lines=19","log-driver=json-file map[max-file:3 max-size:10m] started=2026-09-25T04:14:10.796854849Z first-line-within-60s-of-start=yes rotated=unknown(listing .1 needs root)",""]}
+PASS AS agents-summary: {"rc":0,"lines":["aaron\tkind=human\tkeyStatus=owned\thash=0fdda12d","atlas\tkind=ide-session\tkeyStatus=owned\thash=556f9dba","cursor-grok\tkind=ide-session\tkeyStatus=owned\thash=a77570d1","grok\tkind=ide-session\tkeyStatus=owned\thash=016ebdcd","grok-probe\tkind=ide-session\tkeyStatus=owned\thash=4eecd5fd","relay\tkind=ide-session\tkeyStatus=owned\thash=71b67c96","PASS oneRowPerName","PASS oneNamePerHash","PASS allOwned","PASS devKeyHeldByNone","PASS unparsableZero","rows=6 K7=PASS"]}
+PASS L menu outputs: {"hex/base64url run >= 32":0,"convex admin key prefix":0,"ssh public/private key":0,"64-hex run":0}
+PASS N "docker ps": {"rc":2,"out":"refused"}
+PASS N "touch /tmp/qa-t065-x": {"rc":2,"out":"refused"}
+PASS N "auth-log; id": {"rc":2,"out":"refused"}
+PASS N "auth-log && id": {"rc":2,"out":"refused"}
+PASS N "auth-log|id": {"rc":2,"out":"refused"}
+PASS N "auth-log\nid": {"rc":2,"out":"refused"}
+PASS N "auth-log ": {"rc":2,"out":"refused"}
+PASS N " auth-log": {"rc":2,"out":"refused"}
+PASS N "AUTH-LOG": {"rc":2,"out":"refused"}
+PASS N "auth-log --all": {"rc":2,"out":"refused"}
+PASS N "health x": {"rc":2,"out":"refused"}
+PASS N "$(id)": {"rc":2,"out":"refused"}
+PASS N "sh": {"rc":2,"out":"refused"}
+PASS N "bash -i": {"rc":2,"out":"refused"}
+PASS N null: {"rc":2,"out":"refused\nPseudo-terminal will not be allocated because stdin is not a terminal."}
+FAIL N -tt (pty, no command): {"rc":255,"out":"PTY allocation request failed on channel 0"}
+PASS N scp (sftp mode): {"rc":255,"out":"scp: Received message too long 1919247989\r\nscp: Ensure the remote shell produces no output for non-interactive sessions."}
+PASS N scp -O (legacy): {"rc":1,"out":"refused"}
+PASS N sftp: {"rc":255,"out":"Received message too long 1919247989\r\nEnsure the remote shell produces no output for non-interactive sessions."}
+PASS NF -L 45999->127.0.0.1:4000: {"res":{"error":"ECONNRESET"},"err":"channel 2: open failed: administratively prohibited: open failed","exited":null}
+PASS NF -R: {"res":{"note":"remote side; see ssh stderr/exit"},"err":"Error: remote port forwarding failed for listen port 45998","exited":255}
+PASS NF -D (SOCKS connect to 127.0.0.1:4000): {"res":{"closed":true,"stage":1},"err":"channel 2: open failed: administratively prohibited: open failed","exited":null}
+
+30 checks, 29 pass, 1 fail

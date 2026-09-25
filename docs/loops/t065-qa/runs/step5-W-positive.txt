@@ -1,0 +1,3 @@
+== W positive control: find -newer marker
+/tmp
+/tmp/qa-t065-pos

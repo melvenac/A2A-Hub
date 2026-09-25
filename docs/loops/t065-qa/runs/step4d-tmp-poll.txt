@@ -1,0 +1,2 @@
+transient /tmp entries during window: {'runc-process954685025': (0, '0600')}
+entries left after window vs start: none

@@ -1,0 +1,14 @@
+== hashes
+417a34dde54d /home/melvenac/bin/a2a-readonly
+de3a9c3e0cd0 /home/melvenac/bin/a2a-k7.mjs
+== authorized_keys
+lines 2 mode 600
+line1 vs authorized_keys.bak-t065-20260925 line1: equal (ea0a6ce6b1bd)
+line1 vs authorized_keys.bak-t065-g4 line1: equal (ea0a6ce6b1bd)
+diff vs pre-T-065 backup (key bodies masked):
+1a2
+> from="100.64.0.0/10",restrict,command="/home/melvenac/bin/a2a-readonly" ssh-ed25519 AAAA<masked> tcm-readonly
+line2 options: from="100.64.0.0/10",restrict,command="/home/melvenac/bin/a2a-readonly"
+line2 fingerprint: 256 SHA256:SHRHzylxVDEZt3I58jLc7H1eqbOXd+j/Ip0yEJhjN5g tcm-readonly (ED25519)
+== P3 baseline (files changed in last 2 min, nothing from QA running)
+/home/melvenac/.ssh/authorized_keys
