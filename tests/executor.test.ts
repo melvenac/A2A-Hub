@@ -50,7 +50,8 @@ describe("HubExecutor", () => {
 
     const result = await executor.handleMessage("Review this diff", "alice");
     expect(searchFn).not.toHaveBeenCalled();
-    expect(escalateFn).toHaveBeenCalledWith("Review this diff", "alice");
+    // Third argument: the caller's owner (T-066 Q5); none given here.
+    expect(escalateFn).toHaveBeenCalledWith("Review this diff", "alice", undefined);
     expect(result.answeredFromMemory).toBe(false);
     expect(result.response).toBe("alice here — done");
   });

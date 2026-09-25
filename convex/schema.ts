@@ -67,6 +67,11 @@ export default defineSchema({
     // owned row authenticates. Optional so rows present at deploy stay valid;
     // absent reads as legacy until agents:classifyAtDeploy runs.
     keyStatus: v.optional(v.union(v.literal("owned"), v.literal("legacy"))),
+    // T-066 (Loop 5 §4): the human who owns this row; a human-kind row owns
+    // itself. An owner sees the rooms his agents are in (accessLogic). Optional
+    // so rows present at deploy stay valid; agents:assignOwnerAtDeploy fills
+    // them once. Loop 6's accounts keep this as the join key (D-010).
+    owner: v.optional(v.string()),
   })
     .index("by_name", ["name"])
     // Auth looks agents up by key hash on every guarded request.
@@ -83,6 +88,9 @@ export default defineSchema({
     contextId: v.string(),
     task: v.any(),
     updatedAt: v.number(),
+    // T-066 (Loop 5 §6): the caller that created the task. Only it may load
+    // the task by id. Absent on tasks saved before Loop 5 (anyone may load).
+    createdBy: v.optional(v.string()),
   }).index("by_taskId", ["taskId"]),
 
   // --- Chat channel (ADR-005: peers/sessions/messages, replaces Telegram) ---

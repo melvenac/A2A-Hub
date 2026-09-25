@@ -161,11 +161,18 @@ describe("no public function returns apiKeyHash (ruling 3, F1)", () => {
 
   it("getByName keeps what the hub needs (askPolicy), and listOnline what its callers read", async () => {
     const { ctx } = seed();
-    expect(await call(getByName, ctx, { name: "victim" })).toEqual({ name: "victim", askPolicy: undefined });
+    // T-066 adds owner (and human on getByName). Still no apiKeyHash, keyStatus
+    // or instance lease: the exact key lists below are the F1 guard.
+    expect(await call(getByName, ctx, { name: "victim" })).toEqual({
+      name: "victim",
+      askPolicy: undefined,
+      owner: undefined,
+      human: false,
+    });
     const rows = await call(listOnline, ctx, {});
     expect(rows.map((r: any) => Object.keys(r).sort())).toEqual([
-      ["agentCard", "lastSeen", "name", "status"],
-      ["agentCard", "lastSeen", "name", "status"],
+      ["agentCard", "lastSeen", "name", "owner", "status"],
+      ["agentCard", "lastSeen", "name", "owner", "status"],
     ]);
   });
 

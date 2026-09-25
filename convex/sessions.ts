@@ -1,4 +1,6 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, type QueryCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { crossOwnerParticipant, decideAccess, type OwnedRow } from "./accessLogic.js";
 import { v } from "convex/values";
 import { computeReadState, numberTurns } from "./readLogic.js";
 import { unknownPeerError } from "./peers.js";
@@ -207,5 +209,90 @@ export const readState = query({
       turnCount: session.turnCount,
       participants: computeReadState(turns, members),
     };
+  },
+});
+
+// --- T-066 (Loop 5 §3-§4): room access. New queries only; the old hub never
+// calls them, and listAll/get/listForPeer are unchanged (Preserve 6, skew). ---
+
+async function agentRow(ctx: QueryCtx, name: string): Promise<OwnedRow | null> {
+  return (await ctx.db
+    .query("agents")
+    .withIndex("by_name", (q) => q.eq("name", name))
+    .first()) as OwnedRow | null;
+}
+
+async function rowsFor(ctx: QueryCtx, names: string[]): Promise<Map<string, OwnedRow>> {
+  const rows = new Map<string, OwnedRow>();
+  for (const name of new Set(names)) {
+    const row = await agentRow(ctx, name);
+    if (row) rows.set(name, row);
+  }
+  return rows;
+}
+
+async function participantNames(ctx: QueryCtx, sessionId: Id<"sessions">): Promise<string[]> {
+  const memberships = await ctx.db
+    .query("sessionPeers")
+    .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+    .collect();
+  const names: string[] = [];
+  for (const m of memberships) {
+    const peer = await ctx.db.get(m.peerId);
+    if (peer) names.push(peer.name);
+  }
+  return names;
+}
+
+/**
+ * May `caller` see this session, and is it a participant? A malformed or
+ * unknown id reads as exists: false, so the hub can answer both the same way.
+ */
+export const access = query({
+  args: { sessionId: v.string(), caller: v.optional(v.string()) },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ exists: boolean; participant: boolean; ownerView: boolean }> => {
+    const sessionId = ctx.db.normalizeId("sessions", args.sessionId);
+    const session = sessionId ? await ctx.db.get(sessionId) : null;
+    if (!sessionId || !session) return { exists: false, participant: false, ownerView: false };
+    const caller = args.caller || null;
+    const names = await participantNames(ctx, sessionId);
+    const callerRow = caller ? await agentRow(ctx, caller) : null;
+    return { exists: true, ...decideAccess(caller, callerRow, names, await rowsFor(ctx, names)) };
+  },
+});
+
+/** The session list a caller may see: listAll's entry shape, filtered. */
+export const listVisibleTo = query({
+  args: { name: v.string() },
+  handler: async (ctx, args) => {
+    const callerRow = await agentRow(ctx, args.name);
+    const sessions = await ctx.db.query("sessions").collect();
+    const rowCache = new Map<string, OwnedRow>();
+    const result = [];
+    for (const s of sessions) {
+      const names = await participantNames(ctx, s._id);
+      for (const n of names) {
+        if (!rowCache.has(n)) {
+          const row = await agentRow(ctx, n);
+          if (row) rowCache.set(n, row);
+        }
+      }
+      const { participant, ownerView } = decideAccess(args.name, callerRow, names, rowCache);
+      if (participant || ownerView) result.push({ ...s, participants: names });
+    }
+    return result;
+  },
+});
+
+/** For POST /a2a/session (Q6, O2): the first participant another owner owns, or null. */
+export const createCheck = query({
+  args: { caller: v.string(), participantNames: v.array(v.string()) },
+  handler: async (ctx, args): Promise<{ crossOwner: string | null }> => {
+    const callerRow = await agentRow(ctx, args.caller);
+    const rows = await rowsFor(ctx, args.participantNames);
+    return { crossOwner: crossOwnerParticipant(callerRow, args.participantNames, rows) };
   },
 });
