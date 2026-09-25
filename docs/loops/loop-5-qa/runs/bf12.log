@@ -1,0 +1,4 @@
+PASS BF1: first backfill: counts = rows lacking owner; every row now owned (aaron, or itself for a human) :: {"rows":18,"lacking":18,"humans":0,"result":{"assigned":18,"self":0,"untouched":0},"stillLacking":0,"owners":["aaron"]}
+PASS BF2: second run changes nothing (idempotent) :: {"assigned":0,"self":0,"untouched":18}
+
+2 checks, 2 pass, 0 fail

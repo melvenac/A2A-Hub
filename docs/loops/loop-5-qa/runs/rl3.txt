@@ -1,0 +1,6 @@
+== owned (rc 0): rows=2 K7=PASS PASS ownerAssigned rows-without-owner=0 
+   full-hash leak: 0
+== ownerless (rc 0): rows=2 K7=PASS FAIL ownerAssigned rows-without-owner=1 
+   full-hash leak: 0
+== empty (rc 2): UNDETERMINED: 0 rows (0 unparsable) 
+   full-hash leak: 0

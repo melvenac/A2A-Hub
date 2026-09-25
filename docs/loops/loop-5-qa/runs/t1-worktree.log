@@ -1,0 +1,17 @@
+
+ RUN  v4.1.0 C:/Users/melve/Worktrees/qa3-cand
+
+ ❯ tests/hub-key.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/hub-key.test.ts [ tests/hub-key.test.ts ]
+SyntaxError: Invalid or unexpected token
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 21 passed (22)
+      Tests  196 passed (196)
+   Start at  01:48:42
+   Duration  17.33s (transform 1.03s, setup 0ms, import 3.14s, tests 27.48s, environment 4ms)
+

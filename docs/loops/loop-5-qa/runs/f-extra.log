@@ -1,0 +1,11 @@
+PASS F-live warn: c4d2d1c hub on candidate listOnline: 200; entries carry only the old fields (no owner/human) :: {"status":200,"keys":["kind","lastSeen","name","rowCount"],"n":1}
+PASS F-escalate warn: c4d2d1c hub escalation on candidate functions assigns the task to an online agent :: {"found":true,"assignedAgent":"qa-t1-p1","status":"escalated"}
+PASS F-register warn: c4d2d1c hub re-register (same key) on candidate functions: 200 :: {"status":200,"body":"{\"ok\":true,\"message\":\"Agent qa-t1-p2 registered\"}"}
+PASS F-live strict: c4d2d1c hub on candidate listOnline: 200; entries carry only the old fields (no owner/human) :: {"status":200,"keys":["kind","lastSeen","name","rowCount"],"n":2}
+PASS F-escalate strict: c4d2d1c hub escalation on candidate functions assigns the task to an online agent :: {"found":true,"assignedAgent":"qa-t1-p1","status":"escalated"}
+PASS F-register strict: c4d2d1c hub re-register (same key) on candidate functions: 200 :: {"status":200,"body":"{\"ok\":true,\"message\":\"Agent qa-t3-p2 registered\"}"}
+PASS F-askgate warn: c4d2d1c hub still denies by askPolicy read from the widened getByName: 403 :: {"event":"same","status":403,"body":"{\"error\":\"askPolicy denied\",\"reason\":\"askPolicy does not allow qa-t1-p2 to ask qa-d1-p2\"}"}
+PASS F-askgate strict: c4d2d1c hub still denies by askPolicy read from the widened getByName: 403 :: {"event":"same","status":403,"body":"{\"error\":\"askPolicy denied\",\"reason\":\"askPolicy does not allow qa-t3-p2 to ask qa-d1-p2\"}"}
+PASS F-guard runtime: no public query (old and new) returns apiKeyHash or a 64-hex value :: {"probed":["agents:getByName","agents:listOnline","sessions:listAll","sessions:listVisibleTo","sessions:createCheck","sessions:access"],"hits":[]}
+
+9 checks, 9 pass, 0 fail

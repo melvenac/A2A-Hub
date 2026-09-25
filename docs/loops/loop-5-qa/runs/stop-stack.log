@@ -1,0 +1,27 @@
+﻿recorded 8692: already gone
+killed 17980 (recorded), rc 0
+killed 13620 (recorded), rc 0
+killed 19276 (recorded), rc 0
+killed 13728 (recorded), rc 0
+killed 16760 (recorded), rc 0
+killed 14764 (recorded), rc 0
+killed 18936 (recorded), rc 0
+killed 18276 (recorded), rc 0
+killed 17772 (recorded), rc 0
+killed 17352 (recorded), rc 0
+STOPPED: all 15 QA ports free (3710,3711,3720,3721,4710,4711,4712,4713,4720,4721,4730,4731,4740,6790,6791); no QA convex-local-backend
+recorded 8692: already gone
+recorded 17980: already gone
+recorded 13620: already gone
+recorded 19276: already gone
+recorded 13728: already gone
+recorded 16760: already gone
+recorded 14764: already gone
+recorded 18936: already gone
+recorded 18276: already gone
+recorded 17772: already gone
+recorded 17352: already gone
+killed 18028 (recorded), rc 0
+killed 1288 (recorded), rc 0
+killed 20288 (recorded), rc 0
+STOPPED: all 15 QA ports free (3710,3711,3720,3721,4710,4711,4712,4713,4720,4721,4730,4731,4740,6790,6791); no QA convex-local-backend

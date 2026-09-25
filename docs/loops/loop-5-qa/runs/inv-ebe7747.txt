@@ -1,0 +1,36 @@
+USE     /a2a                                     src/index.ts:202
+USE     /a2a/jsonrpc                             src/index.ts:244
+GET     /health                                  src/index.ts:259
+GET     /.well-known/agent-card.json             src/index.ts:285
+POST    /a2a/message/send                        src/index.ts:290
+POST    /a2a/task/:taskId/respond                src/index.ts:341
+POST    /a2a/task/:taskId/claim                  src/index.ts:389
+GET     /a2a/queue/:agentId                      src/index.ts:405
+POST    /a2a/heartbeat/:agentId                  src/index.ts:418
+GET     /a2a/agents/live                         src/index.ts:443
+POST    /a2a/register                            src/index.ts:496
+POST    /a2a/rotate                              src/index.ts:503
+GET     /a2a/whoami                              src/index.ts:506
+POST    /a2a/session                             src/index.ts:511
+POST    /a2a/session/:sessionId/message          src/index.ts:554
+GET     /a2a/peer/:peerName/sessions             src/index.ts:586
+GET     /a2a/sessions                            src/index.ts:605
+POST    /a2a/session/:sessionId/rename           src/index.ts:618
+POST    /a2a/session/:sessionId/extend           src/index.ts:636
+GET     /a2a/session/:sessionId/messages         src/index.ts:656
+POST    /a2a/session/:sessionId/read             src/index.ts:677
+GET     /a2a/session/:sessionId/reads            src/index.ts:713
+USE     /ui (mountUi)                            src/index.ts:729
+USE     /ui (mountUi)                            src/ui.ts:15
+JSONRPC agent/getAuthenticatedExtendedCard
+JSONRPC message/send
+JSONRPC message/stream
+JSONRPC tasks/cancel
+JSONRPC tasks/get
+JSONRPC tasks/pushNotificationConfig/delete
+JSONRPC tasks/pushNotificationConfig/get
+JSONRPC tasks/pushNotificationConfig/list
+JSONRPC tasks/pushNotificationConfig/set
+JSONRPC tasks/resubscribe
+
+20 verb routes, 4 mounts, 10 JSON-RPC methods at ebe7747
