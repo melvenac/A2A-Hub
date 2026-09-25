@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 52,
+  "revision": 53,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -507,7 +507,7 @@
       "opened_session": 16,
       "closed_session": null,
       "supersedes": null,
-      "note": "Found by Rivet in the Loop 3 design (§9): the tracked docker-compose.yml:48-49 publishes Convex on 3210:3210 (every interface). RELAYED EVIDENCE FROM tcm (SIA record 97, read-only, via the SIA planner, 2026-09-24): Convex listens on 127.0.0.1:3210 only (`docker port convex` = 3210/tcp -> 127.0.0.1:3210); also reachable from the host at 172.20.0.2:3210/3211 over the a2a docker bridge. So: (1) tcm's Convex is NOT published to the tailnet, and tcm's live compose differs from the tracked file. A deploy from the tracked compose would widen it: FIX THE TRACKED FILE to 127.0.0.1:3210. (2) Any local process on tcm can call every PUBLIC Convex function without the hub or a key; the code-level fix is making hub-only functions internal. Loop 3 closed only the dev-key part. NEW, session 17 (Rivet, first-hand, 2026-09-25 04:14:16Z after the v1.10.0 swap): the HUB container publishes 0.0.0.0:4000->4000, every interface of tcm, not only the tailnet. v1.8.0's binding was not recorded before the recreate. With /ui/ live and keyless, anything that can reach tcm:4000 on any interface can load the page (every /a2a route still needs a key). Decide the intended binding (tailnet only?) before exposure. Relay has not verified the Convex part on tcm itself. Gates exposure (T-002 step 5)."
+      "note": "Found by Rivet in the Loop 3 design (§9): the tracked docker-compose.yml:48-49 publishes Convex on 3210:3210 (every interface). RELAYED EVIDENCE FROM tcm (SIA record 97, read-only, via the SIA planner, 2026-09-24): Convex listens on 127.0.0.1:3210 only (`docker port convex` = 3210/tcp -> 127.0.0.1:3210); also reachable from the host at 172.20.0.2:3210/3211 over the a2a docker bridge. So: (1) tcm's Convex is NOT published to the tailnet, and tcm's live compose differs from the tracked file. A deploy from the tracked compose would widen it: FIX THE TRACKED FILE to 127.0.0.1:3210. (2) Any local process on tcm can call every PUBLIC Convex function without the hub or a key; the code-level fix is making hub-only functions internal. Loop 3 closed only the dev-key part. Loop 5 QA O-3 (1963352): agents:registerAgent is a public mutation and in v1.11.0 takes `owner`, so a local caller could set any owner directly (the hub route ignores a body owner). NEW, session 17 (Rivet, first-hand, 2026-09-25 04:14:16Z after the v1.10.0 swap): the HUB container publishes 0.0.0.0:4000->4000, every interface of tcm, not only the tailnet. With /ui/ live and keyless, anything that can reach tcm:4000 on any interface can load the page (every /a2a route still needs a key). Decide the intended binding (tailnet only?) before exposure (D-011 step 5). Relay has not verified the Convex part on tcm itself. Gates exposure."
     },
     {
       "id": "T-058",
@@ -597,7 +597,7 @@
       "opened_session": 17,
       "closed_session": null,
       "supersedes": null,
-      "note": "Brief: docs/loops/loop-5-identity-and-membership-brief.md. Design: docs/loops/loop-5-design.md (origin/loop/5-identity 6687e7c, Rivet). RULING 1 (docs/loops/loop-5-ruling-1.md, Relay): approved to build; Q1-Q9 as recommended (Q9 parity: askPolicy was never warn-soft, since denyNamedAsk refuses in every mode; no live row holds an askPolicy); binding additions A1 (the read-only log must see [authz]) and A2 (an [authz] soak before strict, D-012). Serves D-011 and D-010. Covers T-004 and T-058, plus room membership, an agents.owner field (interim HUB_OWNER=aaron, bound to G-001 until Loop 6), same-owner agents/live and escalation, A2A tasks by creator, and assignedAgent-only /respond. Preserves hub-talk and the daemons unchanged, and Aaron's page gets a read-only owner view."
+      "note": "Brief docs/loops/loop-5-identity-and-membership-brief.md; design docs/loops/loop-5-design.md; rulings loop-5-ruling-1.md and loop-5-ruling-2.md. BUILT (Rivet) and ACCEPTED (V-008) on origin/loop/5-identity ebe7747, v1.11.0. Report qa/loop-5 1963352. REMAINING, each on Aaron's word: merge loop/5-identity + qa/loop-5; tag v1.11.0; deploy per Rivet's 11-step plan in docs/loops/rivet-handoff-session-17.md (assignOwnerAtDeploy twice; PB; PD; RL2 with a2a-readonly c7728ab751cd and a2a-k7.mjs f1de001c3435; rows-without-owner=0; stays warn); then the one-day [authz] soak (D-012) read via the read-only auth-log's authz-lines header; then strict. Close T-066 at the deploy's PD+RL2 pass. Follow-ups: T-070 (/read oracle), T-071 (k7 exit code)."
     },
     {
       "id": "T-067",
@@ -627,7 +627,27 @@
       "opened_session": 17,
       "closed_session": null,
       "supersedes": null,
-      "note": "Found by Relay, session 17: `node .gitnexus/run.cjs analyze` in the main checkout rewrote the stats line in tracked CLAUDE.md and AGENTS.md (restored there; stats committed on docs/session-17-c 8a89273). Atlas (SIA planner, 2026-09-25): SIA master carries `.gitnexusrc` = {\"noStats\": true}, which stops it (SIA's CLAUDE.md explains); A2A-Hub has none in HEAD. Also: two GitNexus indexes are registered as \"A2A-Hub\" (~/Projects/A2A-Hub and ~/Worktrees/a2a-rivet): drop the rivet one or always pass `repo` as the absolute path. And /sync only WARNS on index staleness (SIA V-037); whether it should run analyze is Aaron's call via Atlas (pending). The A2A-Hub index was 120 commits stale (2026-07-29) until Relay refreshed it at c4d2d1c, 2026-09-25 06:33Z."
+      "note": "Found by Relay, session 17: `node .gitnexus/run.cjs analyze` in the main checkout rewrote the stats line in tracked CLAUDE.md and AGENTS.md (restored there; stats committed via PR #20). FIX: `.gitnexusrc` = {\"noStats\": true} at the repo root, as SIA master carries. VERIFIED by Relay against the installed GitNexus 1.6.9 (Aaron asked whether .gitnexusrc is an old mechanism): dist/cli/analyze-config.js:2 'Project-local .gitnexusrc support for gitnexus analyze (#243)', GITNEXUS_RC_FILENAME '.gitnexusrc' (:32), noStats a supported key (:57,:69), CLI flags override it (:362); not deprecated. The file, not a flag, because it binds whoever runs analyze. MORE PRESSING NOW: Aaron ruled via Atlas (SIA D-049, T-187, 2026-09-25 ~06:45Z) that /sync will REBUILD a stale index; without this file every sync would dirty the main checkout. Land before SIA's T-187 reaches A2A-Hub. Also drop the duplicate GitNexus registration for ~/Worktrees/a2a-rivet, or always pass repo as the absolute path."
+    },
+    {
+      "id": "T-070",
+      "title": "/read still distinguishes non-member from nonexistent session in strict (Q2 oracle gap)",
+      "priority": "P2",
+      "status": "open",
+      "opened_session": 17,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "Loop 5 QA O-1 (docs/loops/loop-5-qa-report.md, 1963352): POST /a2a/session/:id/read keeps markRead's own answers (A6 unchanged by design), so in strict a non-member gets 404 'X is not a participant' while a nonexistent id gets 400 'not a session id'. Every other session and task route answers byte-identically (ruling 1 Q2). Close before public exposure (D-011): /read should answer a non-member exactly as a nonexistent id."
+    },
+    {
+      "id": "T-071",
+      "title": "K7 analyzer exits 0 on FAIL lines (agents-summary)",
+      "priority": "P2",
+      "status": "open",
+      "opened_session": 17,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "Loop 5 QA O-4: k7.mjs (installed as ~/bin/a2a-k7.mjs, read-only agents-summary) prints FAIL lines but exits 0; the owner verdict is its own line. Pre-existing since Relay wrote it (session 17). A script or seat reading only the exit status would take a FAIL as a pass (shared.md: instruments fail closed). Fix: exit non-zero when K7=FAIL or any FAIL line; keep UNDETERMINED rc 2. A tcm script change, so it ships with a deploy on Aaron's word, re-running T-065 N and L."
     }
   ],
   "verified": [
@@ -727,6 +747,19 @@
           "type": "qa-report",
           "path": "docs/loops/t065-qa-report.md (qa/t065 fdcd000, ruling recorded at top); criteria docs/loops/t065-qa-criteria.md (3e704c3)",
           "observation": "Gauge, 2026-09-25 04:50:50-04:56:40Z, frozen candidate ~/bin/a2a-readonly 417a34dde54d, ~/bin/a2a-k7.mjs de3a9c3e0cd0, authorized_keys line 2 `from=\"100.64.0.0/10\",restrict,command=\"/home/melvenac/bin/a2a-readonly\"`, line 1 (the full key) ea0a6ce6b1bd unchanged. PASS on S (exact case dispatch, pipefail, admin key env-only, output mask), AK, P1, M1-M4, AL (14 [auth] lines = full-key grep -c, no cap), AS (6 owned, K7 PASS), AF (a dead Convex port gives UNDETERMINED rc 124, exit 2), L (planted positive first, 0 hits), N (19 refusals rc 2; forced pty fails, nothing runs), NF (-L/-R/-D prohibited, full-key -L control 200), K (0 of 35 repos track the key). W as written FAILED on a root-owned runc exec spec in /tmp created and deleted within each docker exec; Relay ruled it a mis-specified rule, clarified to 'nothing persists after the call and nothing is written by melvenac' (every read-only docker exec does this, K7 included), so T-065 passes; the original W verdict stays visible in the report. Allow rules: six exact Bash(ssh -i C:/Users/melve/.ssh/tcm-readonly -o IdentitiesOnly=yes melvenac@100.124.212.87 <item>) entries in ~/.claude/settings.json, no wildcard (read by Relay). First real use by Relay in auto mode: auth-log, complete since start, confirmed atlas and grok served attributed after migration."
+        }
+      ],
+      "since_session": 17,
+      "status": "verified"
+    },
+    {
+      "id": "V-008",
+      "claim": "Loop 5 (T-066, v1.11.0) passes acceptance on loop/5-identity ebe7747: every request acts as its key's name and touches only rooms it may see; strict refuses, warn logs [authz]; JSON-RPC enforces askPolicy",
+      "evidence": [
+        {
+          "type": "qa-report",
+          "path": "docs/loops/loop-5-qa-report.md (qa/loop-5 1963352); criteria loop-5-qa-criteria.md (69967fd + E3b); rulings loop-5-ruling-1.md, loop-5-ruling-2.md",
+          "observation": "Gauge, 2026-09-25 06:12-07:01Z, scratch only, SHA read back unchanged; 168 checks passed, 0 failed; 11/11 mutants caught, each with a passing control first. INV: 20 routes + 10 SDK JSON-RPC methods covered (extractor validated on c4d2d1c). A1-A20 strict refusals, each one REJECT line; forbidden 404s byte-identical to nonexistent ids (incl. JSON-RPC tasks/get, cancel, resubscribe). B1-B5 warn = c4d2d1c's answer + exactly one WOULD REJECT line; B3 0 [authz] lines from as-self flows (hub-talk, daemons, page); B4 0 keys/hashes in 24 logs. C askPolicy refused on JSON-RPC in both modes (c4d2d1c does not: T-004 shown). D1/D2 26/26 hub-talk steps identical. E owner view (API and page, read-only). F1 c4d2d1c hub on candidate functions after a real convex deploy: 0 differences; Relay's deviation (widened getByName/listOnline) safe as observed; no public query returns apiKeyHash. BF1-3 incl. the O4 gap. RL1/RL3 planted. T1 211 reproduced (Rivet's 92/93 e2e script not in repo, not reproduced). Criteria gap found and fixed in-run: E3b (an agent named as another row's owner gets 404) catches M2. NOT IN VERDICT: PB, PD, RL2 (deploy act), the [authz] soak (D-012), LLM paths (invalid QA Anthropic key). Relay accepted, having read the report."
         }
       ],
       "since_session": 17,

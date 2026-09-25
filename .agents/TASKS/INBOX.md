@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 52 by open-brain v1.10.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 53 by open-brain v1.10.0 — do not edit; change state via ob_state -->
 
 # Inbox
 
@@ -54,6 +54,8 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-062** Express development error pages leak paths and stacks (no NODE_ENV on tcm)
 - [ ] **T-064** Read tcm's hub log after a working day for WOULD REJECT legacy (T-003 second signal)
 - [ ] **T-069** Add .gitnexusrc {"noStats": true} so GitNexus analyze stops rewriting tracked CLAUDE.md/AGENTS.md
+- [ ] **T-070** /read still distinguishes non-member from nonexistent session in strict (Q2 oracle gap)
+- [ ] **T-071** K7 analyzer exits 0 on FAIL lines (agents-summary)
 
 ## P3
 
