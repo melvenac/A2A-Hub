@@ -31,8 +31,11 @@ export function makeRegisterHandler(deps: {
   convex: Convex;
   authMode: AuthMode;
   notifyHuman: (content: string) => Promise<void>;
+  /** The owner of every non-human registration until Loop 6's enrollment (T-066 Q3). */
+  hubOwner?: string;
 }) {
   const { convex, authMode, notifyHuman } = deps;
+  const hubOwner = deps.hubOwner ?? "aaron";
   return async (req: Request, res: Response) => {
     try {
       const { name, apiKey, agentCard } = req.body ?? {};
@@ -52,6 +55,10 @@ export function makeRegisterHandler(deps: {
           instanceId,
           keyTooShort: apiKey.length < KEY_FLOOR,
           strict: authMode === "strict",
+          // T-066 (Q3, O5): a human owns only itself; anything else belongs to
+          // the hub's owner. A body `owner` (top level or in agentCard) is never
+          // read, so a registrant cannot choose who can see its rooms.
+          owner: card?.kind === "human" ? name : hubOwner,
         });
       } catch (error) {
         const refusal = refusalOf(error);

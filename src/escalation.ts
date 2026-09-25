@@ -9,12 +9,19 @@ export class Escalation {
     this.client = new ConvexHttpClient(convexUrl);
   }
 
-  async escalateToAgent(message: string, agentName?: string): Promise<string> {
+  /**
+   * @param owner the caller's owner (T-066 Q5). When set and no agent is named,
+   *              only that owner's agents are candidates, so a stranger's
+   *              question never lands on someone else's agent. Unset (warn,
+   *              unknown caller) keeps today's "any online agent".
+   */
+  async escalateToAgent(message: string, agentName?: string, owner?: string): Promise<string> {
     // Find an online agent
     const agents = await this.client.query(api.agents.listOnline, {});
+    const candidates = owner ? agents.filter((a: any) => a.owner === owner) : agents;
     const target = agentName
       ? agents.find((a: any) => a.name === agentName)
-      : agents[0];
+      : candidates[0];
 
     if (!target) {
       return "No agents are currently online. Please try again later or check the documentation at https://github.com/melvenac/A2A-Hub";

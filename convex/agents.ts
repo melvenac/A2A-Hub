@@ -3,6 +3,7 @@ import type { MutationCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { ConvexError, v } from "convex/values";
 import { decideHeartbeat } from "./instanceLogic.js";
+import { isHumanRow, ownerOf } from "./accessLogic.js";
 import {
   classifyAtDeployStatus,
   decideRegister,
@@ -100,6 +101,9 @@ const registerArgs = {
   // hub's AUTH_MODE. Absent = not short, warn.
   keyTooShort: v.optional(v.boolean()),
   strict: v.optional(v.boolean()),
+  // New in v1.11.0 (T-066, Loop 5 §4), optional so older hubs still validate.
+  // The owner a row gets if it has none yet; a register never changes an owner.
+  owner: v.optional(v.string()),
 };
 
 export type RegisterEvent = "insert" | "same" | "legacy-same" | "migrate";
@@ -114,6 +118,7 @@ async function registerCore(
     askPolicy?: { allow: string[]; what?: unknown };
     keyTooShort?: boolean;
     strict?: boolean;
+    owner?: string;
   }
 ): Promise<{ id: Doc<"agents">["_id"]; event: RegisterEvent }> {
   const now = Date.now();
@@ -122,6 +127,7 @@ async function registerCore(
     : {};
   const policyFields =
     args.askPolicy !== undefined ? { askPolicy: args.askPolicy } : {};
+  const ownerFields = args.owner ? { owner: args.owner } : {};
 
   const dupes = await rowsByName(ctx, args.name);
   const canonical = dupes.length ? canonicalOf(dupes) : null;
@@ -149,6 +155,7 @@ async function registerCore(
         keyStatus: ownedStatusFor(args.apiKeyHash),
         ...instanceFields,
         ...policyFields,
+        ...ownerFields,
       });
       return { id, event: "insert" };
     }
@@ -167,6 +174,8 @@ async function registerCore(
         activeInstanceId: takeoverId(args.instanceId),
         lastHeartbeatAt: now,
         ...policyFields,
+        // A migrated name keeps the owner its legacy row had, if any.
+        ...(canonical?.owner ? { owner: canonical.owner } : ownerFields),
       });
       return { id, event: "migrate" };
     }
@@ -179,6 +188,7 @@ async function registerCore(
         status: "online",
         ...instanceFields,
         ...policyFields,
+        ...(c.owner ? {} : ownerFields),
       });
       await deleteRows(
         ctx,
@@ -296,6 +306,47 @@ export const release = internalMutation({
   },
 });
 
+/**
+ * T-066 (Loop 5 §4): give every row with no owner one, once, at deploy. A
+ * human-kind row owns itself; any other row gets `owner`. Rows that already
+ * have an owner are untouched, so a second run changes nothing. Admin key:
+ *   convex run agents:assignOwnerAtDeploy '{"owner":"aaron"}'
+ * Returns counts only.
+ */
+export const assignOwnerAtDeploy = internalMutation({
+  args: { owner: v.string() },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ assigned: number; self: number; untouched: number }> => {
+    let assigned = 0;
+    let self = 0;
+    let untouched = 0;
+    for (const row of await ctx.db.query("agents").collect()) {
+      if (row.owner) {
+        untouched++;
+      } else if (row.agentCard?.kind === "human") {
+        await ctx.db.patch(row._id, { owner: row.name });
+        self++;
+      } else {
+        await ctx.db.patch(row._id, { owner: args.owner });
+        assigned++;
+      }
+    }
+    return { assigned, self, untouched };
+  },
+});
+
+/** T-066: set one name's owner (every row of it). Admin key only, e.g. for a scratch second owner. */
+export const setOwner = internalMutation({
+  args: { name: v.string(), owner: v.string() },
+  handler: async (ctx, args): Promise<{ updated: number }> => {
+    const rows = await rowsByName(ctx, args.name);
+    for (const row of rows) await ctx.db.patch(row._id, { owner: args.owner });
+    return { updated: rows.length };
+  },
+});
+
 export const heartbeat = mutation({
   args: { name: v.string(), instanceId: v.optional(v.string()) },
   handler: async (ctx, args): Promise<{ ok: true; superseded?: true }> => {
@@ -338,6 +389,8 @@ export const getByName = query({
   ): Promise<{
     name: string;
     askPolicy?: { allow: string[] };
+    owner?: string;
+    human?: boolean;
   } | null> => {
     const agent = await ctx.db
       .query("agents")
@@ -345,7 +398,15 @@ export const getByName = query({
       .first();
     // No public function returns apiKeyHash (ruling 3, F1): a stored hash is
     // rotateKey's proof, so it must be readable only with the admin key.
-    return agent ? { name: agent.name, askPolicy: agent.askPolicy } : null;
+    // owner and human are new in v1.11.0 (T-066); older hubs ignore them.
+    return agent
+      ? {
+          name: agent.name,
+          askPolicy: agent.askPolicy,
+          owner: ownerOf(agent),
+          human: isHumanRow(agent),
+        }
+      : null;
   },
 });
 
@@ -385,13 +446,23 @@ export const listOnline = query({
   args: {},
   handler: async (
     ctx
-  ): Promise<{ name: string; agentCard: any; lastSeen: number; status: "online" | "offline" }[]> => {
+  ): Promise<
+    { name: string; agentCard: any; lastSeen: number; status: "online" | "offline"; owner?: string }[]
+  > => {
     const rows = await ctx.db
       .query("agents")
       .filter((q) => q.eq(q.field("status"), "online"))
       .collect();
+    // owner is new in v1.11.0 (T-066): /agents/live and escalation keep to the
+    // caller's owner. Older hubs map the fields they know and ignore it.
     return rows
       .filter((r) => r.agentCard?.kind !== "human")
-      .map((r) => ({ name: r.name, agentCard: r.agentCard, lastSeen: r.lastSeen, status: r.status }));
+      .map((r) => ({
+        name: r.name,
+        agentCard: r.agentCard,
+        lastSeen: r.lastSeen,
+        status: r.status,
+        owner: ownerOf(r),
+      }));
   },
 });

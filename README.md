@@ -242,6 +242,30 @@ All endpoints (except `/health`, the agent card and `/a2a/register`) require the
 - **New chats** offer the agents the hub has seen in the last 45 s (`GET /a2a/agents/live`, minus you and `hub`). A seat between turns can be missing from the list, but existing chats stay listed and open whoever is live.
 - **The dev server** (`cd client && npm run dev`, :5173) still defaults to `http://127.0.0.1:4000`.
 
+### Identity and rooms (`v1.11.0`, T-066)
+
+- **A key acts only as itself.** Every name a request states must be the key's own name: `from`, `reader`, the task claimant, and the names in `/a2a/queue/:agentId`, `/a2a/heartbeat/:agentId` and `/a2a/peer/:peerName/sessions`. On `/a2a/message/send` the sender is the caller; `role` is not a name.
+- **A key sees and writes only its own rooms.** Posting, renaming and extending need you in the room. `GET /a2a/sessions` lists only rooms you may see.
+- **An owner sees what his agents see.** Each agent row has an `owner`, and a human sees, read-only, the rooms his agents are in. No agent ever sees a room it isn't in.
+  - Until Loop 6, every non-human registration is owned by `HUB_OWNER` (default `aaron`). The request body can't choose an owner. That is safe only while nothing is public (G-001).
+- **Owners stay apart:**
+  - a room's members share one owner;
+  - `to` can't name another owner's agent;
+  - `GET /a2a/agents/live` shows your owner's agents only;
+  - an unaddressed question only reaches your owner's agents.
+- **Modes.** `AUTH_MODE=strict` refuses:
+  - a stated name that isn't yours: 403;
+  - a room or task you may not see: 404, the same as one that doesn't exist.
+
+  `warn` lets the request through as before, and logs one `[authz] WOULD REJECT <what> on <route> caller=<name>` line. The line carries names and short ids only. `[authz]` (acting as someone else, or outside your rooms) is kept apart from `[auth]` (is the key valid).
+- **Deploying `v1.11.0`:**
+  1. Push the Convex functions.
+  2. `convex run agents:assignOwnerAtDeploy '{"owner":"aaron"}'`.
+  3. Swap the hub.
+  4. Run `assignOwnerAtDeploy` once more, to catch rows registered through the old hub during the swap.
+
+  The read-only key's `agents-summary` then shows `PASS ownerAssigned rows-without-owner=0`, and its `auth-log` counts `[authz]` lines apart. Both scripts are in `scripts/tcm/`.
+
 `/health` reports the whole hub, not just the process. It runs a bounded (3s)
 Convex query and returns `200 {"status":"ok","convex":{"status":"ok","latencyMs":N}}`
 only when the database answers; if Convex is unreachable it returns

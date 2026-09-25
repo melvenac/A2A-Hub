@@ -9,6 +9,7 @@
  */
 
 import type * as a2aTasks from "../a2aTasks.js";
+import type * as accessLogic from "../accessLogic.js";
 import type * as agents from "../agents.js";
 import type * as experiences from "../experiences.js";
 import type * as instanceLogic from "../instanceLogic.js";
@@ -28,6 +29,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   a2aTasks: typeof a2aTasks;
+  accessLogic: typeof accessLogic;
   agents: typeof agents;
   experiences: typeof experiences;
   instanceLogic: typeof instanceLogic;

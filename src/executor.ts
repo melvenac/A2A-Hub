@@ -4,7 +4,7 @@ const CONFIDENCE_THRESHOLD = parseFloat(process.env.CONFIDENCE_THRESHOLD || "0.8
 
 interface ExecutorDeps {
   searchMemory: (query: string) => Promise<MemoryResult>;
-  escalate: (message: string, agentName?: string) => Promise<string>;
+  escalate: (message: string, agentName?: string, owner?: string) => Promise<string>;
   storeLesson: (lesson: {
     trigger: string;
     action: string;
@@ -30,7 +30,8 @@ export class HubExecutor {
     this.deps = deps;
   }
 
-  async handleMessage(message: string, to?: string): Promise<ExecutorResult> {
+  /** @param owner the caller's owner, which bounds an unaddressed escalation (T-066 Q5). */
+  async handleMessage(message: string, to?: string, owner?: string): Promise<ExecutorResult> {
     // Directly addressed messages skip memory — the sender wants that agent,
     // not a cached answer.
     if (!to) {
@@ -45,7 +46,7 @@ export class HubExecutor {
     }
 
     // Step 2: Escalate to the addressed agent, or any available agent
-    const agentResponse = await this.deps.escalate(message, to);
+    const agentResponse = await this.deps.escalate(message, to, owner);
 
     // Steps 3-4 are best-effort: the agent already answered, so a classifier
     // or storage failure must not turn a delivered response into an error.

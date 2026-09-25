@@ -11,26 +11,18 @@
  * This script only ASSIGNS the goal (creates the session + seed message as
  * alice), then passively watches. Every subsequent message is daemon↔daemon.
  */
-import { generateKey } from "./hub-key.mjs";
+import { resolveKey } from "./hub-key.mjs";
 
 const HUB = process.env.HUB_URL || "http://localhost:4000";
-// A throwaway identity for this run (T-003: no shared default key). The key is
-// generated in memory, used for this run, and never stored or printed.
-const EPHEMERAL = `demo-${process.pid}`;
-const EPHEMERAL_KEY = generateKey();
-async function registerEphemeral(hubUrl) {
-  const res = await fetch(`${hubUrl}/a2a/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name: EPHEMERAL,
-      apiKey: EPHEMERAL_KEY,
-      agentCard: { name: EPHEMERAL, description: "Throwaway identity for demo" },
-    }),
-  });
-  if (!res.ok) throw new Error(`register ${EPHEMERAL} refused (${res.status})`);
+// The seed is alice's own words, so the demo runs with alice's own key (T-066
+// Q7: a key acts only as itself, in its own rooms). Local stack only: the key
+// alice's daemon already uses (AGENT_KEY or her key file), never printed.
+const alice = resolveKey({ hub: HUB, name: "alice" });
+if (alice.error) {
+  console.error(`demo-loop: ${alice.error}`);
+  process.exit(1);
 }
-const headers = { "Content-Type": "application/json", "X-Agent-Key": EPHEMERAL_KEY };
+const headers = { "Content-Type": "application/json", "X-Agent-Key": alice.key };
 
 // Usage: node scripts/demo-loop.mjs ["seed message"] [maxTurns]
 const SEED =
@@ -45,7 +37,6 @@ async function hub(path, init) {
   return res.json();
 }
 
-await registerEphemeral(HUB);
 const { sessionId } = await hub("/a2a/session", {
   method: "POST",
   body: JSON.stringify({

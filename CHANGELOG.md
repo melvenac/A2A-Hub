@@ -2,6 +2,37 @@
 
 All notable changes to the A2A Intelligent Hub.
 
+## [v1.11.0] - 2026-09-25
+
+Loop 5 (T-066, P0): a key acts only as itself, and only in its own rooms. Brief `docs/loops/loop-5-identity-and-membership-brief.md`, design `docs/loops/loop-5-design.md`, rulings 1 and 2, D-010, D-011, D-012 and G-001.
+
+Every new check refuses only when `AUTH_MODE=strict`. In `warn` (tcm's mode) the request goes through exactly as before and the hub logs one `[authz] WOULD REJECT …` line, so the soak (D-012) can see every mismatch before strict is turned on. The one exception is `askPolicy` on JSON-RPC, which refuses in every mode, like `/a2a/message/send` always has.
+
+### Added
+- **Identity is the key's.** A name a request asserts must be the caller's own name: `from` on a session message, `:agentId` on `/a2a/queue` and `/a2a/heartbeat`, `agentName` on a task claim, `:peerName` on `/a2a/peer/:peerName/sessions`, and `reader` on `/read`. Strict gives 403 `"<field> is not the caller"`. `role` on `/a2a/message/send` is no longer read as the sender: the sender is the caller.
+- **Room membership.** Posting, renaming and extending need the caller to be a participant. Reading messages and receipts also admits a human owner's view. Strict answers a room the caller may not see, and a room that does not exist, with the same `404 {"error":"session not found"}`.
+- **The owner's view.** Agent rows get an `owner`: a human owns himself, and everything else is owned by `HUB_OWNER` (default `aaron`) until Loop 6's enrollment decides. That interim is safe only because nothing is public before strict and Loop 6 (G-001). A human sees the rooms his agents are in, read-only. `GET /a2a/sessions` lists only the rooms a caller may see.
+  - `agents:assignOwnerAtDeploy` (internal) fills rows with no owner. Run it before and after the hub swap.
+  - A register body cannot choose an owner.
+- **Owners stay apart.**
+  - `GET /a2a/agents/live` lists only the caller's owner's agents.
+  - A room can only be created with the caller in it and with members of the caller's owner (strict 403 `cross-owner participant=<name>`).
+  - An explicit `to` naming another owner's agent is refused (strict 403 `cross-owner to=<name>`), on `/a2a/message/send` and JSON-RPC.
+  - An unaddressed escalation only reaches the caller's owner's agents.
+  - Only the hub owner's own traffic is narrated into his "Hub activity" room.
+- **Tasks.** Only the agent a task is assigned to may respond to it; strict answers anyone else as a missing task (404). Completing a task now keeps its `assignedAgent` instead of clearing it.
+- **JSON-RPC carries the caller (T-004).** The executor sees the authenticated name. `askPolicy` and the cross-owner rule are enforced as on `/a2a/message/send`, and a refusal is a terminal `rejected` task. An A2A task belongs to its creator (`a2aTasks.createdBy`): another caller's `tasks/get` or `tasks/cancel` gets the same error as a nonexistent id in strict.
+- **The chat page** shows a room you see only through your agents read-only, with no composer, extend or rename.
+- **`scripts/tcm/`** holds the read-only key's forced command and analyzer (T-065), now versioned. `auth-log` counts `[auth]` and `[authz]` apart and prints both. `agents-summary` shows each row's owner and an `ownerAssigned` verdict.
+
+### Changed
+- `/read`'s reader mismatch now logs as `[authz]`, not `[auth]`. Its codes and texts are unchanged.
+- `scripts/demo-loop.mjs` runs with alice's own key rather than a throwaway identity that posted as alice.
+
+### Unchanged
+- `scripts/hub-talk.mjs`, `scripts/hub-key.mjs` and the daemon.
+- Every Convex change is additive: optional fields, new functions and optional arguments only. A v1.10.0 hub runs against these functions.
+
 ## [v1.10.0] - 2026-09-24
 
 Loop 4 (T-061): the chat page served by the hub. Brief `docs/loops/loop-4-ui-on-tcm-brief.md`, design `docs/loops/loop-4-ui-on-tcm-design.md`, rulings 1 and 2.

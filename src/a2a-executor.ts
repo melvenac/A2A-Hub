@@ -1,7 +1,33 @@
 import { randomUUID } from "crypto";
-import type { AgentExecutor, RequestContext, ExecutionEventBus } from "@a2a-js/sdk/server";
+import type { AgentExecutor, RequestContext, ExecutionEventBus, User } from "@a2a-js/sdk/server";
 import type { Task, TaskStatusUpdateEvent, Message } from "@a2a-js/sdk";
 import type { HubExecutor } from "./executor.js";
+
+/**
+ * The JSON-RPC caller (T-004, T-066 §6): the name the key guard resolved.
+ * The SDK hands it to the executor and the task store as context.user.
+ * userName is "" for the unauthenticated warn path, as the SDK's own
+ * UnauthenticatedUser does.
+ */
+export class HubUser implements User {
+  constructor(private readonly name: string | null) {}
+  get isAuthenticated(): boolean {
+    return !!this.name;
+  }
+  get userName(): string {
+    return this.name ?? "";
+  }
+}
+
+/** The caller from a request context, or null. */
+export function callerOf(context: { user?: User } | undefined): string | null {
+  return context?.user?.userName || null;
+}
+
+export type AuthorizeAsk = (
+  caller: string | null,
+  to: string | undefined
+) => Promise<{ refusal?: string; owner?: string }>;
 
 /**
  * Adapts the hub's existing HubExecutor to the A2A AgentExecutor interface.
@@ -20,7 +46,14 @@ import type { HubExecutor } from "./executor.js";
  * reply that merely *ends* with the word.
  */
 export class HubAgentExecutor implements AgentExecutor {
-  constructor(private readonly hub: HubExecutor) {}
+  /**
+   * @param deps.authorize the hub's rules for an ask (cross-owner `to`, askPolicy),
+   *        shared with POST /a2a/message/send. Absent = allow (tests).
+   */
+  constructor(
+    private readonly hub: HubExecutor,
+    private readonly deps: { authorize?: AuthorizeAsk } = {}
+  ) {}
 
   async execute(requestContext: RequestContext, eventBus: ExecutionEventBus): Promise<void> {
     const { userMessage, taskId, contextId } = requestContext;
@@ -61,8 +94,19 @@ export class HubAgentExecutor implements AgentExecutor {
       return;
     }
 
+    // The same rules as the legacy route (T-004): a refusal is terminal
+    // `rejected`, the JSON-RPC form of that route's 403.
+    const gate = this.deps.authorize
+      ? await this.deps.authorize(callerOf(requestContext.context), to)
+      : {};
+    if (gate.refusal) {
+      eventBus.publish(this.status(taskId, contextId, "rejected", true, gate.refusal));
+      eventBus.finished();
+      return;
+    }
+
     try {
-      const result = await this.hub.handleMessage(text, to);
+      const result = await this.hub.handleMessage(text, to, gate.owner);
       eventBus.publish(
         this.status(taskId, contextId, "completed", true, result.response, {
           answeredFromMemory: result.answeredFromMemory,
