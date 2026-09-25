@@ -4,8 +4,8 @@ Relay, session 18, 2026-09-25. Serves D-011 step 4 (order corrected by D-012). T
 T-005 (rate limiting) and T-062 (error pages), plus T-070 and T-055 as the same "before exposure"
 class. Line numbers are at `9a38b8d` (master, v1.11.0), read by Relay.
 
-**Status: draft.** One open question (§ Open question) must be answered through Atlas under D-003
-before Rivet designs the hub-talk side. The rest can be designed now. **Build does not start before
+**Status: ready for design.** The one open question was answered through Atlas under D-003:
+`--invite` is approved (D-014; see § hub-talk: `--invite`). **Build does not start before
 Loop 5 is deployed to tcm:** Loop 6 builds on Loop 5's `owner` field and `[authz]` behaviour, and the
 soak may still change them.
 
@@ -123,20 +123,23 @@ then. This is a planner scoping ruling, not a change to D-010. Aaron's "yes, cro
 invitation" had no timing, and it still stands. It will be recorded as a decision pointing at the
 Loop 5 texts.
 
-## Open question (D-003, through Atlas)
+## hub-talk: `--invite` (D-003, answered; D-014)
 
-**How does a new SIA seat create its name once codes exist?** Today a new seat runs
+**The question was how a new SIA seat creates its name once codes exist.** Today a new seat runs
 `hub-talk --as <name> --init-key` and exists. After this loop, in strict, a new name needs a code.
-The options change hub-talk's contract to different degrees. The recommendation goes to Aaron
-through Atlas, one question, with the detail:
 
-- **Recommended:** hub-talk gains `--invite <code>`, used only with `--init-key`, and passes the code
-  on that one register. Every other invocation is byte-identical to today. Aaron, or a seat on his
-  word, issues a code before a new seat is created. The cost is one extra step per new name. That
-  is the point of the loop.
+**Approved:** hub-talk gains `--invite <code>`, used only with `--init-key`, and passes the code on
+that one register. Every other invocation is byte-identical to today. Aaron issues a code before a
+new seat is created.
 
-Until the answer arrives, Rivet designs everything except the hub-talk change. The hub side must
-accept the code in a way that `--invite` can send.
+Aaron answered "yes" in the SIA planner session (Atlas, record 109, session
+`9a149231-b394-4290-9cfe-7118be1d6ba0`) at about 22:17Z on 2026-09-25. He was answering "Do you
+approve `--invite <code>`?", put to him verbatim with this recommendation. Atlas relayed it to Relay
+the same evening. **It does not choose how codes are issued** (one command or a chat-page button);
+that stays with the design (scope 1).
+
+This is the one hub-talk contract change in the loop. Anything else the design wants from hub-talk
+is a new D-003 question.
 
 ## Acceptance (Gauge writes the criteria; these are the conditions)
 
@@ -157,7 +160,7 @@ accept the code in a way that `--invite` can send.
   seat pattern gets none. Per-source limiting is shown to see distinct sources as they will arrive
   through Funnel, or the design's alternative is tested instead.
 - **G. Preserve 1-5.** A seat acting as itself behaves identically, v1.11.0 versus candidate, in both
-  modes, through the unchanged hub-talk (except `--invite`, if ruled in). Loop 5's rows re-run.
+  modes, through the unchanged hub-talk (except the new `--invite`, D-014). Loop 5's rows re-run.
 - **H. Skew** as Preserve 7.
 
 ## Sequencing and authority
