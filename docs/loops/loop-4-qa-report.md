@@ -181,3 +181,11 @@ These were four GETs to `http://100.124.212.87:4000`, none with a key header:
 
 **Still not observed on tcm:** O1's path disclosure on `/ui/<missing>`, because it was not in PD's
 four reads. The page with a real key, and `aaron`'s key init, remain Aaron's steps.
+
+**O1 on tcm, observed** at 04:27:25Z, folded into K7 on Aaron's "yes to both", relayed by Relay.
+This was one keyless `GET /ui/does-not-exist-o1`. Result: 404, `text/html; charset=utf-8`, 218
+bytes. The body is Express's error page, reading `Error: ENOENT: no such file or directory, stat
+'/app/client/dist/<x>'`. **It discloses the served directory's absolute path in the container. It
+has no stack trace.** The log is `runs/o1-tcm.log`, with the path redacted to its shape. This is
+still an observation, not a fix. The sibling class is the malformed-JSON error page, present since
+before Loop 4.
