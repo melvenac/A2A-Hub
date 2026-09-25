@@ -58,6 +58,11 @@ passthrough), T-070's oracle, and basic rate limiting (T-005).
      code's issuer. The body cannot choose it (this keeps Loop 5's O5).
    - **Re-register of an existing name with its own key is unchanged** and needs no code. This is what
      keeps every hub-talk run working.
+   - **A refusal names its condition** (Atlas, for SIA, 2026-09-25): a new name with no code, an
+     expired code and a used code each get a distinct error saying so. For example, "this name is
+     new and needs an enrollment code from its owner". A seat that hits one then reports the right
+     thing through its planner instead of retrying. The message still reveals nothing else, such as
+     whether a code ever existed for another name.
    - **Aaron must be able to issue a code without programming:** one command he can paste, or a
      control on the chat page. The design picks one and shows the exact steps.
 2. **Human rows come from the operator, not from a register body.** Closes the `keys.ts:61` path: a
@@ -138,7 +143,8 @@ accept the code in a way that `--invite` can send.
 - **A. Enrollment, both directions, in strict.** A new name without a code is refused; with a valid
   code it succeeds and its `owner` is the issuer. The same code a second time is refused. An expired
   code is refused. A code from a scratch second owner yields that owner. An agent key cannot issue.
-  A register body cannot choose `owner` or become human.
+  A register body cannot choose `owner` or become human. Each refusal's error names its condition
+  (no code, expired, used).
 - **B. Warn.** Each refusal in A succeeds in warn and logs its `[enroll]` line. The line is visible
   through the read-only tcm menu in the deploy's own check.
 - **C. Secrecy.** No code, key or hash appears in any log line or in any response other than issue.
