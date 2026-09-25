@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 62 by open-brain v1.11.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 63 by open-brain v1.11.0 — do not edit; change state via ob_state -->
 
 # Next Session Handoff
 
@@ -6,7 +6,7 @@
 
 ### Pick up here
 
-Relay session 18 (2026-09-25 ~10:35Z-22:20Z; no /end, see watch-out). DONE THIS SESSION: Loop 6 brief written and merged (docs/loops/loop-6-enrollment-brief.md, PR #27 9252329, on Aaron's word 'merge docs'); T-067 note carries the scope; D-013 (cross-account rooms are NOT in Loop 6; corrects loop-5-design.md:54-55 and loop-5-ruling-1.md:35); new finding: src/keys.ts:61 lets any register body with agentCard.kind 'human' become its own owner, closed by Loop 6 scope 2. D-003 question sent to Atlas on Aaron's word; Aaron answered 'yes' to --invite (~22:17Z, via Atlas) = D-014; brief now 'ready for design'. The D-014 record is on branch docs/session-18-d014 (pushed; merge needs Aaron's word for THAT PR). NEXT, in order (D-012): (1) after ~04:30Z 2026-09-26, T-064: read tcm's [auth] log with the read-only key (`ssh -i C:/Users/melve/.ssh/tcm-readonly -o IdentitiesOnly=yes melvenac@100.124.212.87 auth-log`; auto mode OK) for a working day since the 04:14:10Z swap; (2) then ask Aaron for the Loop 5 deploy: Rivet follows docs/loops/loop-5-deploy-plan.md (merged to master, PR #25), including step 0.5 (full-key check of tcm's live compose env_file; copy .env if it points into the rotated dir), steps 12-13 (main checkout to master, GitNexus reindex); Aaron runs gh-runners-pause/resume himself (sudo); Gauge does PB, PD, RL2; (3) one-day [authz] soak via auth-log's authz-lines header; (4) AUTH_MODE=strict on Aaron's word; (5) Loop 6: send Rivet the brief for a design (Rivet may design now; build only after the deploy + soak); (6) Funnel + the Grok Bot HTTPS test (T-068). Also queued: T-069 .gitnexusrc (before SIA T-187 makes /sync rebuild), T-071, T-060, T-057 (0.0.0.0:4000; reviewed before Funnel), T-017, T-050. T-070 and T-055 are inside Loop 6's scope.
+Relay session 18 (2026-09-25 ~10:35Z-22:30Z; no /end, see watch-out). DONE THIS SESSION: Loop 6 brief written and merged (docs/loops/loop-6-enrollment-brief.md, PR #27 9252329); T-067 note carries the scope; D-013 (cross-account rooms are NOT in Loop 6; corrects loop-5-design.md:54-55 and loop-5-ruling-1.md:35); new finding: src/keys.ts:61 lets any register body with agentCard.kind 'human' become its own owner, closed by Loop 6 scope 2. D-003 question sent to Atlas on Aaron's word; Aaron answered 'yes' to --invite (~22:17Z, via Atlas) = D-014; brief now 'ready for design'. D-015: docs/* merges that touch only documents and the record no longer need Aaron's word (rule in .agents/roles/shared.md); docs/session-18-d014 merged under it. NEXT, in order (D-012): (1) after ~04:30Z 2026-09-26, T-064: read tcm's [auth] log with the read-only key (`ssh -i C:/Users/melve/.ssh/tcm-readonly -o IdentitiesOnly=yes melvenac@100.124.212.87 auth-log`; auto mode OK) for a working day since the 04:14:10Z swap; (2) then ask Aaron for the Loop 5 deploy: Rivet follows docs/loops/loop-5-deploy-plan.md (merged to master, PR #25), including step 0.5 (full-key check of tcm's live compose env_file; copy .env if it points into the rotated dir), steps 12-13 (main checkout to master, GitNexus reindex); Aaron runs gh-runners-pause/resume himself (sudo); Gauge does PB, PD, RL2; (3) one-day [authz] soak via auth-log's authz-lines header; (4) AUTH_MODE=strict on Aaron's word; (5) Loop 6: send Rivet the brief for a design (Rivet may design now; build only after the deploy + soak); (6) Funnel + the Grok Bot HTTPS test (T-068). Also queued: T-069 .gitnexusrc (before SIA T-187 makes /sync rebuild), T-071, T-060, T-057 (0.0.0.0:4000; reviewed before Funnel), T-017, T-050. T-070 and T-055 are inside Loop 6's scope.
 
 ### Watch out
 
@@ -16,9 +16,9 @@ Relay session 18 (2026-09-25 ~10:35Z-22:20Z; no /end, see watch-out). DONE THIS 
 - The T-064 read MUST precede the Loop 5 deploy: the container recreate starts a fresh log and would erase the day-long window.
 - GitNexus: index follows ~/Projects/A2A-Hub, currently c4d2d1c (PRE-Loop-5) until deploy step 13. Rebuild with `gitnexus analyze --force --skip-agents-md --skip-skills` (1.6.12). Pass repo as the absolute path (two registrations named A2A-Hub).
 - Questions for Aaron on SHARED work (hub-talk contract, transport, T-050, SIA tooling) go through the live SIA planner (Atlas) under D-003; A2A-only work to Aaron directly. Aaron wants DETAILED questions with a recommendation, one at a time.
-- D-005: seats push their OWN branches (Rivet loop/* chore/*, Gauge qa/*, Relay docs/*); merges, tags, tcm acts, main-checkout updates, stack start/stop and live Convex writes each need Aaron's word for that act. The planner writes briefs, rulings and the record; Rivet builds and designs; Gauge accepts.
+- D-005: seats push their OWN branches (Rivet loop/* chore/*, Gauge qa/*, Relay docs/*); merges, tags, tcm acts, main-checkout updates, stack start/stop and live Convex writes each need Aaron's word for that act. EXCEPTION D-015: a docs/* branch whose diff vs origin/master touches only docs/, .agents/ and top-level *.md merges without asking (check the diff first; merges only, never tags). The planner writes briefs, rulings and the record; Rivet builds and designs; Gauge accepts.
 - Relay's error shape, again in session 17 (four instances): asserting without reading (bundled the main-checkout update against R2; cited ruling B1 unread; 'SIA seats may never be live' before reading hub-talk; 'refresh touches no tracked file'). Each was caught before harm, twice by peers. Read the artifact a claim rests on BEFORE sending it; validate on a known positive.
-- Decisions are append-only; a correction is a new decision pointing at the old (D-012 corrects D-011's order; D-013 corrects the Loop 5 texts' 'cross-owner rooms in Loop 6').
+- Decisions are append-only; a correction is a new decision pointing at the old (D-012 corrects D-011's order; D-013 corrects the Loop 5 texts' 'cross-owner rooms in Loop 6'; D-015 amends D-005).
 - Loop 6 must keep re-register of an EXISTING name codeless: hub-talk registers on every run (scripts/hub-talk.mjs:346,368) and a refused register is rc 1, so a code requirement on existing names breaks every SIA seat.
 - D-014 approves ONLY --invite with --init-key. Any other hub-talk change in Loop 6's design is a new D-003 question through Atlas.
 - The tracked .agents/AGENT.md frontmatter names Rivet (developer); this seat's name comes from the untracked AGENT.local.md (Relay). Trust the hook's seat line, not AGENT.md.
@@ -34,7 +34,6 @@ Relay session 18 (2026-09-25 ~10:35Z-22:20Z; no /end, see watch-out). DONE THIS 
 **SHA frozen for QA:** _None._
 
 **Questions pending for Aaron:** 
-- Merge docs/session-18-d014 (D-014 record + brief section; documents only).
 - After the T-064 read (>= ~04:30Z 2026-09-26): approve the Loop 5 deploy to tcm per docs/loops/loop-5-deploy-plan.md.
 
 **Rulings made mid-loop:** 
@@ -43,6 +42,7 @@ Relay session 18 (2026-09-25 ~10:35Z-22:20Z; no /end, see watch-out). DONE THIS 
 - D-008..D-012 (session 17).
 - D-013 (session 18): cross-account rooms after Loop 6; Loop 6 brief scope as written, plus Atlas's named-refusal requirement.
 - D-014 (session 18): --invite approved by Aaron via Atlas.
+- D-015 (session 18): docs/* merges that touch only documents and the record need no approval.
 
 ## developer _(written session 17)_
 
