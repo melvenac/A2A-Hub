@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 41,
+  "revision": 42,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -37,7 +37,7 @@
       "opened_session": 14,
       "closed_session": null,
       "supersedes": null,
-      "note": "deprecate the shared `dev-key`. Step 2 of the remote sequence. MEASURED ON TCM 2026-09-24 (Loop 2, V-003): 8 of 10 names hold the dev-key hash, which resolves to `atlas` for all 8. LOOP 3 BUILT AND ACCEPTED (V-004): loop/3-build-r3 fe4eb14 (v1.9.0); report docs/loops/loop-3-qa-report.md (qa/loop-3-harness-keys b6f1cef); rulings docs/loops/loop-3-ruling-1..4.md; design loop/3-per-agent-keys a2e1562 (+ build-branch sections 13-14). PRs, NOT MERGED, each on Aaron's word: #11 (loop/3-build-r3 -> master, code) and #12 (qa/loop-3-harness-keys -> master, QA docs); then tag v1.9.0 on the merge commit. D-006: hub-talk contract and staged cutover approved. D-007: release the 8 dev-key rows; each needed name re-registers fresh via --init-key. Browser page acts as `aaron` (Aaron). REMAINING, each on Aaron's word: (1) merge + tag; (2) live local start (N.5(b): alice/bob keys and migration; browser key for aaron); (3) tcm cutover per design section 4.2: pre-deploy read (incl. askPolicy fingerprints), deploy act (Convex push, classifyAtDeploy, release clark/cursor/general/probe, hub), relay canary, then atlas/forge/grok in a SIA-named window (never during SIA candidate A7), main-checkout update after `hub-key check`, K7 reads. SIA's tcm HUB_URL = http://100.124.212.87:4000. TCM RUNNERS (SIA D-043/D-044): two SIA GitHub Actions runners on tcm, low priority, egress-firewalled. BEFORE the deploy act: tell the SIA planner, then `sudo /usr/local/sbin/gh-runners-pause` as melvenac. It waits for any running CI job to finish (allow a few minutes of lead time), stops both units, and reads the state back. AFTER: `sudo /usr/local/sbin/gh-runners-resume`, then tell the SIA planner. Provided by SIA record 97, unverified by A2A: check that both scripts exist before relying on them. tcm has 16 GB; SIA requires OOMScoreAdjust>=500 on the runners so an OOM hits CI before Convex. Close T-003 when K7's end state is read on tcm. NOTE: in v1.9.0 convex/peers.ts also reads the agents table (error text only); D-007's 'only agents.ts' was true at ea9d057, and its conclusion still holds (REL passed)."
+      "note": "deprecate the shared `dev-key`. Step 2 of the remote sequence. MEASURED ON TCM 2026-09-24 (Loop 2, V-003): 8 of 10 names hold the dev-key hash, which resolves to `atlas` for all 8. LOOP 3 BUILT AND ACCEPTED (V-004): loop/3-build-r3 fe4eb14 (v1.9.0); report docs/loops/loop-3-qa-report.md (qa/loop-3-harness-keys b6f1cef); rulings docs/loops/loop-3-ruling-1..4.md; design loop/3-per-agent-keys a2e1562 (+ build-branch sections 13-14). MERGED AND TAGGED (session 17, on Aaron's word): #11 192091d, #12 8521d90, #13 cef7517; annotated tag v1.9.0 (1b973eb) on cef7517, pushed. D-006: hub-talk contract and staged cutover approved. D-007: release the 8 dev-key rows; each needed name re-registers fresh via --init-key. Browser page acts as `aaron` (Aaron). REMAINING, in this order (D-008), each on Aaron's word: (1) tcm cutover per design section 4.2: pre-deploy read (incl. askPolicy fingerprints), deploy act (Convex push, classifyAtDeploy, release clark/cursor/general/probe, hub), relay canary, then atlas/forge/grok in a SIA-named window (never during a SIA candidate A build); (2) main-checkout update after `hub-key check` over every name that runs from ~/Projects/A2A-Hub (SIA part derived by the SIA planner; observed so far: atlas, grok); (3) live local start (N.5(b)) FROM THE MAIN CHECKOUT, so alice/bob migrate in its real DB (~/Projects/A2A-Hub/.convex/local/default, 297 MB; local Convex data is per checkout, Rivet session 17), and the browser key for aaron. SIA's tcm HUB_URL = http://100.124.212.87:4000. TCM RUNNERS (SIA D-043/D-044): two SIA GitHub Actions runners on tcm, low priority, egress-firewalled. BEFORE the deploy act: tell the SIA planner, then `sudo /usr/local/sbin/gh-runners-pause` as melvenac. It waits for any running CI job to finish (allow a few minutes of lead time), stops both units, and reads the state back. AFTER: `sudo /usr/local/sbin/gh-runners-resume`, then tell the SIA planner. Provided by SIA record 97, unverified by A2A: check that both scripts exist before relying on them. tcm has 16 GB; SIA requires OOMScoreAdjust>=500 on the runners so an OOM hits CI before Convex. Close T-003 when K7's end state is read on tcm. NOTE: in v1.9.0 convex/peers.ts also reads the agents table (error text only); D-007's 'only agents.ts' was true at ea9d057, and its conclusion still holds (REL passed)."
     },
     {
       "id": "T-004",
@@ -410,76 +410,6 @@
       "note": "keys resolve against the stored hash; `AUTH_MODE=warn` logs rejections without enforcing. `95ca5c6`, PRD §8.1 (Session 14)"
     },
     {
-      "id": "T-041",
-      "title": "Name ownership + daemon instance supersede",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 14,
-      "closed_session": 14,
-      "supersedes": null,
-      "note": "PRD §8.2 partial: names are owned via `apiKeyHash`, and a daemon's `instanceId` supersedes an orphaned predecessor, which closes the two-daemons-race-one-name bug. Full `owner/name` namespacing waits for per-agent keys. `95f2433`, ADR-011 (Session 14)"
-    },
-    {
-      "id": "T-042",
-      "title": "\"Who may ask this peer what\"",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 14,
-      "closed_session": 14,
-      "supersedes": null,
-      "note": "optional `askPolicy`, absent = allow-all. `d9dfaed`, ADR-012, PRD §8.3. JSON-RPC gap tracked at P1 (Session 14)"
-    },
-    {
-      "id": "T-043",
-      "title": "`agents.register` upserts",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 14,
-      "closed_session": 14,
-      "supersedes": null,
-      "note": "patches a canonical row and deletes the extras; live-data verification tracked at P0 (Session 14)"
-    },
-    {
-      "id": "T-044",
-      "title": "Shipped v1.7.0, tagged and deployed to tcm",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 14,
-      "closed_session": 14,
-      "supersedes": null,
-      "note": "all three §8 prerequisites, the spec JSON-RPC transport, a truthful agent card (Session 14)"
-    },
-    {
-      "id": "T-045",
-      "title": "Fixed the seat transport silently dropping turns",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 14,
-      "closed_session": 14,
-      "supersedes": null,
-      "note": "the cursor is now a turn number only a print moves; `--inbox` reports without consuming (Session 14)"
-    },
-    {
-      "id": "T-046",
-      "title": "ADR-013",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 14,
-      "closed_session": 14,
-      "supersedes": null,
-      "note": "**ambiguous silence must fail closed** (Session 14)"
-    },
-    {
-      "id": "T-047",
-      "title": "Recovered the split-deploy outage and wrote `docs/redeploying-tcm.md`",
-      "priority": "P3",
-      "status": "done",
-      "opened_session": 14,
-      "closed_session": 14,
-      "supersedes": null,
-      "note": "(Session 14)"
-    },
-    {
       "id": "T-048",
       "title": "`docs/joining-the-hub.md`",
       "priority": "P3",
@@ -598,6 +528,16 @@
       "closed_session": null,
       "supersedes": null,
       "note": "Proposed by Rivet in the Loop 3 design §6: ^[a-z0-9][a-z0-9-]{0,62}$, 400 otherwise (all 10 tcm names match). Struck from Loop 3 by Relay (docs/loops/loop-3-ruling-1.md) because it changes what registration accepts for SIA and outside bots and the brief did not ask for it. Revisit before exposure (T-002 step 5), when look-alike names start to matter."
+    },
+    {
+      "id": "T-060",
+      "title": "`start-stack.ps1` starts local Convex without --local-cloud-port",
+      "priority": "P2",
+      "status": "open",
+      "opened_session": 17,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "Rivet, session 17, at cef7517: start-stack.ps1:104 runs `npx convex dev --local --local-force-upgrade` with no --local-cloud-port, relying on the :101 Test-PortBusy 3210 guard. Conflicts with the port-pinning rule (convex dev --local silently takes 3210/3211 when free). Sibling of T-020 and of verify-client-stack.mjs's hardcoded :4000 (ruling 4). Fix before step 3 of T-003 (local start, D-008)."
     }
   ],
   "verified": [
@@ -785,6 +725,12 @@
       "title": "Remove every agent row that used the shared dev-key; each agent re-registers fresh and gets its own key at that point (supersedes the SIA planner's keep-and-migrate for forge/probe)",
       "date": "2026-09-24",
       "note": "Aaron, in Relay session 16, 2026-09-24, verbatim: \"All agent have been testing agent.  The only two agents that have used the hub for real work is Atlas and forge while using cursor.  Since each agent will get a new key let's have each agent register and assign them a new key at that point.  We can remove all agents that were using the shared key.\" APPLIES TO the 8 dev-key names on tcm (Loop 2, V-003): relay, grok, cursor, clark, general, probe, forge, atlas. Each agents row is released (Loop 3 design section 4.3(b), internalMutation agents:release), and a name that is needed again registers fresh via --init-key, which inserts it as owned with its own key. NOT covered: cursor-grok and grok-probe, which hold their own keys and were not on the shared key; they stay, classified owned at deploy. SUPERSEDES the SIA planner's ruling (2026-09-24) to keep forge and probe and migrate them. Its reason, that their rooms are SIA history, still holds under this ruling: only convex/agents.ts reads or writes the agents table (5 queries; the search was validated on that known positive), so releasing a row leaves sessions, sessionPeers, messages and peers intact. SEQUENCING (Relay): agents:release exists only after the Loop 3 deploy. The unused test names (clark, cursor, general, probe) can be released in the deploy act. Live names are released together with their fresh --init-key at their own cutover step, so no seat is left without a row: relay as canary; atlas, forge and grok in the SIA-named window, and never while SIA candidate A7 is being built or scored. grok is SIA's live Cursor developer seat right now. This is Aaron's word for the 8 releases, to be executed at those steps. The deploy, each --init-key against tcm, and the main-checkout update each still need his word (D-006)."
+    },
+    {
+      "id": "D-008",
+      "title": "T-003's live local start moves after the main-checkout update and runs from the main checkout; order is tcm cutover, main-checkout update, local start",
+      "date": "2026-09-24",
+      "note": "Aaron, Relay session 17, 2026-09-24, verbatim \"yes\" to Relay's question \"do you agree to that reorder, with the local start moving to after the main-checkout update?\". REASON: local Convex data is per checkout (Rivet, read-only: ~/Projects/A2A-Hub/.convex/local/default/convex_local_backend.sqlite3, 297 MB, holds alice/bob's rows; every worktree has its own 0.5-2 MB DB; start-stack.ps1:21 roots at $PSScriptRoot). A v1.9.0 stack from a separate worktree gets an empty DB, so N.5(b)'s migration could not be observed; from the main checkout it can, but that checkout may move only last (design section 3.6, R2). Aaron's earlier \"yes\" to a local start (same session) is NOT used; step 3 gets its own word. RELAY ERROR ENTRY (session 17): Relay's question to Aaron bundled 'update ~/Projects/A2A-Hub to v1.9.0' into the local start, against R2, and sent it to Rivet as scope; Relay also told the SIA planner that ruling B1 covers a v1.9.0 client against a v1.8.0 hub, without reading B1 (B1 is a new name on the old client). Caught by Relay on reading B1 and by the SIA planner's questions before any act: Rivet ran nothing, main checkout stayed 003f57d, both corrections sent. Shape: asserting without reading, again. Containment: read the design section a question cites before asking it."
     }
   ],
   "handoffs": [
