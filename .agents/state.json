@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 53,
+  "revision": 54,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -597,7 +597,7 @@
       "opened_session": 17,
       "closed_session": null,
       "supersedes": null,
-      "note": "Brief docs/loops/loop-5-identity-and-membership-brief.md; design docs/loops/loop-5-design.md; rulings loop-5-ruling-1.md and loop-5-ruling-2.md. BUILT (Rivet) and ACCEPTED (V-008) on origin/loop/5-identity ebe7747, v1.11.0. Report qa/loop-5 1963352. REMAINING, each on Aaron's word: merge loop/5-identity + qa/loop-5; tag v1.11.0; deploy per Rivet's 11-step plan in docs/loops/rivet-handoff-session-17.md (assignOwnerAtDeploy twice; PB; PD; RL2 with a2a-readonly c7728ab751cd and a2a-k7.mjs f1de001c3435; rows-without-owner=0; stays warn); then the one-day [authz] soak (D-012) read via the read-only auth-log's authz-lines header; then strict. Close T-066 at the deploy's PD+RL2 pass. Follow-ups: T-070 (/read oracle), T-071 (k7 exit code)."
+      "note": "Brief docs/loops/loop-5-identity-and-membership-brief.md; design docs/loops/loop-5-design.md; rulings loop-5-ruling-1.md and loop-5-ruling-2.md. BUILT (Rivet) and ACCEPTED (V-008) on ebe7747. MERGED (PRs #21-#23, master f52f6d6) and TAGGED v1.11.0 (45c168e) on Aaron's word, session 17. REMAINING, each on Aaron's word: deploy per Rivet's 11-step plan in docs/loops/rivet-handoff-session-17.md (assignOwnerAtDeploy twice; PB; PD; RL2 with a2a-readonly c7728ab751cd and a2a-k7.mjs f1de001c3435; rows-without-owner=0; stays warn), PLUS two steps Relay added (not in Rivet's plan): (12) update the main checkout ~/Projects/A2A-Hub to v1.11.0 (git merge --ff-only; hub-talk and hub-key are unchanged, so SIA's seats see no difference); (13) reindex GitNexus there with `gitnexus analyze --force --skip-agents-md --skip-skills` (1.6.12). Until (13) the index is at c4d2d1c and describes the PRE-Loop-5 hub (caught by Gauge): do not trust impact/context answers about src/authz.ts, convex/accessLogic.ts or the Loop 5 index.ts changes. Then the one-day [authz] soak (D-012) via the read-only auth-log's authz-lines header; then strict. Close T-066 at the deploy's PD+RL2 pass. Follow-ups: T-070, T-071."
     },
     {
       "id": "T-067",
