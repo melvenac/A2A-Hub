@@ -103,3 +103,53 @@ Reported by Rivet, times from `date -u`:
 - No container touched.
 - Rivet's session was in auto mode, not manual as Relay had said it would be. Rivet stopped before
   (e), which cannot be undone, pending Aaron's confirmation of the mode.
+
+### Step 3(a-c): runner pause, Convex push, releases, DONE
+
+- **Pause:** Aaron ran `sudo gh-runners-pause` himself (it needs a sudo password, which no seat
+  holds) and reported "runner is paused". Relay read it back at 04:06:18Z: `gh-runner@1` and
+  `gh-runner@2` were inactive/dead. Atlas acked before it: SIA's infra seat (sia-infra-5a) treats
+  queued tcm runs as neither pass nor fail.
+- **Mode:** Aaron told Rivet directly, "manual mode is on", before (e). Rivet later saw its session
+  back in auto mode after the swap, with only reads and its own temp files left.
+- **04:07:54-04:07:56 (Rivet):** `npx convex deploy -y` rc 0 ("No indexes are deleted by this
+  push", schema validation complete). Then `agents:classifyAtDeploy`, rc 0:
+  `{"demoted":0,"legacy":8,"owned":2,"untouched":0}`.
+- **04:08:12-04:08:15 (Rivet):** `agents:release` for `clark`, `cursor`, `general`, `probe` and
+  `forge`. Each returned rc 0 and `{"deleted":1}`.
+
+### Step 3(d-f): build, PB, swap, PD, re-read, resume, DONE
+
+- **04:08:29 (Rivet):** `docker tag a2a-hub:latest a2a-hub:prev`, so `prev` = `13aeef206f7b`
+  (v1.8.0).
+- **04:08:29-04:10:16:** `docker build -t a2a-hub:latest .` gave image `648ac3963dd7`. Relay's
+  correction to build onto a candidate tag arrived after the build; the fallback, had PB failed,
+  was to retag `prev` to `latest`.
+- **04:11:18-04:13:14 (Gauge), PB PASS:**
+  - PB1: Cmd, Entrypoint, ExposedPorts `4000/tcp` and WorkingDir are identical to `prev`.
+  - PB2: `/app/client` holds `dist` only, and no container is left over.
+  - PB3: K selftest first, then `docker save` streamed locally: 261 MB, 125 gzip layers, 0 opaque,
+    0 hits. The local copy was deleted, and no QA file is on tcm.
+  - Run 1 (04:10:39Z) was VOID because of Gauge's script bugs, one of them a fail-open; both are
+    fixed, and a detector positive was added. The void log is kept.
+  - Evidence: qa/t003-pb 921428d.
+- **04:14:00-04:14:10 (Rivet), swap:** `docker compose up -d --force-recreate a2a-hub` from
+  `~/docker-compose/a2a-hub`; the compose label confirms the file. Rivet ran it on Gauge's PASS,
+  which reached it before Relay's go; the swap is inside the approved act, and Aaron approved the
+  command.
+- **Read back 04:14:16:**
+  - image `648ac396`; `AUTH_MODE=warn`; `/health` 200 with convex ok;
+  - `/ui/` 200 and `/` 404;
+  - log "UI: serving /app/client/dist at /ui/", 0 error lines.
+  - Published `0.0.0.0:4000->4000`: all interfaces. v1.8.0's binding was not recorded before the
+    recreate. Relay noted it on T-057.
+- **04:15:05 (Gauge), PD PASS:** keyless. `/ui/` 200 no-cache; asset
+  `index-BDybZYJ0.js` 200, immutable, with the same hash as the QA replay build; `/` 404;
+  `/health` ok.
+- **04:15:15 (Rivet), Loop 2's read repeated:** 5 rows. `atlas`, `grok` and `relay` are legacy
+  (`7e9f8fd1`); `cursor-grok` (`a77570d1`) and `grok-probe` (`4eecd5fd`) are owned. Since the
+  swap: 0 `WOULD REJECT`, 0 errors.
+- **Resume:** Aaron ran `sudo gh-runners-resume` ("done"). Relay read it back at 04:16:21Z: both
+  units active/running. After-resume notice sent to Atlas.
+- **Pending:** Rivet removes `/tmp/a2a-build-v1.10.0.log`, `/tmp/a2a-npm-ci.log` and
+  `~/a2a-hub-v1.10.0.tar.gz` from tcm.
