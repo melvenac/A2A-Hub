@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 48 by open-brain v1.10.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 52 by open-brain v1.10.0 — do not edit; change state via ob_state -->
 
 # Next Session Handoff
 
@@ -43,36 +43,23 @@ ROLL HANDOFF (Relay session 16 -> fresh Relay, 2026-09-25 ~00:00Z; Aaron restart
 - No tcm rebuild without a new version (Aaron).
 - tcm runners: pause/resume procedure agreed with the SIA planner (SIA D-043/D-044).
 
-## developer _(written session 16)_
+## developer _(written session 17)_
 
 ### Pick up here
 
-Rivet (handoff relayed to Relay at session 16's roll, 2026-09-25). Loop 3 (T-003, v1.9.0) is ACCEPTED at fe4eb14 (V-004); PR #11 is OPEN, not merged. Each needs Aaron's word: (1) merge #11, then `git tag -a v1.9.0 <merge-commit>` and push tags; (2) the tcm cutover, design section 4.2: a pre-deploy read-only (log churn for cursor-grok/grok-probe; askPolicy count on the 8 rows); the deploy act (Convex push -> agents:classifyAtDeploy -> agents:release clark/cursor/general/probe -> hub, staying in warn); a new-client worktree; relay as canary via --init-key; atlas/forge/grok in SIA's window; `hub-key.mjs check --names ...` before updating ~/Projects/A2A-Hub; K7 read-only. Nothing touching grok or atlas until SIA's candidate A is decided. The deploy steps are in docs/redeploying-tcm.md. Refs: loop/3-build-r3 fe4eb14 (accepted), loop/3-build 84694b9 (superseded), loop/3-per-agent-keys a2e1562 (the design). a2a-rivet is clean; nothing running.
+Rivet (handoff relayed to Relay at the session 17 roll, 2026-09-25; full text docs/loops/rivet-handoff-session-17.md, READ IT FIRST). Loop 5 (T-066, v1.11.0) is BUILT and FROZEN at origin/loop/5-identity ebe7747, awaiting Gauge's verdict (criteria qa/loop-5 69967fd; Loop 5 rulings 1-2). Seven declared deviations, #7 being the widened getByName/listOnline returns. Next for Rivet, each on Aaron's word: after merge, the Loop 5 deploy act per the handoff's 11-step plan (redeploying-tcm.md:47-51, NOT deploy.sh; assignOwnerAtDeploy twice; install scripts/tcm a2a-readonly c7728ab751cd + a2a-k7.mjs f1de001c3435; RL2; rows-without-owner=0; stays warn). Then T-069 (.gitnexusrc noStats, per SIA), T-060, the daemon.ts:286 retry bug, D-008 step 3.
 
 ### Watch out
 
-- `convex dev --local` binds 3210 when it's free: always pass --local-cloud-port/--local-site-port, and identify every pre-existing listener BEFORE starting.
-- Commit or WIP-commit before any mutant check: `git checkout` restores the commit, not uncommitted edits.
-- convex dev rewrites convex/_generated/{api.js,dataModel.d.ts,server.d.ts,server.js} with line-ending-only diffs; restore them with git checkout. Only api.d.ts carries a real change (keyLogic).
-- `npx gitnexus analyze` rewrites the tracked CLAUDE.md, AGENTS.md and .claude/skills/gitnexus/*; revert those before committing.
-- cmd.exe strips JSON quotes from `convex run`: call node node_modules/convex/bin/main.js with an args array.
-- tcm's HUB_URL spelling is http://100.124.212.87:4000; key files are keyed by it. Never set AGENT_KEY inline in a seat's command.
-- a2a-rivet/.convex/local and .env.local are disposable test state on 3340.
+- Declare every widened return, even an additive one, as a deviation (Loop 5 lesson).
+- tcm: use the read-only key menu for reads; the full key only for writes on Aaron's word; back up authorized_keys and prove a fresh full-key login before touching it. sudo is Aaron's.
+- Deploys follow docs/redeploying-tcm.md:47-51 with PB before the swap; build to a version tag, not :latest, before PB.
+- git archive under autocrlf=true: -c core.autocrlf=false -c core.eol=lf; count CR bytes with tr. PowerShell 5.1 pipes corrupt binary tar: use git archive -o.
+- Scratch stacks on pinned ports only (3310/3311, 41xx), scratch A2A_KEY_DIR, kill by PID (convex-local-backend survives TaskStop). Never start-stack.ps1 from a seat worktree; never the main checkout.
 
 ### Open questions
 
 _None._
-
-### Loop state
-
-**Open PRs:** 
-- #11 — QA: accepted — loop/3-build-r3 -> master, head fe4eb14
-
-**SHA frozen for QA:** `fe4eb14`
-
-**Questions pending for Aaron:** _None._
-
-**Rulings made mid-loop:** _None._
 
 ## qa _(written session 16)_
 

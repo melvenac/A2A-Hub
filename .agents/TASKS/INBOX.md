@@ -1,10 +1,14 @@
-<!-- generated from .agents/state.json rev 48 by open-brain v1.10.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 52 by open-brain v1.10.0 — do not edit; change state via ob_state -->
 
 # Inbox
 
 Legend: `[ ]` open · `[~]` in_progress · `[!]` blocked
 
 Titles only. Full rationale for a task is its `note` in `.agents/state.json` under `tasks[]` — read it when you work the task, not when you pick one.
+
+## P0
+
+- [ ] **T-066** Loop 5: a key acts only as itself, and only in its own rooms (identity + membership + owner's view)
 
 ## P1
 
@@ -18,6 +22,8 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-050** Wake an idle IDE seat that has an unread turn in its room
 - [ ] **T-057** Convex is callable without the hub: tracked compose publishes 3210 on all interfaces; on tcm, any local process can call it
 - [ ] **T-061** Chat UI served by tcm's hub (Loop 4, v1.10.0)
+- [ ] **T-067** Loop 6: enrollment codes replace open registration; rate limiting; clean error pages
+- [ ] **T-068** First outside-agent test: Grok Bot (cloud VM) registers over HTTPS via Funnel and talks to relay
 
 ## P2
 
@@ -47,6 +53,7 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-060** `start-stack.ps1` starts local Convex without --local-cloud-port
 - [ ] **T-062** Express development error pages leak paths and stacks (no NODE_ENV on tcm)
 - [ ] **T-064** Read tcm's hub log after a working day for WOULD REJECT legacy (T-003 second signal)
+- [ ] **T-069** Add .gitnexusrc {"noStats": true} so GitNexus analyze stops rewriting tracked CLAUDE.md/AGENTS.md
 
 ## P3
 

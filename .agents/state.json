@@ -1,11 +1,11 @@
 {
   "schema_version": 2,
-  "revision": 48,
+  "revision": 52,
   "project": {
     "name": "a2a-intelligent-hub"
   },
   "objective": {
-    "text": "Prove a truly remote agent can join the hub over the public internet with its own key. Done: revocation of superseded keys (V-003); per-agent keys on tcm, where every row owns its key and the shared dev-key resolves to no one (V-006, session 17); tcm runs v1.10.0 with the chat UI at /ui/ (V-005). Next in the ordered remote-agent sequence: warn-mode soak (T-064 reads the log for legacy-key traffic), then `AUTH_MODE=strict`, then expose over HTTPS, then remote registration (T-002). askPolicy on JSON-RPC (T-004), rate limiting (T-005), error-page leaks (T-062) and the hub/Convex bindings (T-057) also gate exposure. On-demand spawn follows.",
+    "text": "Prove a truly remote agent can join the hub over the public internet with its own key: Aaron's Grok Bot on a cloud VM registers over HTTPS and talks to relay (D-011), as the first step to a multi-tenant hub where humans own accounts, agents join by invitation, and rooms can cross accounts by invitation (D-010). Done: per-agent keys (V-006), chat UI on tcm (V-005), read-only tcm access (V-007). Next, in order: Loop 5 (T-066, identity + membership); T-064's log read; AUTH_MODE=strict; Loop 6 (T-067, enrollment codes, rate limits, error pages); Funnel; the test (T-068). NEVER a public address while tcm is in warn (gap). Also gating exposure: T-057.",
     "since_session": 17
   },
   "tasks": [
@@ -588,6 +588,46 @@
       "closed_session": 17,
       "supersedes": null,
       "note": "CLOSED session 17 (V-007). Built by Rivet on Aaron's word ('set that up on tcm, manual mode is on'), every tcm write approved by Aaron in manual mode; accepted by Gauge; W ruled by Relay (a correction of the rule's wording). Menu: health, auth-mode, image, runners, auth-log, agents-summary. Call: ssh -i C:/Users/melve/.ssh/tcm-readonly -o IdentitiesOnly=yes melvenac@100.124.212.87 <item>. Keys on this PC only; never copy ~/.ssh/tcm-readonly. On tcm by design: ~/.ssh/authorized_keys.bak-t065-20260925, .bak-t065-g4, ~/bin/a2a-readonly.bak-t065-g1. Nit left: the line-5 comment in a2a-readonly predates from=. Found in passing: the Convex CLI retries forever against a dead port (now under timeout 60 in the script)."
+    },
+    {
+      "id": "T-066",
+      "title": "Loop 5: a key acts only as itself, and only in its own rooms (identity + membership + owner's view)",
+      "priority": "P0",
+      "status": "open",
+      "opened_session": 17,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "Brief: docs/loops/loop-5-identity-and-membership-brief.md. Design: docs/loops/loop-5-design.md (origin/loop/5-identity 6687e7c, Rivet). RULING 1 (docs/loops/loop-5-ruling-1.md, Relay): approved to build; Q1-Q9 as recommended (Q9 parity: askPolicy was never warn-soft, since denyNamedAsk refuses in every mode; no live row holds an askPolicy); binding additions A1 (the read-only log must see [authz]) and A2 (an [authz] soak before strict, D-012). Serves D-011 and D-010. Covers T-004 and T-058, plus room membership, an agents.owner field (interim HUB_OWNER=aaron, bound to G-001 until Loop 6), same-owner agents/live and escalation, A2A tasks by creator, and assignedAgent-only /respond. Preserves hub-talk and the daemons unchanged, and Aaron's page gets a read-only owner view."
+    },
+    {
+      "id": "T-067",
+      "title": "Loop 6: enrollment codes replace open registration; rate limiting; clean error pages",
+      "priority": "P1",
+      "status": "open",
+      "opened_session": 17,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "D-011 step 4. One-time enrollment codes issued by a human owner replace open POST /a2a/register (hub-talk --init-key --invite <code>: a hub-talk contract change, so D-003 through the SIA planner). Grok Bot joins Aaron's account for the test; cross-account rooms by invitation come after (D-010). Bundles T-005 (rate limiting) and T-062 (error pages leak paths and stacks). Needs Loop 5's owner field. Brief not written yet."
+    },
+    {
+      "id": "T-068",
+      "title": "First outside-agent test: Grok Bot (cloud VM) registers over HTTPS via Funnel and talks to relay",
+      "priority": "P1",
+      "status": "open",
+      "opened_session": 17,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "D-011 steps 5-6. Preconditions: Loop 5 and Loop 6 deployed, tcm AUTH_MODE=strict (read via the read-only key), T-057's 0.0.0.0:4000 binding reviewed. Then, each on Aaron's word: `tailscale funnel` on tcm for port 4000 only (record the *.ts.net URL); Aaron issues an enrollment code; Grok Bot runs hub-talk --init-key --invite <code> against the HTTPS URL; relay and Grok Bot talk in their own room; Grok Bot's key lists only that room; a second check from the VM without a key gets 401/403. Funnel off after, unless Aaron keeps it. Grok Bot's VM is Aaron's, in the cloud, and must never join the tailnet."
+    },
+    {
+      "id": "T-069",
+      "title": "Add .gitnexusrc {\"noStats\": true} so GitNexus analyze stops rewriting tracked CLAUDE.md/AGENTS.md",
+      "priority": "P2",
+      "status": "open",
+      "opened_session": 17,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "Found by Relay, session 17: `node .gitnexus/run.cjs analyze` in the main checkout rewrote the stats line in tracked CLAUDE.md and AGENTS.md (restored there; stats committed on docs/session-17-c 8a89273). Atlas (SIA planner, 2026-09-25): SIA master carries `.gitnexusrc` = {\"noStats\": true}, which stops it (SIA's CLAUDE.md explains); A2A-Hub has none in HEAD. Also: two GitNexus indexes are registered as \"A2A-Hub\" (~/Projects/A2A-Hub and ~/Worktrees/a2a-rivet): drop the rivet one or always pass `repo` as the absolute path. And /sync only WARNS on index staleness (SIA V-037); whether it should run analyze is Aaron's call via Atlas (pending). The A2A-Hub index was 120 commits stale (2026-07-29) until Relay refreshed it at c4d2d1c, 2026-09-25 06:33Z."
     }
   ],
   "verified": [
@@ -693,7 +733,15 @@
       "status": "verified"
     }
   ],
-  "gaps": [],
+  "gaps": [
+    {
+      "id": "G-001",
+      "what": "In AUTH_MODE=warn the hub admits unknown keys as nobody; any public address before strict makes every room readable and writable without a valid key. tcm is in warn (V-006).",
+      "evidence": "src/auth.ts:95-116 at c4d2d1c (read by Relay, session 17): an unrecognised X-Agent-Key logs `[auth] WOULD REJECT unknown ...` and continues with req.agentName = null (:103); tcm's startup line reads 'Auth: WARN - unknown X-Agent-Key is logged and allowed' (t-003-cutover-log.md step 2).",
+      "recommended_update": "Never give the hub a public address (Funnel, the public hostname, a port forward) while AUTH_MODE=warn. Turn strict on after T-064's read, on Aaron's word, before D-011 step 5. Close this gap when tcm reads strict via the read-only key's auth-mode.",
+      "opened_session": 17
+    }
+  ],
   "decisions": [
     {
       "id": "ADR-001",
@@ -826,35 +874,40 @@
       "title": "Loop 4 merged and tagged v1.10.0; the T-003 cutover's deploy act ships v1.10.0 instead of v1.9.0, as one deploy",
       "date": "2026-09-25",
       "note": "AUTHORITY, both links recorded: (1) Aaron to Atlas, in the SIA planner session (sia-planner-ac), 2026-09-25 ~02:50Z, verbatim \"merge loop 4, I agree ship v1.10.0 directly\", relayed by Atlas to Relay. Relay did not act on the relay alone: merging Loop 4 is A2A-Hub-only, so D-003's exception does not reach it, and the quoted words did not mention the tag. (2) Aaron directly to Relay, session 17, verbatim \"go ahead\", answering Relay's question: \"Do you want me to merge Loop 4's three branches into master, tag v1.10.0 on the merge commit, and have the tcm cutover ship v1.10.0 in place of v1.9.0 as a single deploy?\" DONE: PRs #14 (loop/4-ui fdc6bfb, merge 62b1d00), #15 (qa/loop-4-ui 2b4bb61, merge b85ff23), #16 (docs/session-17 0a89158, merge c4d2d1c); no file overlaps checked first; annotated tag v1.10.0 (1eeb4f1) on c4d2d1c, pushed and read back. Master's convex/ and scripts/hub-talk.mjs are unchanged from cef7517. NOT COVERED: the cutover window (the SIA planner names it once SIA's candidate A is decided), and every tcm act, each on Aaron's word at the time. The deploy act follows docs/redeploying-tcm.md:47-51 with PB1-PB3 between build and swap (ruling 2), not scripts/deploy.sh."
+    },
+    {
+      "id": "D-010",
+      "title": "The hub becomes multi-tenant: humans own accounts, agents join an account by invitation, rooms can cross accounts by invitation",
+      "date": "2026-09-25",
+      "note": "Aaron, Relay session 17, verbatim: \"A human user wants its agents to communicate via the hub. How does that human create an account and invite his agents to his account? I shouldn't see that persons hub rooms, right?\" and then \"yes, cross-account rooms by invitation\" to Relay's recommendation. FOUND by Relay at c4d2d1c (read, not asserted): GET /a2a/sessions returns sessions.listAll unfiltered; GET /a2a/session/:id/messages has no participant check; POST /a2a/session/:id/message has no participant check and takes `from` from the body (T-058); /a2a/register is open; convex/schema.ts has no owner/account/tenant field. So today any valid key sees and writes every room. SHAPE (Relay, to be designed in loops): (1) Loop 5 = a key acts only as its own name on every path (T-004, T-058) AND reads/posts only in rooms it participates in; (2) then accounts: a human owner; agents enrolled by one-time invite codes (replacing open registration, amending T-002 step 6); rooms owned by an account, with cross-account membership by invitation from day one. The operator does not see other accounts' rooms through the API or UI; privacy from the operator (end-to-end encryption) is out of scope unless Aaron asks."
+    },
+    {
+      "id": "D-011",
+      "title": "The first outside-agent test is Aaron's Grok Bot on a cloud VM registering over HTTPS, never via his tailnet; route: Loop 5, T-064, strict, Loop 6, Funnel, test",
+      "date": "2026-09-25",
+      "note": "Aaron, Relay session 17, verbatim: \"We started down that road by stopped, it's my grok bot running on a vm in the cloud. I don't want to expose grok bot to my tailnet network. I want grokbot to register via https as the first outside agent test of the hub\", then \"yes, and record the important detail of this conversation so future planner agents see it\". SUPERSEDES for this test T-002's tailnet-adjacent ideas: no tailnet join, and no Tailscale node sharing (Relay had offered it; Aaron wants HTTPS). BLOCKING FINDING (Relay, src/auth.ts:95-116 at c4d2d1c): in AUTH_MODE=warn an unknown X-Agent-Key is allowed as nobody, so ANY public address before strict = an open hub (anyone reads and posts every room without a valid key). ORDER, each on Aaron's word: (1) Loop 5 (T-066): identity on every path + room membership + the owner's view (brief docs/loops/loop-5-identity-and-membership-brief.md); (2) T-064's day-long log read (after 2026-09-26 ~04:30Z); (3) AUTH_MODE=strict on tcm, its own act; (4) Loop 6 (T-067): one-time enrollment codes replacing open /a2a/register (Grok Bot joins Aaron's account; cross-account rooms come later per D-010), basic rate limiting (T-005), clean error pages (T-062); (5) Tailscale Funnel on tcm publishing only port 4000 over HTTPS at a *.ts.net name (Relay's recommendation for the TEST; hub.tarrantcountymakerspace.com stays reserved for the public launch; one command turns Funnel off; T-057's 0.0.0.0:4000 binding is reviewed before it); (6) the test (T-068): Grok Bot runs --init-key with an enrollment code against the HTTPS URL, then talks to relay in its own room and sees nothing else."
+    },
+    {
+      "id": "D-012",
+      "title": "Correction to D-011's order: strict comes only after Loop 5 is deployed in warn AND an [authz] soak; the read-only log must see [authz]",
+      "date": "2026-09-25",
+      "note": "Relay, Loop 5 ruling 1 (docs/loops/loop-5-ruling-1.md), additions A1 and A2. Reason: Loop 5 adds new checks that log `[authz] WOULD REJECT ...` in warn, and T-064's read covers only `[auth]` (key validity) on v1.10.0. Flipping strict before an [authz] soak would refuse any seat (SIA's included) acting outside its own name or rooms without warning, e.g. hub-talk --session with a pasted room id. Also, the T-065 read-only auth-log greps the literal `\\[auth\\]`, which `[authz]` lines do not match, so the soak would be blind (A1: add an `authz-log` item or widen auth-log, a tcm script change in Loop 5's deploy act on Aaron's word; a 7th item needs one more exact allow rule on his word). CORRECTED ORDER (supersedes D-011's): Loop 5 build and QA -> T-064's [auth] read -> Loop 5 deploy in warn (with assignOwnerAtDeploy) -> [authz] soak, one working day -> AUTH_MODE=strict -> Loop 6 -> Funnel -> the Grok Bot test. G-001 unchanged: no public address before strict."
     }
   ],
   "handoffs": [
     {
       "seat": "developer",
-      "pick_up": "Rivet (handoff relayed to Relay at session 16's roll, 2026-09-25). Loop 3 (T-003, v1.9.0) is ACCEPTED at fe4eb14 (V-004); PR #11 is OPEN, not merged. Each needs Aaron's word: (1) merge #11, then `git tag -a v1.9.0 <merge-commit>` and push tags; (2) the tcm cutover, design section 4.2: a pre-deploy read-only (log churn for cursor-grok/grok-probe; askPolicy count on the 8 rows); the deploy act (Convex push -> agents:classifyAtDeploy -> agents:release clark/cursor/general/probe -> hub, staying in warn); a new-client worktree; relay as canary via --init-key; atlas/forge/grok in SIA's window; `hub-key.mjs check --names ...` before updating ~/Projects/A2A-Hub; K7 read-only. Nothing touching grok or atlas until SIA's candidate A is decided. The deploy steps are in docs/redeploying-tcm.md. Refs: loop/3-build-r3 fe4eb14 (accepted), loop/3-build 84694b9 (superseded), loop/3-per-agent-keys a2e1562 (the design). a2a-rivet is clean; nothing running.",
+      "pick_up": "Rivet (handoff relayed to Relay at the session 17 roll, 2026-09-25; full text docs/loops/rivet-handoff-session-17.md, READ IT FIRST). Loop 5 (T-066, v1.11.0) is BUILT and FROZEN at origin/loop/5-identity ebe7747, awaiting Gauge's verdict (criteria qa/loop-5 69967fd; Loop 5 rulings 1-2). Seven declared deviations, #7 being the widened getByName/listOnline returns. Next for Rivet, each on Aaron's word: after merge, the Loop 5 deploy act per the handoff's 11-step plan (redeploying-tcm.md:47-51, NOT deploy.sh; assignOwnerAtDeploy twice; install scripts/tcm a2a-readonly c7728ab751cd + a2a-k7.mjs f1de001c3435; RL2; rows-without-owner=0; stays warn). Then T-069 (.gitnexusrc noStats, per SIA), T-060, the daemon.ts:286 retry bug, D-008 step 3.",
       "watch_out": [
-        "`convex dev --local` binds 3210 when it's free: always pass --local-cloud-port/--local-site-port, and identify every pre-existing listener BEFORE starting.",
-        "Commit or WIP-commit before any mutant check: `git checkout` restores the commit, not uncommitted edits.",
-        "convex dev rewrites convex/_generated/{api.js,dataModel.d.ts,server.d.ts,server.js} with line-ending-only diffs; restore them with git checkout. Only api.d.ts carries a real change (keyLogic).",
-        "`npx gitnexus analyze` rewrites the tracked CLAUDE.md, AGENTS.md and .claude/skills/gitnexus/*; revert those before committing.",
-        "cmd.exe strips JSON quotes from `convex run`: call node node_modules/convex/bin/main.js with an args array.",
-        "tcm's HUB_URL spelling is http://100.124.212.87:4000; key files are keyed by it. Never set AGENT_KEY inline in a seat's command.",
-        "a2a-rivet/.convex/local and .env.local are disposable test state on 3340."
+        "Declare every widened return, even an additive one, as a deviation (Loop 5 lesson).",
+        "tcm: use the read-only key menu for reads; the full key only for writes on Aaron's word; back up authorized_keys and prove a fresh full-key login before touching it. sudo is Aaron's.",
+        "Deploys follow docs/redeploying-tcm.md:47-51 with PB before the swap; build to a version tag, not :latest, before PB.",
+        "git archive under autocrlf=true: -c core.autocrlf=false -c core.eol=lf; count CR bytes with tr. PowerShell 5.1 pipes corrupt binary tar: use git archive -o.",
+        "Scratch stacks on pinned ports only (3310/3311, 41xx), scratch A2A_KEY_DIR, kill by PID (convex-local-backend survives TaskStop). Never start-stack.ps1 from a seat worktree; never the main checkout."
       ],
       "open_questions": [],
-      "session": 16,
-      "loop_state": {
-        "open_prs": [
-          {
-            "ref": "#11",
-            "qa_status": "accepted",
-            "note": "loop/3-build-r3 -> master, head fe4eb14"
-          }
-        ],
-        "frozen_sha": "fe4eb14",
-        "questions_for_aaron": [],
-        "rulings": []
-      }
+      "session": 17,
+      "loop_state": null
     },
     {
       "seat": "planner",
