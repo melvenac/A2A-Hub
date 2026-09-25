@@ -1,0 +1,17 @@
+﻿killed 16388 (recorded), rc 0
+killed 11968 (recorded), rc 0
+killed 8332 (recorded), rc 0
+killed 10788 (recorded), rc 0
+killed 15396 (recorded), rc 0
+killed 7448 (recorded), rc 0
+recorded 17576: already gone
+recorded 18748: already gone
+recorded 20124: already gone
+recorded 19640: already gone
+recorded 10356: already gone
+recorded 16500: already gone
+recorded 2472: already gone
+recorded 15964: already gone
+recorded 18964: command line names no QA port; NOT killed (PID reused?)
+killed 2468 (recorded), rc 0
+STOPPED: all 11 QA ports free (3610,3611,4610,4611,4612,4620,4621,4640,5610,6790,6791); no QA convex-local-backend

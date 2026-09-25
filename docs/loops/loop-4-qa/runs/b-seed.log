@@ -1,0 +1,10 @@
+PASS B.setup: whoami(aaron) on warn and strict :: {"warn":"aaron","strict":"aaron"}
+PASS B.setup: whoami(qa-h2) on warn and strict :: {"warn":"qa-h2","strict":"qa-h2"}
+PASS B.setup: whoami(qa-l4a) on warn and strict :: {"warn":"qa-l4a","strict":"qa-l4a"}
+PASS B.setup: whoami(qa-l4b) on warn and strict :: {"warn":"qa-l4b","strict":"qa-l4b"}
+PASS B.setup: whoami(qa-l4c) on warn and strict :: {"warn":"qa-l4c","strict":"qa-l4c"}
+PASS B.setup: seeded session qa-b seeded 1 :: {"status":200,"sid":"k57e1vz760chn6ewf3qty68vr98f3gh6","msg":200,"ok":true}
+PASS B.setup: seeded session qa-b seeded 2 :: {"status":200,"sid":"k575cmtsa5s4f8aw47tgkkgmt58f20ty","msg":200,"ok":true}
+SEEDED k57e1vz760chn6ewf3qty68vr98f3gh6 k575cmtsa5s4f8aw47tgkkgmt58f20ty
+
+7 checks, 7 pass, 0 fail

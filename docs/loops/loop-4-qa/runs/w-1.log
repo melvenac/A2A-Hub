@@ -1,0 +1,35 @@
+PASS W.pos: W flags a request to another origin (hub box pointed at :4620) :: {"origins":["http://127.0.0.1:4610","http://127.0.0.1:4620"]}
+PASS A3: hub box defaults to the page origin (http://127.0.0.1:4610) :: {"hubVal":"http://127.0.0.1:4610"}
+PASS B1: no key: zero /a2a requests after load+4s (http://127.0.0.1:4610) :: {"requests":["GET /ui/","GET /ui/assets/index-BDybZYJ0.js","GET /ui/assets/index-B1nU_qqJ.css","GET /health"],"a2a":0}
+PASS B1: no key: key-needed state shown and connection box open :: {"noKeyText":true,"connOpen":true}
+PASS B1: both directions: after a key, whoami is the first /a2a call, exactly once :: {"first":"/a2a/whoami","whoamiCount":1,"calls":["/a2a/whoami","/a2a/sessions"]}
+PASS A2: every request is same-origin (http://127.0.0.1:4610) :: {"origins":["http://127.0.0.1:4610"]}
+PASS A3: hub box defaults to the page origin (http://localhost:4610) :: {"hubVal":"http://localhost:4610"}
+PASS B1: no key: zero /a2a requests after load+4s (http://localhost:4610) :: {"requests":["GET /ui/","GET /ui/assets/index-BDybZYJ0.js","GET /ui/assets/index-B1nU_qqJ.css","GET /health"],"a2a":0}
+PASS B1: no key: key-needed state shown and connection box open :: {"noKeyText":true,"connOpen":true}
+PASS B1: both directions: after a key, whoami is the first /a2a call, exactly once :: {"first":"/a2a/whoami","whoamiCount":1,"calls":["/a2a/whoami","/a2a/sessions"]}
+PASS A2: every request is same-origin (http://localhost:4610) :: {"origins":["http://localhost:4610"]}
+PASS B2: whoami name shown; seeded sessions listed :: {"you":true,"seeded":["qa-b seeded 1","qa-b seeded 2"],"listed":true}
+PASS B2: composer post in "qa-b seeded 1" reads back from == aaron :: {"found":true,"from":"aaron","seenOpen":true}
+PASS B2: composer post in "qa-b seeded 2" reads back from == aaron :: {"found":true,"from":"aaron","seenOpen":true}
+PASS B4: panel on open == GET /a2a/agents/live minus aaron and hub :: {"panel":["qa-l4a","qa-l4b"],"live":["qa-l4a","qa-l4b"]}
+PASS R-L: panel states it lists agents seen in the last 45 s :: {"hasText":true}
+PASS B3: new chat: participants exactly [aaron, qa-l4a]; first message from aaron :: {"participants":["aaron","qa-l4a"],"first":{"from":"aaron","content":true}}
+PASS B3: (info) POSTs made by Start :: {"posts":["/a2a/session","/a2a/session/k57eh15rfm6g8qrh1twsd5s3rn8f29ge/message"]}
+PASS B4: stop qa-l4b heartbeat :: {"killed":true}
+PASS B4: after qa-l4b stale: panel == agents/live minus me, hub :: {"panel":["qa-l4a"],"live":["qa-l4a"]}
+PASS B4: qa-l4c heartbeats: refresh adds it; panel == route :: {"panel":["qa-l4a","qa-l4c"],"live":["qa-l4a","qa-l4c"]}
+PASS B5: stop qa-l4a heartbeat :: {"killed":true}
+PASS B5: no live agents: panel says so; route agrees :: {"checkboxes":0,"live":[],"says":true}
+PASS B5: session list still loads with no live agents :: {"seededListed":true}
+PASS B5: existing session opens and takes a post from aaron with nobody live :: {"from":"aaron"}
+PASS A2: B2-B5 flow: every request same-origin :: {"origins":["http://127.0.0.1:4610"]}
+PASS B6: unknown key on warn: refusal shown, no POST under /a2a, no composer or panel :: {"shown":true,"a2a":["GET /a2a/whoami"],"posts":0,"composer":0,"panel":0}
+PASS B6: unknown key on strict: refusal shown, no POST under /a2a, no composer or panel :: {"shown":true,"a2a":["GET /a2a/whoami"],"posts":0,"composer":0,"panel":0}
+PASS B7: key change: whoami runs again first, name becomes qa-h2, open room reset :: {"first":"/a2a/whoami","you":true,"roomOpen":0}
+PASS B7: post after key change reads back from == qa-h2 :: {"from":"qa-h2"}
+PASS B7: no B7 post carries aaron :: {"late":["qa-h2"]}
+PASS D2.w: w-requests.jsonl carries no key or hash :: {"bytes":15730,"hits":0}
+PASS D2.w: w-console.log carries no key or hash :: {"bytes":113,"hits":0}
+
+33 checks, 33 pass, 0 fail

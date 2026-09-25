@@ -1,0 +1,7 @@
+K: 11 keys loaded (22 needles: key + sha256 each)
+PASS D1.client-stage-dist: 3 files, 0 tar members, 60396 bytes, hits 0
+PASS D1.replay-app-client: 3 files, 0 tar members, 60396 bytes, hits 0
+PASS D2.all-logs: 20 files, 0 tar members, 145164 bytes, hits 0
+PASS D2.w-requests: 1 files, 0 tar members, 15730 bytes, hits 0
+PASS D2.w-console: 1 files, 0 tar members, 113 bytes, hits 0
+PASS D2.qa-run-logs: 14 files, 0 tar members, 18927 bytes, hits 0

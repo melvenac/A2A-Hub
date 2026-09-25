@@ -1,0 +1,7 @@
+PASS E1: dev page loads at / (200) and its hub box defaults to http://127.0.0.1:4000 :: {"status":200,"def":"http://127.0.0.1:4000"}
+PASS E1: (info) requests the default made to :4000 (nothing listens; E0) :: {"to4000":["GET /health"],"failed":1}
+PASS E1: with the QA hub and aaron's key: you are aaron, sessions listed :: {"you":true,"seeded":true}
+PASS E1: post from the dev page reads back from == aaron :: {"from":"aaron"}
+PASS E1: cross-origin /a2a calls from :5610 to :4610 succeed (CORS intact) :: {"calls":7,"failed":[]}
+
+5 checks, 5 pass, 0 fail

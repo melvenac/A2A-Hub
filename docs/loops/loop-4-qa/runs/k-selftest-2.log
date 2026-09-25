@@ -1,0 +1,3 @@
+K: 11 keys loaded (22 needles: key + sha256 each)
+selftest: clean dist hits 0 (expect 0); planted dist hits 2 (expect 2: key in JS + hash in html); nested tar hits 2 over 6 members (expect 2)
+SELFTEST PASS
