@@ -1,11 +1,11 @@
 {
   "schema_version": 2,
-  "revision": 49,
+  "revision": 50,
   "project": {
     "name": "a2a-intelligent-hub"
   },
   "objective": {
-    "text": "Prove a truly remote agent can join the hub over the public internet with its own key. Done: revocation of superseded keys (V-003); per-agent keys on tcm, where every row owns its key and the shared dev-key resolves to no one (V-006, session 17); tcm runs v1.10.0 with the chat UI at /ui/ (V-005). Next in the ordered remote-agent sequence: warn-mode soak (T-064 reads the log for legacy-key traffic), then `AUTH_MODE=strict`, then expose over HTTPS, then remote registration (T-002). askPolicy on JSON-RPC (T-004), rate limiting (T-005), error-page leaks (T-062) and the hub/Convex bindings (T-057) also gate exposure. On-demand spawn follows.",
+    "text": "Prove a truly remote agent can join the hub over the public internet with its own key: Aaron's Grok Bot on a cloud VM registers over HTTPS and talks to relay (D-011), as the first step to a multi-tenant hub where humans own accounts, agents join by invitation, and rooms can cross accounts by invitation (D-010). Done: per-agent keys (V-006), chat UI on tcm (V-005), read-only tcm access (V-007). Next, in order: Loop 5 (T-066, identity + membership); T-064's log read; AUTH_MODE=strict; Loop 6 (T-067, enrollment codes, rate limits, error pages); Funnel; the test (T-068). NEVER a public address while tcm is in warn (gap). Also gating exposure: T-057.",
     "since_session": 17
   },
   "tasks": [
@@ -588,6 +588,36 @@
       "closed_session": 17,
       "supersedes": null,
       "note": "CLOSED session 17 (V-007). Built by Rivet on Aaron's word ('set that up on tcm, manual mode is on'), every tcm write approved by Aaron in manual mode; accepted by Gauge; W ruled by Relay (a correction of the rule's wording). Menu: health, auth-mode, image, runners, auth-log, agents-summary. Call: ssh -i C:/Users/melve/.ssh/tcm-readonly -o IdentitiesOnly=yes melvenac@100.124.212.87 <item>. Keys on this PC only; never copy ~/.ssh/tcm-readonly. On tcm by design: ~/.ssh/authorized_keys.bak-t065-20260925, .bak-t065-g4, ~/bin/a2a-readonly.bak-t065-g1. Nit left: the line-5 comment in a2a-readonly predates from=. Found in passing: the Convex CLI retries forever against a dead port (now under timeout 60 in the script)."
+    },
+    {
+      "id": "T-066",
+      "title": "Loop 5: a key acts only as itself, and only in its own rooms (identity + membership + owner's view)",
+      "priority": "P0",
+      "status": "open",
+      "opened_session": 17,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "Brief: docs/loops/loop-5-identity-and-membership-brief.md (Relay, session 17). Serves D-011 (Grok Bot over HTTPS) and D-010 (multi-tenant). Covers T-004 (JSON-RPC unauthenticated) and T-058 (caller-asserted identities) and adds room membership on every session route; preserves hub-talk's contract (D-003), the daemons, and Aaron's chat page view of his own agents' rooms (first piece of D-010's data model). strict refuses, warn logs. Design by Rivet, ruled by Relay, before any build."
+    },
+    {
+      "id": "T-067",
+      "title": "Loop 6: enrollment codes replace open registration; rate limiting; clean error pages",
+      "priority": "P1",
+      "status": "open",
+      "opened_session": 17,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "D-011 step 4. One-time enrollment codes issued by a human owner replace open POST /a2a/register (hub-talk --init-key --invite <code>: a hub-talk contract change, so D-003 through the SIA planner). Grok Bot joins Aaron's account for the test; cross-account rooms by invitation come after (D-010). Bundles T-005 (rate limiting) and T-062 (error pages leak paths and stacks). Needs Loop 5's owner field. Brief not written yet."
+    },
+    {
+      "id": "T-068",
+      "title": "First outside-agent test: Grok Bot (cloud VM) registers over HTTPS via Funnel and talks to relay",
+      "priority": "P1",
+      "status": "open",
+      "opened_session": 17,
+      "closed_session": null,
+      "supersedes": null,
+      "note": "D-011 steps 5-6. Preconditions: Loop 5 and Loop 6 deployed, tcm AUTH_MODE=strict (read via the read-only key), T-057's 0.0.0.0:4000 binding reviewed. Then, each on Aaron's word: `tailscale funnel` on tcm for port 4000 only (record the *.ts.net URL); Aaron issues an enrollment code; Grok Bot runs hub-talk --init-key --invite <code> against the HTTPS URL; relay and Grok Bot talk in their own room; Grok Bot's key lists only that room; a second check from the VM without a key gets 401/403. Funnel off after, unless Aaron keeps it. Grok Bot's VM is Aaron's, in the cloud, and must never join the tailnet."
     }
   ],
   "verified": [
@@ -693,7 +723,15 @@
       "status": "verified"
     }
   ],
-  "gaps": [],
+  "gaps": [
+    {
+      "id": "G-001",
+      "what": "In AUTH_MODE=warn the hub admits unknown keys as nobody; any public address before strict makes every room readable and writable without a valid key. tcm is in warn (V-006).",
+      "evidence": "src/auth.ts:95-116 at c4d2d1c (read by Relay, session 17): an unrecognised X-Agent-Key logs `[auth] WOULD REJECT unknown ...` and continues with req.agentName = null (:103); tcm's startup line reads 'Auth: WARN - unknown X-Agent-Key is logged and allowed' (t-003-cutover-log.md step 2).",
+      "recommended_update": "Never give the hub a public address (Funnel, the public hostname, a port forward) while AUTH_MODE=warn. Turn strict on after T-064's read, on Aaron's word, before D-011 step 5. Close this gap when tcm reads strict via the read-only key's auth-mode.",
+      "opened_session": 17
+    }
+  ],
   "decisions": [
     {
       "id": "ADR-001",
@@ -832,6 +870,12 @@
       "title": "The hub becomes multi-tenant: humans own accounts, agents join an account by invitation, rooms can cross accounts by invitation",
       "date": "2026-09-25",
       "note": "Aaron, Relay session 17, verbatim: \"A human user wants its agents to communicate via the hub. How does that human create an account and invite his agents to his account? I shouldn't see that persons hub rooms, right?\" and then \"yes, cross-account rooms by invitation\" to Relay's recommendation. FOUND by Relay at c4d2d1c (read, not asserted): GET /a2a/sessions returns sessions.listAll unfiltered; GET /a2a/session/:id/messages has no participant check; POST /a2a/session/:id/message has no participant check and takes `from` from the body (T-058); /a2a/register is open; convex/schema.ts has no owner/account/tenant field. So today any valid key sees and writes every room. SHAPE (Relay, to be designed in loops): (1) Loop 5 = a key acts only as its own name on every path (T-004, T-058) AND reads/posts only in rooms it participates in; (2) then accounts: a human owner; agents enrolled by one-time invite codes (replacing open registration, amending T-002 step 6); rooms owned by an account, with cross-account membership by invitation from day one. The operator does not see other accounts' rooms through the API or UI; privacy from the operator (end-to-end encryption) is out of scope unless Aaron asks."
+    },
+    {
+      "id": "D-011",
+      "title": "The first outside-agent test is Aaron's Grok Bot on a cloud VM registering over HTTPS, never via his tailnet; route: Loop 5, T-064, strict, Loop 6, Funnel, test",
+      "date": "2026-09-25",
+      "note": "Aaron, Relay session 17, verbatim: \"We started down that road by stopped, it's my grok bot running on a vm in the cloud. I don't want to expose grok bot to my tailnet network. I want grokbot to register via https as the first outside agent test of the hub\", then \"yes, and record the important detail of this conversation so future planner agents see it\". SUPERSEDES for this test T-002's tailnet-adjacent ideas: no tailnet join, and no Tailscale node sharing (Relay had offered it; Aaron wants HTTPS). BLOCKING FINDING (Relay, src/auth.ts:95-116 at c4d2d1c): in AUTH_MODE=warn an unknown X-Agent-Key is allowed as nobody, so ANY public address before strict = an open hub (anyone reads and posts every room without a valid key). ORDER, each on Aaron's word: (1) Loop 5 (T-066): identity on every path + room membership + the owner's view (brief docs/loops/loop-5-identity-and-membership-brief.md); (2) T-064's day-long log read (after 2026-09-26 ~04:30Z); (3) AUTH_MODE=strict on tcm, its own act; (4) Loop 6 (T-067): one-time enrollment codes replacing open /a2a/register (Grok Bot joins Aaron's account; cross-account rooms come later per D-010), basic rate limiting (T-005), clean error pages (T-062); (5) Tailscale Funnel on tcm publishing only port 4000 over HTTPS at a *.ts.net name (Relay's recommendation for the TEST; hub.tarrantcountymakerspace.com stays reserved for the public launch; one command turns Funnel off; T-057's 0.0.0.0:4000 binding is reviewed before it); (6) the test (T-068): Grok Bot runs --init-key with an enrollment code against the HTTPS URL, then talks to relay in its own room and sees nothing else."
     }
   ],
   "handoffs": [
