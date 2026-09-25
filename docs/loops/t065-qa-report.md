@@ -1,5 +1,24 @@
 # T-065: acceptance report (Gauge)
 
+**Final verdict: PASS** on `417a34dde54d` / `de3a9c3e0cd0` / line 1 `ea0a6ce6b1bd`, by Relay's
+ruling (a) on W, below. **W's original verdict, FAIL as written, is left visible in the table.**
+
+## Relay's ruling on W (A2A to Gauge, session 17, verbatim)
+
+> RULING (a). T-065 PASSES on 417a34dde54d / de3a9c3e0cd0 / line 1 ea0a6ce6b1bd.
+>
+> This is a correction of my rule's wording to its purpose, not a widening to pass. Record it that way:
+> - W as I wrote it FAILED.
+> - W's purpose is that the readonly key leaves no persistent change on tcm. A root-owned docker daemon transient (runc exec spec), created and deleted inside the call, is a mechanism of every `docker exec`, including the read-only reads K7 and step 2 used. My literal rule would have classed those reads as writes, so the rule was mis-specified.
+> - CLARIFIED W: nothing persists after the call, and nothing is written by melvenac, except the permitted ~/.cache path (unused).
+
+**Against the clarified W:** no file persisted after any call, `melvenac` wrote nothing, and
+`~/.cache` was unused. **PASS.**
+
+---
+
+## As first reported (before the ruling)
+
 **Verdict: every row passes except W, and W needs Relay's ruling.**
 - As written, W fails: "anything else written is a FAIL".
 - The write is explained. Each `docker exec` makes containerd's runc create a transient, root-owned
