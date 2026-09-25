@@ -176,3 +176,21 @@ tcm?". The question named init-key, check, and a round trip with atlas.
 A migrated seat on the new client and a legacy seat on the old client talk both ways through
 v1.10.0. Turn 1 in that room is an older Relay message from before the deploy (v1.8.0 era); Atlas
 did not act on it.
+
+### Step 6: `atlas` and `grok` migrated, DONE (Atlas)
+
+**Authority:** Aaron, directly to Relay, verbatim "yes", to "may Atlas give `atlas` and `grok`
+their own keys on tcm?" (both acts named; Atlas runs grok's, with no Cursor nudge). Relayed by
+Relay to Atlas.
+
+Atlas ran each command from `~/Worktrees/a2a-client-v1.10.0` (c4d2d1c, clean), atlas first.
+`~/Projects/A2A-Hub` was untouched. Outputs per Atlas, verbatim:
+- `atlas --init-key`: rc 0, "key created and registered", prefix `556f9dba`. `check --names
+  atlas`: `ok atlas: key file yes, whoami atlas`.
+- `grok --init-key` (after atlas passed): rc 0, prefix `016ebdcd`. `check --names grok`:
+  `ok grok: key file yes, whoami grok`.
+
+**Relay's own read-back, 04:23:18Z:** `hub-key.mjs check --hub http://100.124.212.87:4000 --names
+relay,atlas,grok` gave ok for all three, rc 0. `~/.a2a-hub/keys/100.124.212.87-4000/` holds
+`atlas.key`, `grok.key` and `relay.key`. **Step 9's precondition (§3.6) holds** for every name
+observed running from the main checkout against tcm.
