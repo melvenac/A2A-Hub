@@ -1,0 +1,10 @@
+CAUGHT M1 (A9, strict): landed=true tsc=clean control(candidate)=pass {"status":403} mutant=fail {"status":200} port4740free=true
+CAUGHT M3 (A7/E1, strict): landed=true tsc=clean control(candidate)=pass {"visibleToA3":0} mutant=fail {"visibleToA3":3} port4740free=true
+CAUGHT M4 (A2 oracle, strict): landed=true tsc=clean control(candidate)=pass {"forbidden":404,"absent":404} mutant=fail {"forbidden":403,"absent":404} port4740free=true
+CAUGHT M5 (C1, strict): landed=true tsc=clean control(candidate)=pass {"state":"rejected"} mutant=fail {"state":"completed"} port4740free=true
+CAUGHT M6 (B4, strict): landed=true tsc=clean control(candidate)=pass {"lines":1,"leak":false} mutant=fail {"lines":1,"leak":true} port4740free=true
+CAUGHT M7 (B1 A1, warn): landed=true tsc=clean control(candidate)=pass {"status":200} mutant=fail {"status":403} port4740free=true
+CAUGHT M8 (A12 (Q8), strict): landed=true tsc=clean control(candidate)=pass {"task":true,"assignedAgent":"qa-a3"} mutant=fail {"task":true,"assignedAgent":null} port4740free=true
+CAUGHT M9 (E6, strict): landed=true tsc=clean control(candidate)=pass {"owner":"aaron"} mutant=fail {"owner":"qa-x"} port4740free=true
+CAUGHT M10 (A15(c), strict): landed=true tsc=clean control(candidate)=pass {"narratedHits":0} mutant=fail {"narratedHits":1} port4740free=true
+CAUGHT M11 (A20, strict): landed=true tsc=clean control(candidate)=pass {"state":"rejected"} mutant=fail {"state":"completed"} port4740free=true

@@ -1,0 +1,5 @@
+PASS BF3 setup: old hub registers qa-gap1 (ide-session) :: {"status":200}
+PASS BF3 setup: old hub registers qa-gap2 (ide-session) :: {"status":200}
+PASS BF3 setup: old hub registers aaron (human) :: {"status":200}
+PASS BF3 before: after the swap, before the second run: the gap rows lack an owner and aaron's view does NOT see their room (no query-time default) :: {"lacking":["aaron","qa-gap1","qa-gap2"],"aaronListSees":false,"access":{"exists":true,"ownerView":false,"participant":false}}
+PASS BF3 after: second run counts exactly the gap rows (2 assigned, aaron self 1); aaron's view sees the room; 0 rows lack an owner :: {"result":{"assigned":2,"self":1,"untouched":18},"lacking":[],"aaronListSees":true,"access":{"exists":true,"ownerView":true,"participant":false}}

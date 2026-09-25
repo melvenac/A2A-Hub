@@ -1,0 +1,1 @@
+B3: [authz] lines during D1/D2 on candidate: warn=0 strict=0 (expect 0 0)

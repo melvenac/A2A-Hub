@@ -1,0 +1,4 @@
+PASS E3b (candidate): an agent named as another row's owner gets NO owner view: 404, not listed :: {"read":404,"listed":false}
+PASS M2 mutant: with the human-only guard removed, E3b must FAIL (the agent gets an owner view) :: {"landed":true,"tsc":0,"deploy":{"rc":0,"tail":"Finalizing push... | ✔ Deployed Convex functions to http://127.0.0.1:3710"},"probe":{"read":200,"listed":true}}
+PASS M2 restore: pristine functions redeployed; E3b passes again (404, not listed) :: {"deploy":{"rc":0,"tail":"Finalizing push... | ✔ Deployed Convex functions to http://127.0.0.1:3710"},"probe":{"read":404,"listed":false}}
+PASS M2 restore (owner view intact): aaron still has his owner view elsewhere (A-agents via nS) :: {"aaronAg":200,"accessR":{"exists":true,"ownerView":true,"participant":false}}

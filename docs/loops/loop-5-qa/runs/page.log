@@ -1,0 +1,16 @@
+PASS E4 list: aaron's history lists his rooms and his agents' rooms, not the other owner's :: {"listed":["A5c","A-in","A5c","A-in"],"other":"B-room"}
+PASS E4 read-only: A-agents opens read-only: 'not in this room', no composer, no extend, no POST :: {"notInRoom":true,"composer":0,"extend":0,"rename":5,"transcript":true,"posts":0}
+PASS E4 read-only (rename): (info) rename pencils shown in the history list :: {"pencils":5}
+PASS E4 post: in A-in (a participant) the composer posts, from == aaron :: {"from":"aaron"}
+PASS B3 page aaron: as-self page use (list, open own/owner-view room, post in own room, panel) writes no [authz] line :: {"lines":0}
+PASS E5 list: qa-owner2's history lists his rooms and his agents' rooms, not the other owner's :: {"listed":["B-room","B-room"],"other":"A-in"}
+PASS E5 read-only: B-room opens read-only for qa-owner2 (not a participant): no composer :: {"notInRoom":true,"composer":0}
+PASS B3 page qa-owner2: as-self page use (list, open own/owner-view room, post in own room, panel) writes no [authz] line :: {"lines":0}
+PASS RG2 B1: no key: zero /a2a requests :: {"a2a":0}
+PASS RG2 B1b: after a key, whoami is the first /a2a call :: {"first":"/a2a/whoami"}
+PASS RG2 B3: new chat from the page: participants [qa-a1, qa-a3]; seed from qa-a1 :: {"participants":["qa-a1","qa-a3"],"from":"qa-a1"}
+PASS RG2 panel (Q4): the new-chat panel offers only the caller's owner's live agents (no qa-b*) :: {"peers":["qa-a2","qa-a3"]}
+PASS F1 page list: c4d2d1c page on candidate functions lists sessions (old hub: unfiltered listAll) :: {"n":25,"hasAin":true}
+PASS F1 page post: c4d2d1c page posts through the old hub on candidate functions (old page sends from 'aaron' via its hard-coded HUMAN? recorded) :: {"stored":true,"from":"qa-a1"}
+
+14 checks, 14 pass, 0 fail

@@ -224,6 +224,9 @@ call as itself (200, with the body equal to old's, per Preserve 5).
 - **E3. No agent gains a view** (the core property). `qa-a3` (A-owned, in no room) lists nothing
   and gets 404 on `A-agents` in strict. An agent registered with `agentCard.kind: "human"` and a new
   name owns only itself (O5) and sees only rooms it is in.
+- **E3b (added in the run; see the report's "Criteria gap").** An **agent** named as another row's
+  owner (`setOwner qa-m2y -> qa-a3`) gets no owner view of that row's room: 404 and not listed. E3's
+  qa-a3 owns no row, so E3 alone cannot catch M2.
 - **E4. The page (W), as `aaron`:**
   - the history lists `A-in` and `A-agents`, and not `B-room`;
   - opening `A-agents` shows the transcript read-only: "you are not in this room" in place of the
@@ -291,7 +294,7 @@ call as itself (200, with the body equal to old's, per Preserve 5).
 | Mutant | Must fail |
 |---|---|
 | M1 `bindName` skipped on `/queue/:agentId` | A9 |
-| M2 `sessionAccess` grants `ownerView` to any caller, not only human-kind | E3 |
+| M2 `sessionAccess` grants `ownerView` to any caller, not only human-kind | E3b (E3 cannot; see E3b) |
 | M3 `GET /a2a/sessions` uses `listAll` | A7, E1 |
 | M4 strict answers **403** for a non-member session | A2 (the oracle) |
 | M5 JSON-RPC executor ignores `askPolicy` | C1 |

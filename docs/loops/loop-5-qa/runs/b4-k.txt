@@ -1,0 +1,2 @@
+K: 43 keys (86 needles). Positive: planted key+hash in a copy of cvxN.err.log -> 2 hits (expect >= 2)
+B4: 24 hub/daemon logs + W request log: key/hash hits = 0 ; [authz] lines seen = 163, with a 32+ run (non-mutant logs) = 0

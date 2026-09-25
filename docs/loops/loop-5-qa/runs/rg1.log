@@ -1,0 +1,8 @@
+PASS RG1 whoami warn: register then whoami resolves the name :: {"reg":200,"whoami":"qa-rg1-warn"}
+PASS RG1 rotate warn: rotate: 200; the new key resolves; the old key no longer does (strict 403, warn name:null) :: {"rot":200,"old":[200,null],"new":"qa-rg1-warn"}
+PASS RG1 taken warn: register of a taken name with a different key: 409 :: {"status":409,"body":"{\"error\":\"name holds its own key; use rotate\"}"}
+PASS RG1 whoami strict: register then whoami resolves the name :: {"reg":200,"whoami":"qa-rg1-strict"}
+PASS RG1 rotate strict: rotate: 200; the new key resolves; the old key no longer does (strict 403, warn name:null) :: {"rot":200,"old":[403,null],"new":"qa-rg1-strict"}
+PASS RG1 taken strict: register of a taken name with a different key: 409 :: {"status":409,"body":"{\"error\":\"name holds its own key; use rotate\"}"}
+
+6 checks, 6 pass, 0 fail

@@ -1,0 +1,130 @@
+[
+ {
+  "step": "warn init qa-t1",
+  "rc": 0,
+  "out": "[hub-talk] qa-t1@127.0.0.1-<port>: key created and registered, stored in C:\\Users\\melve\\AppData\\Local\\Temp\\claude\\C--Users-melve-Worktrees-a2a-qa\\<uuid>\\scratchpad\\l5\\keys\\127.0.0.1-<port>\\qa-t1.key (prefix 89e2fe76)"
+ },
+ {
+  "step": "warn init qa-t2",
+  "rc": 0,
+  "out": "[hub-talk] qa-t2@127.0.0.1-<port>: key created and registered, stored in C:\\Users\\melve\\AppData\\Local\\Temp\\claude\\C--Users-melve-Worktrees-a2a-qa\\<uuid>\\scratchpad\\l5\\keys\\127.0.0.1-<port>\\qa-t2.key (prefix c6caa094)"
+ },
+ {
+  "step": "warn qa-t1 --peer --say",
+  "rc": 0,
+  "out": "[hub-talk] qa-t1 session <sid>\n[hub-talk] sent turn 1"
+ },
+ {
+  "step": "warn qa-t2 --wait",
+  "rc": 0,
+  "out": "--- qa-t1 ---\nhello from qa-t1\n[hub-talk] qa-t2 session <sid>"
+ },
+ {
+  "step": "warn qa-t2 --say",
+  "rc": 0,
+  "out": "[hub-talk] qa-t2 session <sid>\n[hub-talk] sent turn 2"
+ },
+ {
+  "step": "warn qa-t1 --inbox",
+  "rc": 0,
+  "out": "--- qa-t1 ---\nhello from qa-t1\n--- qa-t2 ---\nreply from qa-t2\n[hub-talk] qa-t1 session <sid>\n[hub-talk] 2 turns, 1 unread after turn 0 (cursor unchanged)"
+ },
+ {
+  "step": "warn qa-t1 --wait (no new turn)",
+  "rc": 0,
+  "out": "--- qa-t2 ---\nreply from qa-t2\n[hub-talk] qa-t1 session <sid>"
+ },
+ {
+  "step": "warn reads",
+  "status": 200,
+  "body": "{\"participants\":[{\"lastRead\":{\"at\":<n>,\"turn\":2,\"via\":\"inbox\"},\"name\":\"qa-t1\",\"unread\":[]},{\"lastRead\":{\"at\":<n>,\"turn\":1,\"via\":\"wait\"},\"name\":\"qa-t2\",\"unread\":[]}],\"turnCount\":2}"
+ },
+ {
+  "step": "strict init qa-t3",
+  "rc": 0,
+  "out": "[hub-talk] qa-t3@127.0.0.1-<port>: key created and registered, stored in C:\\Users\\melve\\AppData\\Local\\Temp\\claude\\C--Users-melve-Worktrees-a2a-qa\\<uuid>\\scratchpad\\l5\\keys\\127.0.0.1-<port>\\qa-t3.key (prefix 6a02b072)"
+ },
+ {
+  "step": "strict init qa-t4",
+  "rc": 0,
+  "out": "[hub-talk] qa-t4@127.0.0.1-<port>: key created and registered, stored in C:\\Users\\melve\\AppData\\Local\\Temp\\claude\\C--Users-melve-Worktrees-a2a-qa\\<uuid>\\scratchpad\\l5\\keys\\127.0.0.1-<port>\\qa-t4.key (prefix 933b8d5c)"
+ },
+ {
+  "step": "strict qa-t3 --peer --say",
+  "rc": 0,
+  "out": "[hub-talk] qa-t3 session <sid>\n[hub-talk] sent turn 1"
+ },
+ {
+  "step": "strict qa-t4 --wait",
+  "rc": 0,
+  "out": "--- qa-t3 ---\nhello from qa-t3\n[hub-talk] qa-t4 session <sid>"
+ },
+ {
+  "step": "strict qa-t4 --say",
+  "rc": 0,
+  "out": "[hub-talk] qa-t4 session <sid>\n[hub-talk] sent turn 2"
+ },
+ {
+  "step": "strict qa-t3 --inbox",
+  "rc": 0,
+  "out": "--- qa-t3 ---\nhello from qa-t3\n--- qa-t4 ---\nreply from qa-t4\n[hub-talk] qa-t3 session <sid>\n[hub-talk] 2 turns, 1 unread after turn 0 (cursor unchanged)"
+ },
+ {
+  "step": "strict qa-t3 --wait (no new turn)",
+  "rc": 0,
+  "out": "--- qa-t4 ---\nreply from qa-t4\n[hub-talk] qa-t3 session <sid>"
+ },
+ {
+  "step": "strict reads",
+  "status": 200,
+  "body": "{\"participants\":[{\"lastRead\":{\"at\":<n>,\"turn\":2,\"via\":\"inbox\"},\"name\":\"qa-t3\",\"unread\":[]},{\"lastRead\":{\"at\":<n>,\"turn\":1,\"via\":\"wait\"},\"name\":\"qa-t4\",\"unread\":[]}],\"turnCount\":2}"
+ },
+ {
+  "step": "warn daemon heartbeat (seen live)",
+  "live": true
+ },
+ {
+  "step": "warn qa-t1 -> qa-d1 --say",
+  "rc": 0,
+  "out": "[hub-talk] qa-t1 session <sid>\n[hub-talk] sent turn 1"
+ },
+ {
+  "step": "warn qa-t1 waits for qa-d1's reply",
+  "rc": 0,
+  "out": "--- qa-d1 ---\n[qa-d1 fallback #1] Received: \"qa-t1: ping qa-d1\". Continuing.\n[hub-talk] qa-t1 session <sid>"
+ },
+ {
+  "step": "warn ask qa-d1 (queue: claim + respond)",
+  "status": 200,
+  "answered": true,
+  "body": "{\"task\":{\"status\":\"completed\",\"artifacts\":[{\"parts\":[{\"kind\":\"text\",\"text\":\"[qa-d1 fallback #2] Received: \\\"task for qa-d1\\\". Continuing.\"}]}]}}"
+ },
+ {
+  "step": "warn daemon log (errors)",
+  "errors": 0
+ },
+ {
+  "step": "strict daemon heartbeat (seen live)",
+  "live": true
+ },
+ {
+  "step": "strict qa-t3 -> qa-d2 --say",
+  "rc": 0,
+  "out": "[hub-talk] qa-t3 session <sid>\n[hub-talk] sent turn 1"
+ },
+ {
+  "step": "strict qa-t3 waits for qa-d2's reply",
+  "rc": 0,
+  "out": "--- qa-d2 ---\n[qa-d2 fallback #1] Received: \"qa-t3: ping qa-d2\". Continuing.\n[hub-talk] qa-t3 session <sid>"
+ },
+ {
+  "step": "strict ask qa-d2 (queue: claim + respond)",
+  "status": 200,
+  "answered": true,
+  "body": "{\"task\":{\"status\":\"completed\",\"artifacts\":[{\"parts\":[{\"kind\":\"text\",\"text\":\"[qa-d2 fallback #2] Received: \\\"task for qa-d2\\\". Continuing.\"}]}]}}"
+ },
+ {
+  "step": "strict daemon log (errors)",
+  "errors": 0
+ }
+]

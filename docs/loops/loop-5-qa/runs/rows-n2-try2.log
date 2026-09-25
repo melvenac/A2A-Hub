@@ -1,0 +1,27 @@
+PASS A6a strict: reader != caller: 403 'reader is not the caller' (as c4d2d1c); one REJECT reader=qa-a2 :: {"new":[403,"{\"error\":\"reader is not the caller\"}"],"old":[403,"{\"error\":\"reader is not the caller\"}"],"lines":[{"ok":true,"mode":"REJECT","what":"reader=qa-a2","method":"POST","route":"/a2a/session/:sessionId/read","caller":"qa-a1","warnTail":false,"bad32":false}]}
+PASS B1 A6a: warn: c4d2d1c's answer; one WOULD REJECT reader=qa-a2 :: {"new":[404,"{\"error\":\"qa-a2 is not a participant of this session\"}"],"old":[404,"{\"error\":\"qa-a2 is not a participant of this session\"}"],"lines":[{"ok":true,"mode":"WOULD REJECT","what":"reader=qa-a2","method":"POST","route":"/a2a/session/:sessionId/read","caller":"qa-a1","warnTail":true,"bad32":false}]}
+PASS A6b strict: non-member reader (the caller): markRead's answer, identical to c4d2d1c; logged as non-member [authz] :: {"new":[404,"{\"error\":\"qa-b1 is not a participant of this session\"}"],"old":[404,"{\"error\":\"qa-b1 is not a participant of this session\"}"],"lines":[{"ok":true,"mode":"REJECT","what":"non-member session=k575zdnx…","method":"POST","route":"/a2a/session/:sessionId/read","caller":"qa-b1","warnTail":false,"bad32":false}]}
+PASS A6b warn: non-member reader (the caller): markRead's answer, identical to c4d2d1c; logged as non-member [authz] :: {"new":[404,"{\"error\":\"qa-b1 is not a participant of this session\"}"],"old":[404,"{\"error\":\"qa-b1 is not a participant of this session\"}"],"lines":[{"ok":true,"mode":"WOULD REJECT","what":"non-member session=k575zdnx…","method":"POST","route":"/a2a/session/:sessionId/read","caller":"qa-b1","warnTail":true,"bad32":false}]}
+PASS A6 oracle (recorded): /read keeps markRead's own answers (criteria A6: unchanged); non-member vs nonexistent :: {"nonMember":[404,"{\"error\":\"qa-b1 is not a participant of this session\"}"],"absent":[400,"{\"error\":\"not a session id\"}"]}
+PASS A6 self: own read receipt 200 :: {"status":200,"body":"{\"advanced\":false,\"ok\":true,\"readThroughTurn\":1}"}
+FAIL A11/12 setup: two tasks assigned to qa-a2 :: {"T1":false,"T2":false}
+PASS A11 strict: claim with agentName != caller: 403; one REJECT agentName=qa-a2 :: {"status":403,"body":"{\"error\":\"agentName is not the caller\"}","lines":[{"ok":true,"mode":"REJECT","what":"agentName=qa-a2","method":"POST","route":"/a2a/task/:taskId/claim","caller":"qa-a3","warnTail":false,"bad32":false}]}
+PASS A11 self: assignee claims its own task: 200 :: {"status":200,"body":"{\"claimed\":false,\"reason\":\"not-found\"}"}
+FAIL A12 strict claimed: respond by a non-assignee: 404, byte-identical to a nonexistent task; one REJECT not-assigned :: {"status":404,"body":"{\"error\":\"task not found\"}","absent":[404,"{\"error\":\"task not found\"}"],"lines":[]}
+FAIL A12 strict unclaimed: respond by a non-assignee: 404, byte-identical to a nonexistent task; one REJECT not-assigned :: {"status":404,"body":"{\"error\":\"task not found\"}","absent":[404,"{\"error\":\"task not found\"}"],"lines":[]}
+file:///C:/Users/melve/Worktrees/a2a-qa/docs/loops/loop-5-qa/l5.mjs:57
+  const b = await r.json(); if (b.status !== "success") throw new Error(`${path}: ${b.errorMessage}`); return b.value;
+                                                              ^
+
+Error: tasks:getByTaskId: [Request ID: 1c84eae45d7736a7] Server Error
+ArgumentValidationError: Object is missing the required field `taskId`. Consider wrapping the field validator in `v.optional(...)` if this is expected.
+
+Object: {}
+Validator: v.object({taskId: v.string()})
+
+
+    at cq (file:///C:/Users/melve/Worktrees/a2a-qa/docs/loops/loop-5-qa/l5.mjs:57:63)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async file:///C:/Users/melve/Worktrees/a2a-qa/docs/loops/loop-5-qa/rows-n2.mjs:69:17
+
+Node.js v22.23.2
