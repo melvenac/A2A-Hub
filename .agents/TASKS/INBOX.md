@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 34 by open-brain v1.8.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 41 by open-brain v1.8.0 — do not edit; change state via ob_state -->
 
 # Inbox
 
@@ -20,7 +20,7 @@ Titles only. Full rationale for a task is its `note` in `.agents/state.json` und
 - [ ] **T-008** `hub-talk` exit code 1 means two opposite things
 - [ ] **T-017** `--inbox` then `--wait` re-delivers turns already read (two cursors disagree)
 - [ ] **T-050** Wake an idle IDE seat that has an unread turn in its room
-- [ ] **T-057** Convex may be reachable from the tailnet on 3210, bypassing the hub
+- [ ] **T-057** Convex is callable without the hub: tracked compose publishes 3210 on all interfaces; on tcm, any local process can call it
 
 ## P2
 

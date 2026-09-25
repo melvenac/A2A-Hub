@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 34 by open-brain v1.8.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 41 by open-brain v1.8.0 — do not edit; change state via ob_state -->
 
 # Next Session Handoff
 
@@ -6,82 +6,102 @@
 
 ### Pick up here
 
-Relay session 16 (checkpoint 2, 2026-09-24 ~06:40Z). LOOP 3 (T-003, per-agent keys) IS DESIGNED AND APPROVED, waiting on the SIA hold. Design FINAL: loop/3-per-agent-keys 88a8e0f (+ a0eaa89 build note: start-stack.ps1 honours A2A_KEY_DIR). Rulings: docs/loops/loop-3-ruling-1.md (R1 stored keyStatus, R2 cutover), loop-3-ruling-2.md (approved to build; B1 new names on old client, B2 getByKeyHash stays null) -- both answered in design section 11. Gauge's criteria ACCEPTED: qa/loop-3-harness-keys a522deb (docs/loops/loop-3-qa-criteria.md; harness change 0ca2358). Relay ruled Gauge's Qs: N.5 split (a: scratch A2A_KEY_DIR in QA; b: live main-stack start on Aaron's word -- never start-stack.ps1 in the QA tree); the hold lift covers the throwaway QA stack (asked the SIA planner to confirm at the lift); instrument additions approved. GATES: build when the SIA planner lifts the local hold; merge needs Q1 (Aaron, via SIA planner, expected morning 2026-09-24) + Gauge acceptance + Aaron's word; every tcm act per design section 4.2 on Aaron's word inside a SIA-named quiet window (not yet named: grok may run an A7 session if QA 94 rejects A6). Also this session: Loop 2 = T-001 closed (V-003); T-017 P1; T-057 (Convex port, P1), T-058, T-059 opened. All on docs/session-16-t017, NOT MERGED.
+ROLL HANDOFF (Relay session 16 -> fresh Relay, 2026-09-25 ~00:00Z; Aaron restarting VS Code). STATE: LOOP 3 (T-003, per-agent keys, v1.9.0) is BUILT and ACCEPTED (V-004, ruling 4) on loop/3-build-r3 fe4eb14. THREE PRs await Aaron's word to merge, with no file overlaps and no CI: #11 (code, head fe4eb14), #12 (QA docs, head b6f1cef), #13 (Relay's docs/session-16-b: rulings 3-4, V-004, T-057, T-003, and this handoff). Session 16's record through rev 34 is already merged (PR #10, e166057). FIRST ACTIONS: (1) ListAgents: find the live SIA planner (it rolls too) and tell it you're the live Relay; (2) ask Aaron: "merge #11, #12, #13?" (asked in session 16, no answer yet); (3) after the merge, Rivet tags v1.9.0 on the merge commit on Aaron's word. THEN, each on Aaron's word: the live local start (N.5(b): alice/bob key files and migration; browser key for aaron via hub-key.mjs); the tcm cutover per the Loop 3 design section 4.2 (T-003's note has the full order, including `sudo gh-runners-pause` before the deploy act and `sudo gh-runners-resume` after, telling the SIA planner before and after). grok/atlas/forge steps only in a SIA-named window after SIA's candidate A is decided (A8 is in flight). Also open: T-056 (alice silence; needs the local stack), T-057 (P1: fix the tracked compose to 127.0.0.1:3210; make hub-only Convex functions internal), T-017 (P1).
 
 ### Watch out
 
-- SIA HOLD (narrowed ~03:25Z): no A2A-Hub local stack, builds, test runs or new seats on THIS machine (covers a2a-rivet-63, a2a-qa-5f). Reading, docs, git, hub traffic, tcm OK. FULL STOP (no commands, no git) when the SIA planner calls one; QA 94's suite is next. Grok's A6 session finished ~06:2xZ, so the no-tcm-restart condition is lifted, but grok is NOT in a quiet window for the key cutover until SIA's candidate A is decided. Lifting the hold is the SIA planner's call.
-- Questions for Aaron on SHARED work (anything SIA depends on: T-050, hub transport changes, hub-talk's contract) go through the live SIA planner under D-003, quoted both ways. Find it with ListAgents. A2A-Hub-only work goes to Aaron directly.
-- D-005: seats push their OWN working branches without asking (Rivet loop/* chore/*, Gauge qa/*, Relay docs/*); never master, never force, never another seat's branch; read back with ls-remote. Merges, tags, tcm deploys, main-checkout updates, starting or stopping the local stack, and live Convex writes each need Aaron's word for that act.
-- tcm: `ssh melvenac@tcm`. Auto mode blocks production reads; Aaron switches to manual mode to approve each command. The next deploy must rotate a2a-hub.old first. tcm's source is a tar, not a git tree. Reading tcm's Convex: `convex data <table>` with --limit <= ~99999; generate the admin key inside tcm's shell, never print it. SIA's seats spell tcm http://100.124.212.87:4000 -- key directories are keyed on that spelling.
-- T-056 diagnosis so far (read-only replay, 2026-09-23): every hub call alice's loop makes returns 200; the queue is empty; model id current. Fault is in reply generation or posting. Next: rerun docs/loops/t-056-alice-sim.mjs or read the 'A2A alice' window for '[alice] poll error'. Needs the local stack running (held).
-- One writer for the record while the planner holds a loop; other seats send handoff text to Relay. ob_state writes the CHECKED-OUT tree: switch to the docs branch carrying the latest revision first (session 16: detached origin/master was rev 25 while the branch held 26+).
-- start-stack.ps1 reuses anything listening on 3210/4000, so never run it from a seat worktree. Stopping the stack means killing the node and backend PIDs.
-- Relay's error shape in sessions 15-16: asserting a fact about an artifact without reading it, and reporting a line when it found a class (Loop 3 brief named 3 dev-key sites; there are 7 -- Gauge found 6, Relay the 7th). Read first; search for the class.
-- Decisions are append-only in ob_state; a correction is a new decision pointing at the old.
-- SIA's seats run load-sensitive test suites on this machine. Aaron's standing ruling: work normally; pause only when a SIA seat asks for a controlled rerun.
+- SIA holds: SIA QA measurement moved to a separate PC (SIA D-045, desktop-o4egb1e) from candidate A8, so full stops of A2A seats should end. EXCEPTION: SIA B's Step 0 load test (location undecided): the SIA planner warns first; then every A2A process is killed by PID, ports are shown free, and the three confirmations are collected and sent back. No tcm step touching grok or atlas until SIA's candidate A is decided.
+- Questions for Aaron on SHARED work (anything SIA depends on: hub-talk's contract, transport, T-050) go through the live SIA planner under D-003, quoted both ways. A2A-only work goes to Aaron directly. Aaron wants DETAILED questions: what it is, where it lives, what changes, plus a recommendation.
+- D-005: seats push their OWN branches without asking (Rivet loop/* chore/*, Gauge qa/*, Relay docs/*); never master, never force. Merges, tags, tcm acts, main-checkout updates, starting or stopping the local stack, and live Convex writes each need Aaron's word for that act. D-006 approves the cutover PLAN, not its acts. D-007 is Aaron's word for the 8 releases, done at their plan steps.
+- tcm: `ssh melvenac@tcm`; Aaron switches to manual mode for production commands. Two SIA CI runners (tcm-1/tcm-2) are live: low priority, egress-firewalled, MemoryMax 5G each, OOMScoreAdjust 500. Before a deploy act: `sudo gh-runners-pause [timeout]` (waits for jobs; exits 1 'NOT paused' on timeout, killing nothing), then `sudo gh-runners-resume`. A pause doesn't survive a reboot. SIA's seats use http://100.124.212.87:4000 for tcm; key dirs are keyed on that spelling. tcm Convex publishes 127.0.0.1:3210 only (relayed evidence). No rebuild unless there's a new version.
+- Every convex dev / hub start pins its ports (convex dev --local silently takes 3210/3211 when free), and every pre-existing listener is identified BEFORE starting. start-stack.ps1 is never run from a seat worktree.
+- One writer for the record. ob_state writes the CHECKED-OUT tree: switch to the docs branch holding the latest revision first (the latest is on docs/session-16-b until #13 merges). A `;`-chained command after a failed commit still runs the detach, so check the branch before every ob_state call.
+- T-056 (alice silence): rerun docs/loops/t-056-alice-sim.mjs or read the alice window for '[alice] poll error'; needs the local stack, on Aaron's word.
+- Relay's error shapes: asserting without reading; reporting a line when it had found a class (the Loop 3 brief named 3 dev-key sites of 7; ruling 3 missed listOnline until checked). Read first, search for the class, validate the search on a known positive.
+- Decisions are append-only; a correction is a new decision pointing at the old.
 
 ### Open questions
 
 - Seat transport: Claude Code cross-session messages or a hub room via scripts/hub-talk.mjs? AGENT.md allows both.
-- What did Aaron mean by "Relay can rebuild the tcm hub when ready" (via Atlas, ~05:50Z)? Relay did NOT rebuild: tcm runs 003f57d and master differs only in docs/.agents. Ask Aaron directly.
 
 ### Loop state
 
-**Open PRs:** _None._
+**Open PRs:** 
+- #11 — QA: accepted — loop/3-build-r3 -> master, head fe4eb14, Loop 3 code v1.9.0 (V-004); merge + v1.9.0 tag on Aaron's word
+- #12 — QA: not_required — qa/loop-3-harness-keys -> master, head b6f1cef, QA criteria/report/instruments (docs only)
+- #13 — QA: not_required — docs/session-16-b -> master, Relay record revs 35+ (rulings 3-4, V-004, handoffs)
 
-**SHA frozen for QA:** _None._
+**SHA frozen for QA:** `fe4eb14`
 
 **Questions pending for Aaron:** 
-- Q1 via SIA planner (queued there): may hub-talk's key contract change as in Loop 3 design section 3.5, with the section 3.6/4.2 cutover?
-- Q2 direct: clark, cursor, general -- migrate, release, or leave each? (forge/probe: SIA ruled keep + migrate)
-- Q3 direct: which name should the browser client (client/) use?
-- Direct: what was the tcm rebuild for?
-- Direct: merge docs/session-16-t017 (record rev 26-32, Loop 2 report, Loop 2/3 briefs, Loop 3 rulings 1-2)?
+- Merge #11, #12, #13? (asked in session 16, unanswered)
 
 **Rulings made mid-loop:** 
-- Loop 2 (T-001) run by Relay on Aaron's word in session 16, verbatim "you do it, turning on manual mode"; read-only; closed with V-003.
-- tcm rebuild NOT performed despite Aaron's go-ahead relayed by Atlas ("Relay can rebuild the tcm hub when ready", ~05:50Z): nothing to ship.
-- Loop 3 brief Amendment 1: all 6 of Gauge's objections accepted (fe0ef05).
-- Loop 3 ruling 1 (c34a792): R1 + R2 required; name format struck (T-059); T-057, T-058 opened.
-- Loop 3 ruling 2 (e709329): approved to build subject to B1, B2; rev 2 (88a8e0f) accepted without further ruling.
-- SIA planner ruled forge/probe: keep and migrate, never release.
-- Gauge's Loop 3 criteria (a522deb) accepted; N.5 split; hold lift to cover throwaway QA stack (confirm at lift).
+- Loop 2 (T-001) closed: V-003.
+- Loop 3: brief + Amendment 1; rulings 1-4 (docs/loops/loop-3-ruling-1..4.md); accepted on fe4eb14 (V-004); H4.2 exact-string wording corrected, not widened.
+- D-006 (hub-talk contract + staged cutover), D-007 (release the 8 dev-key rows), browser page acts as `aaron` (Aaron).
+- No tcm rebuild without a new version (Aaron).
+- tcm runners: pause/resume procedure agreed with the SIA planner (SIA D-043/D-044).
 
 ## developer _(written session 16)_
 
 ### Pick up here
 
-Loop 1 (T-049 read receipts, T-051 --peer) is ACCEPTED at e886b6b; PR #3 is open for Aaron. The delivery steps below each need Aaron's word. Candidates for a small follow-up loop: T-053 (the hub logs "running" and exits 0 when its port is taken), T-054 (convex dev rewrites the tracked _generated files), T-055 (the baseline routes return 500 on a bad session id; the new routes already use the normalizeId pattern, convex/messages.ts markRead).
+Rivet (handoff relayed to Relay at session 16's roll, 2026-09-25). Loop 3 (T-003, v1.9.0) is ACCEPTED at fe4eb14 (V-004); PR #11 is OPEN, not merged. Each needs Aaron's word: (1) merge #11, then `git tag -a v1.9.0 <merge-commit>` and push tags; (2) the tcm cutover, design section 4.2: a pre-deploy read-only (log churn for cursor-grok/grok-probe; askPolicy count on the 8 rows); the deploy act (Convex push -> agents:classifyAtDeploy -> agents:release clark/cursor/general/probe -> hub, staying in warn); a new-client worktree; relay as canary via --init-key; atlas/forge/grok in SIA's window; `hub-key.mjs check --names ...` before updating ~/Projects/A2A-Hub; K7 read-only. Nothing touching grok or atlas until SIA's candidate A is decided. The deploy steps are in docs/redeploying-tcm.md. Refs: loop/3-build-r3 fe4eb14 (accepted), loop/3-build 84694b9 (superseded), loop/3-per-agent-keys a2e1562 (the design). a2a-rivet is clean; nothing running.
 
 ### Watch out
 
-- Delivery, each step on Aaron's word. [Relay, recording this: the ORDER was amended after Rivet wrote it. Atlas asked for server first and Relay agreed on 2026-09-23. So: (1) redeploy tcm, Convex functions first (docs/redeploying-tcm.md), then the image, then a real send, cleared with Atlas for live SIA traffic; (2) only then update ~/Projects/A2A-Hub (it runs the stack and is every SIA seat's hub-talk.mjs), restart it, and send for real, which is A6's deferred live start. Rivet's original text had these two steps the other way round.] Until the checkout is updated, seats show "never read" (L4).
-- a2a-rivet/.convex/local (deployment anonymous-agent, used on ports 3310 and 3340) and its .env.local are disposable test state. Never point them at 3210.
-- Live-check hazards (docs/loops/loop-1-live-setup.md): agents:getByName can't see the agentCard; A3's "mark the caller" mutant is invisible under the shared dev-key, so use per-seat keys; cmd.exe strips JSON quotes from `convex run`, so call node node_modules/convex/bin/main.js with an args array.
-- convex dev regenerates the _generated files with line-ending-only diffs (restore them with git checkout) and writes an untracked convex/tsconfig.json.
-- The hub falls back to CONVEX_URL 127.0.0.1:3210 when it's unset (src/index.ts:35), which points at the main stack. Set it explicitly.
+- `convex dev --local` binds 3210 when it's free: always pass --local-cloud-port/--local-site-port, and identify every pre-existing listener BEFORE starting.
+- Commit or WIP-commit before any mutant check: `git checkout` restores the commit, not uncommitted edits.
+- convex dev rewrites convex/_generated/{api.js,dataModel.d.ts,server.d.ts,server.js} with line-ending-only diffs; restore them with git checkout. Only api.d.ts carries a real change (keyLogic).
+- `npx gitnexus analyze` rewrites the tracked CLAUDE.md, AGENTS.md and .claude/skills/gitnexus/*; revert those before committing.
+- cmd.exe strips JSON quotes from `convex run`: call node node_modules/convex/bin/main.js with an args array.
+- tcm's HUB_URL spelling is http://100.124.212.87:4000; key files are keyed by it. Never set AGENT_KEY inline in a seat's command.
+- a2a-rivet/.convex/local and .env.local are disposable test state on 3340.
 
 ### Open questions
 
 _None._
+
+### Loop state
+
+**Open PRs:** 
+- #11 — QA: accepted — loop/3-build-r3 -> master, head fe4eb14
+
+**SHA frozen for QA:** `fe4eb14`
+
+**Questions pending for Aaron:** _None._
+
+**Rulings made mid-loop:** _None._
 
 ## qa _(written session 16)_
 
 ### Pick up here
 
-Loop 1 acceptance is complete. Report 2 (docs/loops/loop-1-qa-report-2.md, qa/loop-1 fb441ab, PR #4) is accepted as the verdict on e886b6b, and all of A1–A7 pass. OUTSTANDING: the A6 live start of start-stack.ps1 is UNVERIFIED. Verify it at the main-checkout update step with a real send, once Aaron authorises updating ~/Projects/A2A-Hub after PRs #3/#4 merge. For the next QA stack, follow docs/loops/loop-1-qa/STACK.md: check ports free, start, confirm the listener PID, start from a fresh .convex, run P2 and the self-test, then the rows.
+Gauge (handoff relayed to Relay at session 16's roll, 2026-09-25). Loop 3 QA is DONE: V-004, PASS on fe4eb14. The criteria, report, instruments and run logs are in docs/loops/loop-3-qa* on qa/loop-3-harness-keys b6f1cef; PR #12 is OPEN, not merged (Aaron's word). NEXT QA work, each on Aaron's word: N.5(b), the live main-stack start (alice/bob get key files and migrate in either order; checked read-only: both rows owned, distinct prefixes, no dev-key row); K7, tcm's read-only checks after each design section 4.2 act, via loop-3-qa/k7-analyzer.mjs (selftest 21/21): --phase deploy (expect 6 rows, 2 owned, 4 legacy, the unused four absent), then --expect-names/--expect-absent/--expect-prefix/--expect-askpolicy, using the askPolicy fingerprints from the pre-deploy read. Tree clean; no process running; every QA port free.
 
 ### Watch out
 
-- A hub that says "Hub running on port N" may not be listening: Express 5 logs success on EADDRINUSE and exits 0 (T-053). Confirm the listener PID's parent command line before any test traffic.
-- `convex dev --local` dirties a frozen tree: _generated rewrites, and on a FRESH deployment convex/tsconfig.json appears even with --codegen disable (T-054). Use --codegen disable and delete the tsconfig before rows run.
-- TaskStop on an npx convex chain leaves convex-local-backend.exe running. Kill the PID tree after checking each command line.
-- Under the shared dev-key, a "marks the caller" mutant survives. Use per-seat keys and whole-row snapshots (`convex data`), not agents:getByName.
+- Two QA worktrees remain, ~/Worktrees/qa3-cand (fe4eb14, detached) and qa3-old (ea9d057), with node_modules installed: reuse them or `git worktree remove` them (QA-owned).
+- Stack scripts: loop-3-qa/start-stack.ps1 records PIDs; stop-stack.ps1 (T) proves 16 ports free, including 6790/6791.
+- `convex dev --local` binds 3210 unless the ports are pinned, opens a dashboard on 6790/6791, and creates an untracked convex/tsconfig.json (T-054); delete that file before P4's check.
+- Inline heredoc edits on this machine mangle backslashes, so write scripts to files. PowerShell: a [string] parameter re-joins arrays; the `kill` alias beats a function named Kill.
+- K7 must never send a dev-key request to tcm (N1).
 
 ### Open questions
 
 _None._
+
+### Loop state
+
+**Open PRs:** 
+- #12 — QA: not_required — qa/loop-3-harness-keys -> master, head b6f1cef
+
+**SHA frozen for QA:** _None._
+
+**Questions pending for Aaron:** _None._
+
+**Rulings made mid-loop:** _None._
 
 ## Last session
 

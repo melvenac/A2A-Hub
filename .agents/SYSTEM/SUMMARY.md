@@ -1,7 +1,7 @@
 # Project Summary
 
 <!-- state:begin -->
-<!-- generated from .agents/state.json rev 34 by open-brain v1.8.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 41 by open-brain v1.8.0 — do not edit; change state via ob_state -->
 > **Status:** v1.8.0 — Prove a truly remote agent can join the hub over the public internet with its own key. Revocation of superseded keys is verified on tcm's live DB (V-003, session 16) and tcm runs v1.8.0 (V-001). Next in the ordered remote-agent sequence: per-agent keys (T-003; on tcm 8 of 10 names share the dev-key, which resolves as `atlas`, so strict means nothing until then), warn-mode soak, `AUTH_MODE=strict`, expose over HTTPS, remote registration. askPolicy on JSON-RPC (T-004) and rate limiting (T-005) also gate exposure. On-demand spawn follows.
 
 ## What's working
@@ -9,6 +9,7 @@
 - tcm serves A2A-Hub v1.8.0 with read receipts live, and ~/Projects/A2A-Hub (every SIA seat's hub-talk) is at 003f57d / v1.8.0 _(V-001, 3 evidence)_
 - The main local stack starts on v1.8.0 from ~/Projects/A2A-Hub (003f57d) and carries a real send with read receipts; this is Loop 1's deferred A6 live start _(V-002, 1 evidence)_
 - On tcm's live DB no agent name has more than one row and no superseded key hash survives: revocation of superseded keys holds (T-001) _(V-003, 1 evidence)_
+- Loop 3 (T-003, per-agent keys, v1.9.0) passes acceptance on loop/3-build-r3 fe4eb14 _(V-004, 1 evidence)_
 
 ## What's broken
 
