@@ -17,6 +17,14 @@
  *   1  usage error or non-retryable failure (4xx, send rejected, …)
  *   2  --wait-timeout elapsed with no peer turn
  *
+ * Keys (T-003, Loop 3 §3). Each name has its own key: AGENT_KEY if set, else
+ * ~/.a2a-hub/keys/<hub-id>/<name>.key (scripts/hub-key.mjs). With neither,
+ * hub-talk exits 1 before any network call; there is no shared default.
+ *   node scripts/hub-talk.mjs --as <name> --init-key     make, store, register
+ *   node scripts/hub-talk.mjs --as <name> --rotate-key   replace (POST /a2a/rotate)
+ * Neither prints the key. A Claude seat never sets AGENT_KEY inline: that puts
+ * the key in the transcript. A register the hub refuses (4xx) is rc 1.
+ *
  * --session / --peer are optional. With neither, this registers as an
  * ide-session, heartbeats, and joins the newest cursor-to-cursor lobby or
  * the other live IDE peer (no pasted ids). --peer names who to talk to; it
@@ -37,9 +45,8 @@
  * Named limits:
  *   L1  delivery, not reading: a mark means the turn was printed by a
  *       hub-talk call, not that the model read it.
- *   L2  identity: under the shared dev-key any seat can mark turns read as
- *       any participant, so "unread by X" means unread by whoever uses the
- *       name X (until per-agent keys, T-003).
+ *   L2  identity: closed by per-agent keys (T-003). The hub checks that the
+ *       reader is the caller: strict 403s a mismatch, warn logs it.
  *   L3  foreground cannot be proven: the hub cannot tell a hub-talk whose
  *       output reaches the agent from one whose output is thrown away. The
  *       rule above is the only guard.
@@ -60,12 +67,14 @@ import {
 } from "./hub-cursor.mjs";
 import { unreadOwnLines } from "./hub-receipts.mjs";
 import { selectLobby } from "./hub-rooms.mjs";
+import { hubId, initKey, recoverPending, resolveKey, rotateKey } from "./hub-key.mjs";
 
 const HUB = process.env.HUB_URL || "http://127.0.0.1:4000";
-const AGENT_KEY = process.env.AGENT_KEY || "dev-key";
 const POLL_MS = 2000;
 const MAX_BACKOFF_MS = 10_000;
-const hdrs = { "Content-Type": "application/json", "X-Agent-Key": AGENT_KEY };
+// Set once the key is resolved (below), before any network call.
+let AGENT_KEY;
+let hdrs;
 
 function arg(flag, fallback) {
   const i = process.argv.indexOf(flag);
@@ -81,9 +90,41 @@ const INBOX = process.argv.includes("--inbox") || (!SAY && !WAIT);
 
 if (!ME) {
   console.error(
-    'Usage: node scripts/hub-talk.mjs --as <name> [--peer <name>] [--session <id>] [--inbox|--say "…"|--wait] [--wait-timeout <seconds>] [--max-turns <n>]',
+    'Usage: node scripts/hub-talk.mjs --as <name> [--peer <name>] [--session <id>] [--inbox|--say "…"|--wait] [--wait-timeout <seconds>] [--max-turns <n>] | --init-key | --rotate-key',
   );
   process.exit(1);
+}
+
+// Key management runs instead of a conversation, and never prints the key.
+if (process.argv.includes("--init-key") || process.argv.includes("--rotate-key")) {
+  const rotating = process.argv.includes("--rotate-key");
+  try {
+    const r = rotating
+      ? await rotateKey({ hub: HUB, name: ME })
+      : await initKey({ hub: HUB, name: ME, kind: "ide-session", register: true });
+    console.error(
+      `[hub-talk] ${ME}@${hubId(HUB)}: key ${rotating ? "rotated" : "created and registered"}, ` +
+        `stored in ${r.path} (prefix ${r.prefix})`,
+    );
+    process.exit(0);
+  } catch (error) {
+    console.error(`[hub-talk] ${error.message}`);
+    process.exit(1);
+  }
+}
+
+{
+  const resolved = resolveKey({ hub: HUB, name: ME });
+  if (resolved.error) {
+    console.error(`[hub-talk] ${resolved.error}`);
+    process.exit(1);
+  }
+  AGENT_KEY = resolved.key;
+  // An interrupted --init-key/--rotate-key may have left a live .next key.
+  if (resolved.source === "file" && (await recoverPending({ hub: HUB, name: ME }).catch(() => false))) {
+    AGENT_KEY = resolveKey({ hub: HUB, name: ME }).key;
+  }
+  hdrs = { "Content-Type": "application/json", "X-Agent-Key": AGENT_KEY };
 }
 
 const LOBBY = "cursor-to-cursor";
@@ -166,20 +207,32 @@ async function api(path, init, { retry = false, until = Infinity } = {}) {
   }
 }
 
+// A refused register is rc 1 with the hub's reason (Loop 3 §3.4). Swallowing it
+// would leave the seat talking under a name the hub says it does not hold. An
+// unreachable hub is left to the calls that follow, which retry or report it.
 async function register(name) {
-  await fetch(`${HUB}/a2a/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name,
-      apiKey: AGENT_KEY,
-      agentCard: {
+  let res;
+  try {
+    res = await fetch(`${HUB}/a2a/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         name,
-        description: `Coding-session peer ${name}`,
-        kind: "ide-session",
-      },
-    }),
-  }).catch(() => {});
+        apiKey: AGENT_KEY,
+        agentCard: {
+          name,
+          description: `Coding-session peer ${name}`,
+          kind: "ide-session",
+        },
+      }),
+    });
+  } catch {
+    return;
+  }
+  if (res.status >= 400 && res.status < 500) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(`register ${name} refused (${res.status}): ${body.error ?? "unknown"}`);
+  }
 }
 
 function printTurns(messages) {

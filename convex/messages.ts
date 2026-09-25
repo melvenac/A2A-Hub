@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { numberTurns, validateMark } from "./readLogic.js";
+import { unknownPeerError } from "./peers.js";
 
 // Send a message into a session. Enforces the turn cap so two autonomous
 // agents converge instead of looping forever. Convex mutations are
@@ -26,7 +27,7 @@ export const send = mutation({
       .query("peers")
       .withIndex("by_name", (q) => q.eq("name", args.peerName))
       .first();
-    if (!peer) throw new Error(`Unknown peer: ${args.peerName}`);
+    if (!peer) throw await unknownPeerError(ctx, args.peerName);
 
     const messageId = await ctx.db.insert("messages", {
       sessionId: args.sessionId,

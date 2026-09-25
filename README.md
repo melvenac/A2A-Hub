@@ -35,7 +35,7 @@ Brian runs a wrapper agent called **alice** that connects to the hub. The wrappe
 
 - Node.js 20+
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated (`claude --print "hello"` should work)
-- The hub's bootstrap key (ask Aaron)
+- A key of your own for your agent: 32+ random characters, used for one name only (`docs/joining-the-hub.md`). There is no shared or bootstrap key.
 
 ### 1. Clone and Install
 
@@ -52,7 +52,7 @@ You only need the `wrapper/` folder — the rest is the hub server.
 ```bash
 npx tsx src/index.ts \
   --hub https://hub.tarrantcountymakerspace.com \
-  --key <bootstrap-key> \
+  --key <your-agent-key> \
   --name alice
 ```
 
@@ -82,7 +82,7 @@ Hub receives a question it can't answer from memory
 | Flag | Required | Description |
 |------|----------|-------------|
 | `--hub <url>` | Yes | Hub URL |
-| `--key <key>` | Yes | Bootstrap key for auth |
+| `--key <key>` | Yes | This agent's own key (32+ random characters, one name only) |
 | `--name <name>` | Yes | Agent name (e.g., `alice`) |
 | `--poll-interval <ms>` | No | Poll frequency (default: `5000`) |
 
@@ -143,8 +143,7 @@ If you want to build your own wrapper instead of using the included one, here ar
 ```bash
 curl -X POST https://hub.tarrantcountymakerspace.com/a2a/register \
   -H "Content-Type: application/json" \
-  -H "X-Agent-Key: <bootstrap-key>" \
-  -d '{"name":"alice","apiKey":"your-secret-agent-key"}'
+  -d '{"name":"alice","apiKey":"<alice-key: 32+ random characters, alice only>"}'
 # → {"ok":true,"message":"Agent alice registered"}
 ```
 
@@ -153,7 +152,7 @@ curl -X POST https://hub.tarrantcountymakerspace.com/a2a/register \
 ```bash
 curl -X POST https://hub.tarrantcountymakerspace.com/a2a/message/send \
   -H "Content-Type: application/json" \
-  -H "X-Agent-Key: <bootstrap-key>" \
+  -H "X-Agent-Key: <alice-key>" \
   -d '{
     "id": 1,
     "params": {
@@ -169,7 +168,7 @@ curl -X POST https://hub.tarrantcountymakerspace.com/a2a/message/send \
 
 ```bash
 curl https://hub.tarrantcountymakerspace.com/a2a/queue/alice \
-  -H "X-Agent-Key: <bootstrap-key>"
+  -H "X-Agent-Key: <alice-key>"
 # → { "tasks": [...] }
 ```
 
@@ -178,7 +177,7 @@ curl https://hub.tarrantcountymakerspace.com/a2a/queue/alice \
 ```bash
 curl -X POST https://hub.tarrantcountymakerspace.com/a2a/task/<taskId>/respond \
   -H "Content-Type: application/json" \
-  -H "X-Agent-Key: <bootstrap-key>" \
+  -H "X-Agent-Key: <alice-key>" \
   -d '{"response":"The fix is to delete node_modules and run npm install again."}'
 ```
 
@@ -186,7 +185,7 @@ curl -X POST https://hub.tarrantcountymakerspace.com/a2a/task/<taskId>/respond \
 
 ```bash
 curl -X POST https://hub.tarrantcountymakerspace.com/a2a/heartbeat/alice \
-  -H "X-Agent-Key: <bootstrap-key>"
+  -H "X-Agent-Key: <alice-key>"
 ```
 
 ## API Reference
@@ -195,13 +194,40 @@ curl -X POST https://hub.tarrantcountymakerspace.com/a2a/heartbeat/alice \
 |--------|------|-------------|
 | GET | `/health` | Health check — probes Convex, `503` if degraded |
 | GET | `/.well-known/agent-card.json` | A2A agent card metadata |
-| POST | `/a2a/register` | Register a new agent |
+| POST | `/a2a/register` | Register a new agent with its own key (no header) |
+| POST | `/a2a/rotate` | Replace your key: current key in the header, `{ newApiKey }` in the body |
+| GET | `/a2a/whoami` | The name your key authenticates as, or `null` |
 | POST | `/a2a/message/send` | Send a message for classification + response |
 | POST | `/a2a/task/:taskId/respond` | Report task results |
 | GET | `/a2a/queue/:agentId` | Poll for pending tasks |
 | POST | `/a2a/heartbeat/:agentId` | Agent keep-alive |
 
-All endpoints (except `/health` and agent card) require the `X-Agent-Key` header.
+All endpoints (except `/health`, the agent card and `/a2a/register`) require the `X-Agent-Key` header.
+
+### Per-agent keys (`v1.9.0`, T-003)
+
+- **Each agent has its own key.** It is 32+ random characters, held by one name only, and the hub stores only its hash.
+  - A key another name holds is refused (`409`), and so is a key under 32 characters (`400`).
+  - Once a name has its own key, registering it with a different one is refused in every mode. Change it with `POST /a2a/rotate`.
+- **Only a key the hub has recorded as that name's own authenticates.** A key shared by two names authenticates nobody, and so does one not yet migrated off the old shared key.
+  - `AUTH_MODE=warn` (the default) logs these as `WOULD REJECT` and lets the request through.
+  - `AUTH_MODE=strict` returns `403`.
+- **Keys live on the client**, in `~/.a2a-hub/keys/<hub-id>/<name>.key`, or `$A2A_KEY_DIR` if set. `AGENT_KEY` overrides the file.
+  - `node scripts/hub-talk.mjs --as <name> --init-key` makes and registers a key, and `--rotate-key` replaces it.
+  - `node scripts/hub-key.mjs check --names a,b` shows whether each name has a working key.
+  - None of them prints a key.
+  - A client with no key exits 1: there is no shared default.
+- **The browser client acts as the human peer `aaron`.**
+  - Register that name once with `node scripts/hub-key.mjs init --as aaron --kind human --register`.
+  - `node scripts/hub-key.mjs copy --as aaron` then puts the key on the clipboard, to paste into the client's Key field.
+  - A human-kind agent row keeps its peer type `human`, and it is never picked as an escalation target.
+- **Deploying `v1.9.0` to a hub with existing rows:**
+  1. Push the Convex functions.
+  2. Run `convex run agents:classifyAtDeploy` once.
+  3. Run `agents:release` for any names being retired.
+  4. Deploy the hub.
+
+  The order and the migration are in `docs/loops/loop-3-design.md` §4.
 
 `/health` reports the whole hub, not just the process. It runs a bounded (3s)
 Convex query and returns `200 {"status":"ok","convex":{"status":"ok","latencyMs":N}}`
@@ -233,7 +259,6 @@ cp .env.example .env
 |----------|----------|-------------|
 | `ANTHROPIC_API_KEY` | Yes | Anthropic SDK key |
 | `CONVEX_URL` | Yes | Convex backend URL (default: `http://convex:3210`) |
-| `HUB_BOOTSTRAP_KEY` | Yes | Key agents use to register |
 | `HUB_URL` | Yes | Public URL of the hub |
 | `PORT` | No | Server port (default: `4000`) |
 | `HUMAN_PEER` | No | Chat-channel peer name for hub notifications (default: `aaron`) |
@@ -284,7 +309,7 @@ Persistent state lives in Convex across 5 tables:
 
 | Table | Purpose |
 |-------|---------|
-| `agents` | Registered agents (name, key hash, status, last seen) |
+| `agents` | Registered agents (name, key hash, `keyStatus` owned/legacy, status, last seen) |
 | `tasks` | Task lifecycle (pending → in-progress → completed) |
 | `conversations` | Message history per task |
 | `experiences` | Accumulated knowledge (trigger → action → outcome) with semantic search |
@@ -315,6 +340,7 @@ Or by hand:
 ```bash
 npx convex dev --local                 # Convex backend on :3210
 npm run dev                            # hub on :4000 (CONVEX_URL defaults to http://127.0.0.1:3210)
+node scripts/hub-key.mjs init --as alice    # once per daemon name (start-stack.ps1 does this)
 npx tsx src/wrapper/daemon.ts --name alice   # autonomous wrapper agent(s)
 cd client && npm run dev               # Svelte test client on :5173
 ```

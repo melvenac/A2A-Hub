@@ -2,28 +2,48 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import express from "express";
 import {
   decideHeartbeat,
-  evaluateNameClaim,
+  decideRegister,
   INSTANCE_LIVENESS_MS,
   isSupersededError,
 } from "../src/identity.js";
+import { makeRegisterHandler } from "../src/keys.js";
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("evaluateNameClaim (Layer A)", () => {
-  it("same-hash re-register is silent", () => {
-    expect(evaluateNameClaim("abc", "abc", "warn")).toBe("ok");
-    expect(evaluateNameClaim("abc", "abc", "strict")).toBe("ok");
+// 32+ characters: test-only keys, registered on no stack (Loop 3 O6).
+const K1 = "k1-test-key-000000000000000000000000";
+const OTHER = "other-test-key-000000000000000000000";
+
+// decideRegister replaced evaluateNameClaim (Loop 3 §7). The name-claim cases
+// that used to live here are the owned-name rows of its table.
+describe("decideRegister (Layer A, Loop 3 §7)", () => {
+  const owned = { apiKeyHash: "abc", keyStatus: "owned" as const };
+  const base = { heldByOtherName: false, keyTooShort: false };
+
+  it("same-hash re-register of an owned name is silent in both modes", () => {
+    for (const strict of [false, true]) {
+      expect(decideRegister({ ...base, existing: owned, presentedHash: "abc", strict })).toEqual({
+        kind: "same",
+        legacy: false,
+      });
+    }
   });
 
-  it("first register (no existing row) is ok", () => {
-    expect(evaluateNameClaim(undefined, "abc", "strict")).toBe("ok");
+  it("first register (no existing row) inserts", () => {
+    expect(
+      decideRegister({ ...base, existing: null, presentedHash: "abc", strict: true }).kind
+    ).toBe("insert");
   });
 
-  it("different-hash claim logs in warn and 409s in strict", () => {
-    expect(evaluateNameClaim("abc", "def", "warn")).toBe("warn");
-    expect(evaluateNameClaim("abc", "def", "strict")).toBe("reject");
+  it("different-hash claim on an owned name is 409 in warn as well as strict (C7)", () => {
+    for (const strict of [false, true]) {
+      expect(decideRegister({ ...base, existing: owned, presentedHash: "def", strict })).toMatchObject({
+        kind: "refuse",
+        status: 409,
+      });
+    }
   });
 });
 
@@ -89,7 +109,7 @@ describe("decideHeartbeat (Layer B)", () => {
   });
 });
 
-describe("register HTTP name claim", () => {
+describe("register HTTP (src/keys.ts makeRegisterHandler)", () => {
   async function listen(app: express.Express) {
     const server = await new Promise<import("node:http").Server>((resolve) => {
       const s = app.listen(0, "127.0.0.1", () => resolve(s));
@@ -104,87 +124,101 @@ describe("register HTTP name claim", () => {
     };
   }
 
-  function mount(convex: { query: ReturnType<typeof vi.fn>; mutation: ReturnType<typeof vi.fn> }, mode: "warn" | "strict") {
+  function mount(
+    convex: { query: ReturnType<typeof vi.fn>; mutation: ReturnType<typeof vi.fn> },
+    mode: "warn" | "strict"
+  ) {
     const app = express();
     app.use(express.json());
-    app.post("/a2a/register", async (req, res) => {
-      const { name, apiKey } = req.body;
-      const apiKeyHash = `hash:${apiKey}`;
-      const existing = await convex.query("getByName", { name });
-      const claim = evaluateNameClaim(existing?.apiKeyHash, apiKeyHash, mode);
-      if (claim === "reject") {
-        return res.status(409).json({ error: "Name claimed by a different identity" });
-      }
-      if (claim === "warn") {
-        console.warn(`[auth] WOULD REJECT name claim on ${name}`);
-      }
-      await convex.mutation("register", { name, apiKeyHash, instanceId: req.body.instanceId });
-      res.json({ ok: true });
-    });
+    app.post(
+      "/a2a/register",
+      makeRegisterHandler({ convex: convex as any, authMode: mode, notifyHuman: async () => {} })
+    );
     return app;
   }
 
-  it("same-hash re-register is silent and calls register", async () => {
-    const convex = {
-      query: vi.fn().mockResolvedValue({ name: "alice", apiKeyHash: "hash:k1" }),
-      mutation: vi.fn().mockResolvedValue("id"),
-    };
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const app = mount(convex, "strict");
+  async function post(app: express.Express, body: unknown) {
     const { port, close } = await listen(app);
     try {
       const res = await fetch(`http://127.0.0.1:${port}/a2a/register`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "alice", apiKey: "k1" }),
+        body: JSON.stringify(body),
       });
-      expect(res.status).toBe(200);
-      expect(convex.mutation).toHaveBeenCalledOnce();
-      expect(warn).not.toHaveBeenCalled();
+      return { status: res.status, json: await res.json() };
     } finally {
       await close();
     }
+  }
+
+  /** A refusal as the Convex client delivers it: ConvexError with data. */
+  function refusal(status: number, reason: string) {
+    return Object.assign(new Error(reason), { data: { status, reason } });
+  }
+
+  it("a same-hash re-register is silent and registers the peer", async () => {
+    const convex = {
+      query: vi.fn(),
+      mutation: vi.fn().mockResolvedValue({ id: "id", event: "same" }),
+    };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const r = await post(mount(convex, "strict"), { name: "alice", apiKey: K1 });
+    expect(r.status).toBe(200);
+    expect(convex.mutation).toHaveBeenCalledTimes(2); // registerAgent, peers.ensure
+    expect(warn).not.toHaveBeenCalled();
   });
 
-  it("different-hash claim 409s in strict and does not register", async () => {
+  it("passes the key floor and the mode to the mutation, never the key", async () => {
     const convex = {
-      query: vi.fn().mockResolvedValue({ name: "alice", apiKeyHash: "hash:owner" }),
-      mutation: vi.fn(),
+      query: vi.fn(),
+      mutation: vi.fn().mockResolvedValue({ id: "id", event: "insert" }),
     };
-    const app = mount(convex, "strict");
-    const { port, close } = await listen(app);
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/a2a/register`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "alice", apiKey: "other" }),
-      });
-      expect(res.status).toBe(409);
-      expect(convex.mutation).not.toHaveBeenCalled();
-    } finally {
-      await close();
+    await post(mount(convex, "strict"), { name: "alice", apiKey: "short" });
+    const args = convex.mutation.mock.calls[0][1];
+    expect(args).toMatchObject({ name: "alice", keyTooShort: true, strict: true });
+    expect(JSON.stringify(args)).not.toContain("short\"");
+    expect(args.apiKeyHash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("a mutation refusal becomes its status and registers no peer (C7, both modes)", async () => {
+    for (const mode of ["warn", "strict"] as const) {
+      const convex = {
+        query: vi.fn(),
+        mutation: vi.fn().mockRejectedValue(refusal(409, "name holds its own key; use rotate")),
+      };
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      const r = await post(mount(convex, mode), { name: "alice", apiKey: OTHER });
+      expect(r.status).toBe(409);
+      expect(r.json.error).toContain("own key");
+      expect(convex.mutation).toHaveBeenCalledOnce(); // no peers.ensure
     }
   });
 
-  it("different-hash claim logs in warn and still registers", async () => {
-    const convex = {
-      query: vi.fn().mockResolvedValue({ name: "alice", apiKeyHash: "hash:owner" }),
-      mutation: vi.fn().mockResolvedValue("id"),
-    };
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const app = mount(convex, "warn");
-    const { port, close } = await listen(app);
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/a2a/register`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "alice", apiKey: "other" }),
-      });
-      expect(res.status).toBe(200);
-      expect(convex.mutation).toHaveBeenCalledOnce();
-      expect(warn.mock.calls.some((c) => String(c[0]).includes("WOULD REJECT name claim"))).toBe(true);
-    } finally {
-      await close();
+  it("a legacy re-register in warn is logged, and a migration is logged", async () => {
+    for (const [event, text] of [
+      ["legacy-same", "WOULD REJECT legacy key on register alice"],
+      ["migrate", "MIGRATE alice"],
+    ]) {
+      const convex = { query: vi.fn(), mutation: vi.fn().mockResolvedValue({ id: "id", event }) };
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const r = await post(mount(convex, "warn"), { name: "alice", apiKey: OTHER });
+      expect(r.status).toBe(200);
+      expect(warn.mock.calls.some((c) => String(c[0]).includes(text))).toBe(true);
+      warn.mockRestore();
+    }
+  });
+
+  it("a human-kind card makes a human peer; anything else an agent peer (§12 H1)", async () => {
+    for (const [card, type] of [
+      [{ name: "aaron", kind: "human" }, "human"],
+      [{ name: "alice", kind: "ide-session" }, "agent"],
+    ] as const) {
+      const convex = {
+        query: vi.fn(),
+        mutation: vi.fn().mockResolvedValue({ id: "id", event: "insert" }),
+      };
+      await post(mount(convex, "warn"), { name: card.name, apiKey: K1, agentCard: card });
+      expect(convex.mutation.mock.calls[1][1]).toEqual({ name: card.name, type });
     }
   });
 });

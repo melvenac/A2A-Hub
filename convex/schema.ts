@@ -63,6 +63,10 @@ export default defineSchema({
         what: v.optional(v.any()),
       })
     ),
+    // T-003 (Loop 3 §1.1): stored, never derived from a holder count. Only an
+    // owned row authenticates. Optional so rows present at deploy stay valid;
+    // absent reads as legacy until agents:classifyAtDeploy runs.
+    keyStatus: v.optional(v.union(v.literal("owned"), v.literal("legacy"))),
   })
     .index("by_name", ["name"])
     // Auth looks agents up by key hash on every guarded request.

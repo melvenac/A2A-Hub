@@ -9,9 +9,9 @@ import { AgentQueue } from "./queue.js";
 import { RepoFixer } from "./repo-fixer.js";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api.js";
-import { createHash } from "crypto";
-import { requireAgentKey, authMode } from "./auth.js";
-import { evaluateNameClaim, INSTANCE_LIVENESS_MS } from "./identity.js";
+import { requireAgentKey, authMode, checkReader } from "./auth.js";
+import { INSTANCE_LIVENESS_MS } from "./identity.js";
+import { makeRegisterHandler, makeRotateHandler, whoami } from "./keys.js";
 import { askDeniedReason, evaluateAsk } from "./ask-policy.js";
 import { DefaultRequestHandler } from "@a2a-js/sdk/server";
 import { jsonRpcHandler, UserBuilder } from "@a2a-js/sdk/server/express";
@@ -336,44 +336,17 @@ app.get("/a2a/agents/live", async (req, res) => {
   }
 });
 
-// Agent registration — also registers the agent as a chat peer.
-app.post("/a2a/register", async (req, res) => {
-  try {
-    const { name, apiKey, agentCard } = req.body;
-    if (!name || !apiKey) {
-      return res.status(400).json({ error: "Missing required fields: name, apiKey" });
-    }
+// Agent registration — also registers the agent as a chat peer. The key rules
+// (uniqueness, owned names, the key floor, migration) live in the mutation
+// (Loop 3 §1.3); src/keys.ts maps its refusals to 409/400.
+app.post("/a2a/register", makeRegisterHandler({ convex, authMode, notifyHuman }));
 
-    const apiKeyHash = createHash("sha256").update(apiKey).digest("hex");
-    const card = agentCard ?? { name, description: `Agent ${name}` };
-    const instanceId =
-      typeof req.body.instanceId === "string" ? req.body.instanceId : undefined;
+// Key rotation (Loop 3 §2): the current key in X-Agent-Key, the new one in the
+// body. Guarded by the /a2a prefix, and it fails closed in warn too.
+app.post("/a2a/rotate", makeRotateHandler({ convex }));
 
-    const existing = await convex.query(api.agents.getByName, { name });
-    const claim = evaluateNameClaim(existing?.apiKeyHash, apiKeyHash, authMode);
-    if (claim === "reject") {
-      return res.status(409).json({ error: "Name claimed by a different identity" });
-    }
-    if (claim === "warn") {
-      console.warn(
-        `[auth] WOULD REJECT name claim on ${name} ` +
-          `(AUTH_MODE=warn; set AUTH_MODE=strict to enforce)`
-      );
-    }
-
-    await convex.mutation(api.agents.register, {
-      name,
-      apiKeyHash,
-      agentCard: card,
-      instanceId,
-    });
-    await convex.mutation(api.peers.register, { name, type: "agent" });
-    await notifyHuman(`Agent ${name} is now online`);
-    res.json({ ok: true, message: `Agent ${name} registered` });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// Which name this key authenticates as (Loop 3 §2.4). Read-only.
+app.get("/a2a/whoami", whoami);
 
 // --- Chat channel routes (peers/sessions/messages) ---
 
@@ -504,8 +477,8 @@ app.get("/a2a/session/:sessionId/messages", async (req, res) => {
 
 // Read receipts (T-049). The only route that writes read state: hub-talk
 // posts here after --inbox or --wait has printed turns, naming the reader.
-// Fetching messages never marks anything. `reader` is asserted by the client —
-// under the shared dev-key the hub cannot check it (named limit, until T-003).
+// Fetching messages never marks anything. `reader` must be the caller (T-049
+// limit L2, Loop 3 §5): strict 403s a mismatch; warn logs it and marks as before.
 app.post("/a2a/session/:sessionId/read", async (req, res) => {
   try {
     const { reader, throughTurn, via } = req.body ?? {};
@@ -514,6 +487,16 @@ app.post("/a2a/session/:sessionId/read", async (req, res) => {
     }
     if (via !== "inbox" && via !== "wait") {
       return res.status(400).json({ error: 'via must be "inbox" or "wait"' });
+    }
+    const readerCheck = checkReader(reader, req.agentName);
+    if (readerCheck === "reject") {
+      return res.status(403).json({ error: "reader is not the caller" });
+    }
+    if (readerCheck === "warn") {
+      console.warn(
+        `[auth] WOULD REJECT reader ${reader} for caller ${req.agentName ?? "unknown"} ` +
+          `on POST /read (AUTH_MODE=warn; set AUTH_MODE=strict to enforce)`
+      );
     }
     const result = await convex.mutation(api.messages.markRead, {
       sessionId: req.params.sessionId,

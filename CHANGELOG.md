@@ -2,6 +2,59 @@
 
 All notable changes to the A2A Intelligent Hub.
 
+## [v1.9.0] - 2026-09-24
+
+Loop 3 (T-003, P0): per-agent keys and rotation. Brief `docs/loops/loop-3-per-agent-keys-brief.md`, design `docs/loops/loop-3-design.md` (final at `a2e1562`), rulings 1 and 2, D-006 and D-007.
+
+### Added
+- **Every agent has a key of its own.** Measured on tcm (Loop 2, V-003): 8 of 10 names shared the old `dev-key`, which resolved to `atlas` for all 8. So `AUTH_MODE=strict` could not tell those agents apart, and revoking the key would lock all 8 out.
+  - **Uniqueness (U1).** `register` refuses a key another name holds, in both modes (`409`).
+  - **Only an owned row authenticates (U3).** A hash two names share, or one not yet migrated, resolves to nobody. From deploy on, the `dev-key` resolves to no one.
+  - **Ownership is stored.** New optional field `agents.keyStatus` (`owned` | `legacy`). It is never derived from a holder count, so the last holder of a shared key cannot become owned by attrition (ruling 1, R1).
+  - **A migrated name keeps its key (C7).** In warn as well as strict, a register with a different key is refused (`409`), and the stored hash is unchanged.
+  - **Key floor.** A key acquired by register or rotate must be at least 32 characters (`400`). This refuses the `dev-key` structurally, with no literal in the code. The floor rides on a flag from the hub, so as a backstop every public mutation that can set a key refuses to acquire the retired shared key's hash, in both modes and whatever the flag says. A legacy holder may keep it until its release. The general direct-Convex-caller gap belongs to T-057.
+  - The rules live in the Convex mutation, so the check and the write commit together (`convex/keyLogic.ts`, `agents.registerAgent`). Refusals throw a `ConvexError`, so the v1.8.0 hub never reads one as success.
+- **Rotation: `POST /a2a/rotate`.** The current key goes in the header and `{ newApiKey }` in the body.
+  - It is a compare-and-swap, and the old key stops authenticating at once.
+  - It takes the instance lease, so a second instance still on the old key is superseded (a 409 on heartbeat in warn, a 403 in strict) and cannot bring the key back.
+  - It fails closed in warn too.
+- **`GET /a2a/whoami`** returns the name a key authenticates as, or `null`.
+- **No public Convex function returns `apiKeyHash`** (ruling 3, F1). `getByName` and `listOnline` project it out, so the stored hash that `rotateKey` takes as proof is readable only with the admin key.
+- **No path ever marks a row holding the retired shared key owned** (ruling 3, F2). `ownedStatusFor` is the one chokepoint, `classifyAtDeploy` repairs rows an earlier build promoted, and the lookup never authenticates that hash.
+- **Migration (§4.1, D-007).** A legacy name's first register with a fresh key deletes its legacy row and inserts a fresh owned one, in one transaction.
+  - `agents:classifyAtDeploy` (internal) classifies the rows present at deploy, once.
+  - `agents:release` (internal) deletes a name's agents row. Peers, sessions and messages stay.
+- **Client keys: `scripts/hub-key.mjs`.** One implementation for every client. Keys live in `~/.a2a-hub/keys/<hub-id>/<name>.key` (`$A2A_KEY_DIR` if set), and `AGENT_KEY` overrides the file.
+  - `init` (with `--register`), `rotate`, `check --names` (the gate for the checkout update), `copy` (to the clipboard only) and `path`. Keys are generated from 32 CSPRNG bytes and never printed; output shows the path and an 8-hex hash prefix only.
+  - An interrupted key change leaves `<name>.key.next`, which the next run promotes after checking it with `whoami`.
+- **`hub-talk --init-key` and `--rotate-key`.**
+- **The browser client acts as the human peer `aaron`** with its own key (§12).
+  - `peers.ensure`: registration never changes an existing peer's type.
+  - `listOnline` leaves out human-kind rows, so escalation never picks a person.
+  - The Key field starts empty and is a password field.
+
+### Changed
+- **No client defaults to the `dev-key` any more.** That covers all 7 sites: `hub-talk`, `daemon.ts`, `ask-agent`, the compliance probe, `demo-loop`, `verify-client-stack` and `client/`. With no key they exit 1 before any network call. `ask-agent`'s `ask-<pid>`, `demo-loop` and `verify-client-stack` use an ephemeral in-memory key.
+- **hub-talk contract (D-006).**
+  - A register the hub refuses is now rc 1 with the hub's reason. It used to be ignored.
+  - Exit codes 0/1/2 are otherwise unchanged.
+- **`POST /a2a/session/:id/read` checks `reader === caller`** (T-049 limit L2). strict `403`; warn logs `WOULD REJECT reader` and marks as before.
+- **Auth log lines say why a key failed:** `unknown`, `legacy` or `shared`. They still never carry a key or a hash.
+- **`Unknown peer` names its likely cause** when the name has no agents row: `not registered on this hub`. That makes a refused register loud on an old client (ruling 2, B1).
+- `daemon.ts` exits on a refused register or a 403 instead of retrying. `start-stack.ps1` generates each daemon's key through `hub-key.mjs`, honours `A2A_KEY_DIR`, and pins the daemons' `HUB_URL` to the local hub.
+- `evaluateNameClaim` is replaced by `decideRegister` (`convex/keyLogic.ts`).
+
+### Fixed
+- **Docs:** `joining-the-hub.md` now describes what tcm runs (v1.8.0, warn) and the per-agent key rules, with one `HUB_URL` spelling per hub.
+- **Removed `HUB_BOOTSTRAP_KEY`**, which no code ever read (design §0). It was cut from `.env.example`, `DEPLOY.md`, `README.md`, `reference/ARCHITECTURE.md`, `PRD.md` and `RULES.md`.
+
+### Deploying
+1. Push the Convex functions.
+2. Run `convex run agents:classifyAtDeploy` once, then `agents:release` for each retired name.
+3. Deploy the hub, still in `AUTH_MODE=warn`.
+
+Order, cutover and the main-checkout gate: design §4.2 and §3.6. Every tcm act needs Aaron's word.
+
 ## [v1.8.0] - 2026-09-23
 
 Loop 1 (`docs/loops/loop-1-read-receipts.md`, design `loop-1-design.md`, ruled by the planner).

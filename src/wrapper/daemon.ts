@@ -23,7 +23,7 @@
  *
  * Env:
  *   HUB_URL             hub base URL (default http://localhost:4000)
- *   AGENT_KEY           X-Agent-Key value (default dev-key)
+ *   AGENT_KEY           X-Agent-Key value (else the key file; no default, T-003)
  *   ANTHROPIC_API_KEY   if set, replies use a real LLM; otherwise a
  *                       deterministic fallback proves the transport loop
  *   WRAPPER_MODEL       model for replies (default claude-haiku-4-5-20251001)
@@ -34,6 +34,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { existsSync } from "node:fs";
 import { isSupersededError } from "../identity.js";
 import {
   isParticipant,
@@ -86,7 +87,7 @@ if (process.argv.includes("--print-persona")) {
 }
 
 const HUB_URL = process.env.HUB_URL || "http://127.0.0.1:4000";
-const AGENT_KEY = process.env.AGENT_KEY || "dev-key";
+const AGENT_KEY = await resolveAgentKey(NAME, HUB_URL);
 // Process identity for ADR-011 Layer B. Register is the takeover; heartbeat
 // renews or learns we were superseded. One clean seam: this id on both calls.
 const INSTANCE_ID = randomUUID();
@@ -95,6 +96,39 @@ const MAX_TOKENS = parseInt(process.env.WRAPPER_MAX_TOKENS || "300");
 const POLL_MS = parseInt(process.env.POLL_MS || "2000");
 
 const headers = { "Content-Type": "application/json", "X-Agent-Key": AGENT_KEY };
+
+/**
+ * The daemon's key (T-003, Loop 3 §3.2): AGENT_KEY, else this name's key file,
+ * else exit 1. There is no shared default. One implementation for every
+ * client lives in scripts/hub-key.mjs; the daemon runs from src/ (tsx) or
+ * dist/src/ (built), so it looks for the script in both layouts.
+ */
+async function resolveAgentKey(name: string, hub: string): Promise<string> {
+  const candidates = [
+    new URL("../../scripts/hub-key.mjs", import.meta.url),
+    new URL("../../../scripts/hub-key.mjs", import.meta.url),
+  ];
+  const found = candidates.find((u) => existsSync(u));
+  if (!found) {
+    if (process.env.AGENT_KEY) return process.env.AGENT_KEY;
+    console.error(`[${name}] scripts/hub-key.mjs not found and AGENT_KEY unset; refusing to start`);
+    process.exit(1);
+  }
+  const { resolveKey } = (await import(found.href)) as {
+    resolveKey: (o: { hub: string; name: string }) => { key?: string; error?: string };
+  };
+  const r = resolveKey({ hub, name });
+  if (!r.key) {
+    console.error(`[${name}] ${r.error}`);
+    process.exit(1);
+  }
+  return r.key;
+}
+
+/** A hub error from hub() below carries its status as "→ <status>:". */
+function hasStatus(error: { message: string }, status: number): boolean {
+  return error.message.includes(`→ ${status}:`);
+}
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
 
 // --repo turns this peer into a standing expert on one codebase: replies come
@@ -248,6 +282,11 @@ async function main() {
       });
       break;
     } catch (error: any) {
+      // A refusal is not a boot race: retrying cannot fix a refused key.
+      if (/→ 4dd:/.test(error.message)) {
+        console.error(`[${NAME}] register refused: ${error.message}`);
+        process.exit(1);
+      }
       if (attempt >= 10) throw error;
       console.log(`[${NAME}] hub not reachable (attempt ${attempt}), retrying in 2s...`);
       await new Promise((r) => setTimeout(r, 2000));
@@ -272,6 +311,12 @@ async function main() {
       if (isSupersededError(error)) {
         console.error(`[${NAME}] superseded by a newer instance, exiting`);
         process.exit(0);
+      }
+      // strict: this key no longer authenticates (rotated or released).
+      // Retrying would only repeat the 403, so stop loudly (Loop 3 §2.3).
+      if (hasStatus(error, 403) && /Invalid X-Agent-Key/.test(error.message)) {
+        console.error(`[${NAME}] key rejected for ${NAME}; run hub-talk --init-key or --rotate-key`);
+        process.exit(1);
       }
       console.error(`[${NAME}] poll error: ${error.message}`);
     }

@@ -5,19 +5,31 @@
  * Answers one question: can a stock @a2a-js/sdk client talk to this hub?
  * Read-only. Sends one message/send; makes no other writes.
  *
- * The guarded routes need a real key. Reuse the one the daemons already run
- * with rather than registering a probe agent — register upserts by name now,
- * but a probe still does not need its own identity.
+ * The guarded routes need a real key: --key, AGENT_KEY, or the key file of
+ * the agent named by --as (scripts/hub-key.mjs). With none it exits 1; there
+ * is no shared default key (T-003).
  *
- * Usage: node --env-file=.env scripts/a2a-compliance-probe.mjs
+ * Usage: node scripts/a2a-compliance-probe.mjs --as <name> [--base URL]
  *        node scripts/a2a-compliance-probe.mjs --key <key> [--base URL]
  */
+import { resolveKey } from "./hub-key.mjs";
+
 const baseArg = process.argv.indexOf("--base");
 const BASE = baseArg > -1 ? process.argv[baseArg + 1] : "http://127.0.0.1:4000";
 const keyArg = process.argv.indexOf("--key");
-// Same default as daemon.ts:87 — every peer currently runs with the literal
-// "dev-key" because .env sets no AGENT_KEY.
-const KEY = keyArg > -1 ? process.argv[keyArg + 1] : process.env.AGENT_KEY || "dev-key";
+const asArg = process.argv.indexOf("--as");
+function probeKey() {
+  if (keyArg > -1 && process.argv[keyArg + 1]) return process.argv[keyArg + 1];
+  if (process.env.AGENT_KEY) return process.env.AGENT_KEY;
+  const name = asArg > -1 ? process.argv[asArg + 1] : undefined;
+  const r = name ? resolveKey({ hub: BASE, name }) : { error: "pass --as <name> or --key" };
+  if (r.error) {
+    console.error(`[probe] no key: ${r.error}`);
+    process.exit(1);
+  }
+  return r.key;
+}
+const KEY = probeKey();
 
 const pass = [], fail = [], warn = [];
 const ok = (m) => { pass.push(m); console.log(`  PASS  ${m}`); };

@@ -114,12 +114,21 @@ if (Test-PortBusy 4000) {
     Wait-ForPort -Port 4000 -TimeoutSec 60 -What 'Hub'
 }
 
-# 3. Agent daemons -- personas resolve from personas\<name>.md relative to repo root
+# 3. Agent daemons -- personas resolve from personas\<name>.md relative to repo root.
+#    Each daemon has its own key (T-003): generated once by scripts\hub-key.mjs
+#    into $A2A_KEY_DIR (default ~\.a2a-hub\keys)\127.0.0.1-4000\<name>.key, never
+#    printed. HUB_URL is set explicitly so the daemon looks up that same file.
+$localHub = 'http://127.0.0.1:4000'
 foreach ($agent in @('alice', 'bob')) {
     if (Test-DaemonRunning $agent) {
         Write-Host "==> $agent daemon already running -- skipping" -ForegroundColor Yellow
     } else {
-        Start-StackWindow "A2A $agent" $root "node --env-file=.env dist\src\wrapper\daemon.js --name $agent"
+        $keyFile = (& node (Join-Path $root 'scripts\hub-key.mjs') path --as $agent --hub $localHub)
+        if (-not (Test-Path $keyFile)) {
+            & node (Join-Path $root 'scripts\hub-key.mjs') init --as $agent --hub $localHub
+            if ($LASTEXITCODE -ne 0) { throw "could not create a key for $agent" }
+        }
+        Start-StackWindow "A2A $agent" $root "`$env:HUB_URL = '$localHub'; node --env-file=.env dist\src\wrapper\daemon.js --name $agent"
     }
 }
 
