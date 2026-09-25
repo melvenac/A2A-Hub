@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 59,
+  "revision": 61,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -607,7 +607,7 @@
       "opened_session": 17,
       "closed_session": null,
       "supersedes": null,
-      "note": "D-011 step 4. One-time enrollment codes issued by a human owner replace open POST /a2a/register (hub-talk --init-key --invite <code>: a hub-talk contract change, so D-003 through the SIA planner). Grok Bot joins Aaron's account for the test; cross-account rooms by invitation come after (D-010). Bundles T-005 (rate limiting) and T-062 (error pages leak paths and stacks). Needs Loop 5's owner field. Brief not written yet."
+      "note": "D-011 step 4 (order D-012). BRIEF WRITTEN, session 18: docs/loops/loop-6-enrollment-brief.md (draft; lines at 9a38b8d). Scope: one-time enrollment codes issued by an authenticated human-kind key (hashed, single-use, expiring, never logged); a NEW name needs a code, re-register of an existing name with its own key is unchanged (hub-talk registers on every run, scripts/hub-talk.mjs:346,368); new row's owner = issuer. Closes a finding new in the brief: src/keys.ts:61 lets any register body with agentCard.kind 'human' become its own owner (an account on the caller's word). Warn logs [enroll], strict refuses; the line must be readable through the read-only key (deploy act). Bundles the exposure class: T-062 + T-055 + the 15 route catch blocks in src/index.ts answering 500 {error: error.message}; T-070; T-005 rate limiting set from measured seat traffic, and how a Funnel request's source address reaches the hub is established by test. Cross-account rooms OUT (D-013). OPEN (D-003, through Atlas): hub-talk --invite <code> with --init-key only, recommended. Build waits for the Loop 5 deploy + [authz] soak."
     },
     {
       "id": "T-068",
@@ -955,6 +955,12 @@
       "title": "Correction to D-011's order: strict comes only after Loop 5 is deployed in warn AND an [authz] soak; the read-only log must see [authz]",
       "date": "2026-09-25",
       "note": "Relay, Loop 5 ruling 1 (docs/loops/loop-5-ruling-1.md), additions A1 and A2. Reason: Loop 5 adds new checks that log `[authz] WOULD REJECT ...` in warn, and T-064's read covers only `[auth]` (key validity) on v1.10.0. Flipping strict before an [authz] soak would refuse any seat (SIA's included) acting outside its own name or rooms without warning, e.g. hub-talk --session with a pasted room id. Also, the T-065 read-only auth-log greps the literal `\\[auth\\]`, which `[authz]` lines do not match, so the soak would be blind (A1: add an `authz-log` item or widen auth-log, a tcm script change in Loop 5's deploy act on Aaron's word; a 7th item needs one more exact allow rule on his word). CORRECTED ORDER (supersedes D-011's): Loop 5 build and QA -> T-064's [auth] read -> Loop 5 deploy in warn (with assignOwnerAtDeploy) -> [authz] soak, one working day -> AUTH_MODE=strict -> Loop 6 -> Funnel -> the Grok Bot test. G-001 unchanged: no public address before strict."
+    },
+    {
+      "id": "D-013",
+      "title": "Cross-account rooms are not in Loop 6; Loop 6 enrolls agents into their owner's own account only",
+      "date": "2026-09-25",
+      "note": "Relay, session 18, planner scoping ruling in docs/loops/loop-6-enrollment-brief.md (Ruling section). The record disagreed with itself: loop-5-design.md:54-55 and loop-5-ruling-1.md:35 say cross-owner rooms come 'by invitation in Loop 6'; D-011 step 4 and T-067 say Grok Bot joins Aaron's account and cross-account rooms 'come after'. RULED: after. D-011's test does not need them (Grok Bot and relay share an owner); they are a second capability, and bundling would make a Loop 6 failure harder to localise. Loop 5's createCheck keeps refusing cross-owner rooms in strict until then. Does not change D-010: Aaron's 'yes, cross-account rooms by invitation' carried no timing and stands. Corrects the two Loop 5 texts above (append-only; they are not edited)."
     }
   ],
   "handoffs": [
@@ -974,7 +980,7 @@
     },
     {
       "seat": "planner",
-      "pick_up": "Relay session 17 close (2026-09-25 ~07:40Z; no /end, per Atlas, see watch-out). DONE THIS SESSION, all on Aaron's word: v1.9.0 merged+tagged; Loop 4 chat UI (v1.10.0) built, accepted (V-005), merged, tagged; the T-003 tcm cutover ran end to end, shipping v1.10.0, closed on K7 (V-006; log docs/loops/t-003-cutover-log.md); read-only tcm key (T-065, V-007); Loop 5 identity+membership (v1.11.0) accepted (V-008), merged (master f52f6d6) and tagged. Decisions D-008..D-012; gap G-001. NEXT, in order (D-012): (1) after ~04:30Z 2026-09-26, T-064: read tcm's [auth] log with the read-only key (`ssh -i C:/Users/melve/.ssh/tcm-readonly -o IdentitiesOnly=yes melvenac@100.124.212.87 auth-log`; auto mode OK) for a working day since the 04:14:10Z swap; (2) then ask Aaron for the Loop 5 deploy: Rivet follows docs/loops/loop-5-deploy-plan.md (chore/loop-5-deploy-plan 936fda8, NOT YET MERGED: ask Aaron to merge it with this record), including step 0.5 (full-key check of tcm's live compose env_file; copy .env if it points into the rotated dir), steps 12-13 (main checkout to master, GitNexus reindex); Aaron runs gh-runners-pause/resume himself (sudo); Gauge does PB, PD, RL2; (3) one-day [authz] soak via auth-log's authz-lines header; (4) AUTH_MODE=strict on Aaron's word; (5) Loop 6 brief (T-067: enrollment codes, rate limits T-005, error pages T-062; hub-talk contract change is D-003 via Atlas); (6) Funnel + the Grok Bot HTTPS test (T-068). Also queued: T-069 .gitnexusrc (before SIA T-187 makes /sync rebuild), T-070, T-071, T-060, T-057 (0.0.0.0:4000), T-017, T-050.",
+      "pick_up": "Relay session 18 (2026-09-25 ~10:35-11:00Z; no /end, see watch-out). DONE THIS SESSION: Loop 6 brief written (docs/loops/loop-6-enrollment-brief.md, draft, lines at 9a38b8d; T-067 note carries the scope); D-013 (cross-account rooms are NOT in Loop 6, they come after; corrects loop-5-design.md:54-55 and loop-5-ruling-1.md:35); new finding in the brief: src/keys.ts:61 lets any register body with agentCard.kind 'human' become its own owner, closed by Loop 6 scope 2. The D-003 question (how a new SIA seat gets a name once codes exist; recommended hub-talk --init-key --invite <code>) was SENT to Atlas (session sia-planner-4d) on Aaron's word ('Asl atlas about the sia seat'). Atlas (record 109) queued it for Aaron NEXT after his open CI question; SIA's own view agrees with --invite; Atlas's request (each refusal names its condition) is now in the brief, scope 1 and acceptance A. docs/session-18-loop-6-brief merged to master on Aaron's word ('merge docs'). NEXT, in order (D-012): (1) after ~04:30Z 2026-09-26, T-064: read tcm's [auth] log with the read-only key (`ssh -i C:/Users/melve/.ssh/tcm-readonly -o IdentitiesOnly=yes melvenac@100.124.212.87 auth-log`; auto mode OK) for a working day since the 04:14:10Z swap; (2) then ask Aaron for the Loop 5 deploy: Rivet follows docs/loops/loop-5-deploy-plan.md (merged to master, PR #25), including step 0.5 (full-key check of tcm's live compose env_file; copy .env if it points into the rotated dir), steps 12-13 (main checkout to master, GitNexus reindex); Aaron runs gh-runners-pause/resume himself (sudo); Gauge does PB, PD, RL2; (3) one-day [authz] soak via auth-log's authz-lines header; (4) AUTH_MODE=strict on Aaron's word; (5) Loop 6: send Rivet the brief for a design (everything except the hub-talk side until Atlas relays Aaron's answer); build only after the deploy + soak; (6) Funnel + the Grok Bot HTTPS test (T-068). Also queued: T-069 .gitnexusrc (before SIA T-187 makes /sync rebuild), T-071, T-060, T-057 (0.0.0.0:4000; reviewed before Funnel), T-017, T-050. T-070 and T-055 are now inside Loop 6's scope.",
       "watch_out": [
         "DO NOT run /end or ob_end, and never use ob_state's end_session op: it writes ONE shared last_session slot, so each seat's close overwrites the others' (SIA V-074; fix SIA T-163/T-179). At session end: set_handoff for your seat (dry run first, verify), commit on docs/*, let the SessionEnd hook capture. (Atlas, 2026-09-25, on Aaron's question.)",
         "G-001: in AUTH_MODE=warn the hub admits unknown keys as nobody. NEVER a public address (Funnel, hostname, port forward) before strict. D-011/D-012 fix the order.",
@@ -984,25 +990,27 @@
         "Questions for Aaron on SHARED work (hub-talk contract, transport, T-050, SIA tooling) go through the live SIA planner (Atlas) under D-003; A2A-only work to Aaron directly. Aaron wants DETAILED questions with a recommendation, one at a time.",
         "D-005: seats push their OWN branches (Rivet loop/* chore/*, Gauge qa/*, Relay docs/*); merges, tags, tcm acts, main-checkout updates, stack start/stop and live Convex writes each need Aaron's word for that act. The planner writes briefs, rulings and the record; Rivet builds and designs; Gauge accepts.",
         "Relay's error shape, again in session 17 (four instances): asserting without reading (bundled the main-checkout update against R2; cited ruling B1 unread; 'SIA seats may never be live' before reading hub-talk; 'refresh touches no tracked file'). Each was caught before harm, twice by peers. Read the artifact a claim rests on BEFORE sending it; validate on a known positive.",
-        "Decisions are append-only; a correction is a new decision pointing at the old (D-012 corrects D-011's order)."
+        "Decisions are append-only; a correction is a new decision pointing at the old (D-012 corrects D-011's order; D-013 corrects the Loop 5 texts' 'cross-owner rooms in Loop 6').",
+        "Loop 6 must keep re-register of an EXISTING name codeless: hub-talk registers on every run (scripts/hub-talk.mjs:346,368) and a refused register is rc 1, so a code requirement on existing names breaks every SIA seat.",
+        "The tracked .agents/AGENT.md frontmatter names Rivet (developer); this seat's name comes from the untracked AGENT.local.md (Relay). Trust the hook's seat line, not AGENT.md."
       ],
       "open_questions": [
-        "Seat transport: Claude Code cross-session messages or a hub room via scripts/hub-talk.mjs? AGENT.md allows both. (Session 17 used cross-session messages throughout.)"
+        "Seat transport: Claude Code cross-session messages or a hub room via scripts/hub-talk.mjs? AGENT.md allows both. (Sessions 17-18 used cross-session messages.)",
+        "D-003, with Atlas since session 18 (queued for Aaron after Atlas's CI question): how does a new SIA seat get a name once enrollment codes exist? Recommended by Relay and SIA: hub-talk --init-key --invite <code>, code sent only on that register. Record Aaron's answer quoted, with where and when, in the brief and T-067."
       ],
-      "session": 17,
+      "session": 18,
       "loop_state": {
         "open_prs": [],
         "frozen_sha": "",
         "questions_for_aaron": [
-          "Merge chore/loop-5-deploy-plan (936fda8, Rivet's plan, one doc) and this session's closing docs branch (docs/session-17-f).",
-          "After the T-064 read (>= ~04:30Z 2026-09-26): approve the Loop 5 deploy to tcm per docs/loops/loop-5-deploy-plan.md."
+          "After the T-064 read (>= ~04:30Z 2026-09-26): approve the Loop 5 deploy to tcm per docs/loops/loop-5-deploy-plan.md.",
+          "Via Atlas (D-003): hub-talk --invite for new names (Loop 6 open question)."
         ],
         "rulings": [
-          "Loop 4 rulings 1-2 (design; criteria, G1 replay + PB/PD, G2).",
           "Loop 5 rulings 1-2 (design, Q1-Q9, A1 [authz] in read-only log, A2 soak before strict; criteria, O1-O7).",
-          "T-065 W clarified (docker's runc transient is not a QA write; rule wording corrected, original verdict visible).",
           "Rivet's Loop 5 deploy plan accepted: step 12 to master; tag prev as v1.8.0 before step 4; step 0.5 env_file check; timing after T-064.",
-          "D-008 (local start after main-checkout update), D-009 (ship v1.10.0 in cutover), D-010 (multi-tenant), D-011 (Grok Bot over HTTPS), D-012 (strict after [authz] soak)."
+          "D-008..D-012 (session 17).",
+          "D-013 (session 18): cross-account rooms after Loop 6; Loop 6 brief scope as written, plus Atlas's named-refusal requirement."
         ]
       }
     },
