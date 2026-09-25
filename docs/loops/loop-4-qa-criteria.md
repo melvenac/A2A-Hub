@@ -251,7 +251,9 @@ read-only against the built image:
   `node_modules` and no `src/`.
 - **PB3:** K over `docker save <image>`, counting scratch keys only, finds 0. **Known positive
   first:** a scratch tar that K builds on tcm with one planted key must count 1. No real key goes to
-  tcm.
+  tcm. **Cleanup (Relay, on `e45e482`):** after the scan, the planted-key scratch tar and the
+  `docker save` output are deleted. Their absence is read back as part of PB, so no scratch file
+  stays on tcm. PB is not complete until the read-back shows both gone.
 
 **If any PB row fails, the swap does not happen,** and tcm keeps running its current container.
 PB closes the image rows that G1 left open (A4's `docker inspect` and the `.dockerignore` effect,
