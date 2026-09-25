@@ -80,7 +80,7 @@ artifact, a commit, a counterpart, or Aaron. Caught in-process by its own author
 
 ## Authority
 
-**Aaron merges, on his word.** Merging has no standing exception. A relay from a peer seat is not his
+**Aaron merges, on his word.** The one standing exception is `docs/*` (D-015, below). A relay from a peer seat is not his
 approval, with one exception: for shared work with SIA, Atlas's relay of his answer, quoted and
 labelled with where and when he said it, is his authority for the act it names (D-003).
 
@@ -97,6 +97,14 @@ Rivet's `loop/*` and `chore/*`, Gauge's `qa/*`, and Relay's `docs/*`. Never mast
 push, never another seat's branch. Read every push back with `git ls-remote` and name it in the
 commit, report or message that follows. Merges, tags, tcm redeploys, updating the main checkout,
 and live Convex writes still each need Aaron's word for that act.
+
+**Standing exception (D-015): a `docs/*` branch merges to master without asking**, as a merge
+commit through a PR, **when its diff against `origin/master` touches only documents and the
+record**: `docs/`, `.agents/` (including `state.json` through `ob_state`) and top-level `*.md`.
+**Check the diff before the merge.** If it touches `src/`, `scripts/`, `convex/`, `client/`,
+tests, `package*.json`, the Dockerfile, compose or any config, it needs Aaron's word like any
+other merge. The exception is for merges only: tags, releases and the main checkout are not
+covered.
 
 **Live data is read-only until a report says otherwise** *(this project, Session 14 / T-001).*
 Investigate first, report, then act on Aaron's word. Do not improvise fixes against live data.
