@@ -1,7 +1,16 @@
 # Loop 4: acceptance criteria (Gauge)
 
-**Date:** 2026-09-24 · **Author:** QA seat (Gauge), session 17 · **Status:** criteria, written
-before a candidate is named. Nothing has been built or run.
+**Date:** 2026-09-24 · **Author:** QA seat (Gauge), session 17 · **Status:** **ACCEPTED** by
+Relay, ruling 2 `docs/loops/loop-4-ruling-2.md` (`origin/docs/session-17`, `2c19450`), on
+`6c1f521`. Written before a candidate is named. Nothing has been built or run.
+
+**Ruling 2, in brief:**
+- **G1:** (a) and (b) are accepted. Those rows are labelled "replay, not image", and **the
+  verdict says so on its own line.** PB is added to the cutover plan (below), and PD is accepted.
+  No Docker host is named for QA.
+- **G2:** no request to the main stack, not even `/health`. E runs only after 3210, 3211 and 4000
+  are shown free. A skipped E is not a pass.
+- **G3:** recorded in the report, not a failure.
 
 **Derived from:** the brief `docs/loops/loop-4-ui-on-tcm-brief.md` (`origin/docs/session-17`,
 `0d50771`), ruling 1 `docs/loops/loop-4-ruling-1.md` (`f13858a`: Q1 to Q4 as recommended, R-L,
@@ -196,7 +205,11 @@ seeded sessions that include `aaron`.
 
 ### E: dev server (condition E; preserve 5)
 
-- **E1.** Subject to G2: `npm run dev -- --port <qa-vite-port> --strictPort` in the candidate's
+- **E0 gate (ruling 2, G2).** Before the dev page opens, the isolation check shows nothing
+  listening on 3210, 3211 or 4000, in both address families. It is validated as T is: a dummy
+  listener on a QA port must be seen. If any of the three is taken, E waits, the report says so,
+  and **a skipped E is not a pass**.
+- **E1.** After E0: `npm run dev -- --port <qa-vite-port> --strictPort` in the candidate's
   `client/` loads at `/`. The connection box's default reads `http://127.0.0.1:4000`, which is read
   and not used. It is changed to the QA hub. With a scratch `aaron` key, the session list loads and
   a post reads back `from == "aaron"`. W shows cross-origin requests succeed, so CORS is intact.
@@ -223,6 +236,26 @@ seeded sessions that include `aaron`.
 - **RG1.** Against the candidate hub, the Loop 3 harness smoke runs: register, whoami, send, `--wait`
   delivery, and a read receipt through `hub-talk`, with results parsed. This confirms that
   `mountUi` changed nothing on the agent path. C1 covers responses route by route.
+
+### PB: pre-swap image check, tcm (ruling 2; a step in the cutover plan, not in the verdict)
+
+This happens on Aaron's word, as part of the deploy act, which follows `docs/redeploying-tcm.md:47-51`:
+tag the old image `prev`, `docker build`, then `compose up -d --force-recreate`. It does **not**
+follow `scripts/deploy.sh`, which removes `a2a-hub` before it builds. Between the build and the swap,
+read-only against the built image:
+
+- **PB1:** `docker inspect` shows `CMD ["node","dist/src/index.js"]` and `ExposedPorts` equal to
+  `{4000/tcp}` only.
+- **PB2:** a listing of `/app/client` in the image, from a throwaway `docker run --rm` of the image
+  or `docker create` plus `docker export` with no ports published, shows `dist/` only. It has no
+  `node_modules` and no `src/`.
+- **PB3:** K over `docker save <image>`, counting scratch keys only, finds 0. **Known positive
+  first:** a scratch tar that K builds on tcm with one planted key must count 1. No real key goes to
+  tcm.
+
+**If any PB row fails, the swap does not happen,** and tcm keeps running its current container.
+PB closes the image rows that G1 left open (A4's `docker inspect` and the `.dockerignore` effect,
+and D1's image scan). The report records whether PB ran, and its result.
 
 ### PD: post-deploy, tcm (only on Aaron's word, read-only, after the deploy act)
 
