@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 59,
+  "revision": 60,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -607,7 +607,7 @@
       "opened_session": 17,
       "closed_session": null,
       "supersedes": null,
-      "note": "D-011 step 4. One-time enrollment codes issued by a human owner replace open POST /a2a/register (hub-talk --init-key --invite <code>: a hub-talk contract change, so D-003 through the SIA planner). Grok Bot joins Aaron's account for the test; cross-account rooms by invitation come after (D-010). Bundles T-005 (rate limiting) and T-062 (error pages leak paths and stacks). Needs Loop 5's owner field. Brief not written yet."
+      "note": "D-011 step 4 (order D-012). BRIEF WRITTEN, session 18: docs/loops/loop-6-enrollment-brief.md (draft; lines at 9a38b8d). Scope: one-time enrollment codes issued by an authenticated human-kind key (hashed, single-use, expiring, never logged); a NEW name needs a code, re-register of an existing name with its own key is unchanged (hub-talk registers on every run, scripts/hub-talk.mjs:346,368); new row's owner = issuer. Closes a finding new in the brief: src/keys.ts:61 lets any register body with agentCard.kind 'human' become its own owner (an account on the caller's word). Warn logs [enroll], strict refuses; the line must be readable through the read-only key (deploy act). Bundles the exposure class: T-062 + T-055 + the 15 route catch blocks in src/index.ts answering 500 {error: error.message}; T-070; T-005 rate limiting set from measured seat traffic, and how a Funnel request's source address reaches the hub is established by test. Cross-account rooms OUT (D-013). OPEN (D-003, through Atlas): hub-talk --invite <code> with --init-key only, recommended. Build waits for the Loop 5 deploy + [authz] soak."
     },
     {
       "id": "T-068",
@@ -955,6 +955,12 @@
       "title": "Correction to D-011's order: strict comes only after Loop 5 is deployed in warn AND an [authz] soak; the read-only log must see [authz]",
       "date": "2026-09-25",
       "note": "Relay, Loop 5 ruling 1 (docs/loops/loop-5-ruling-1.md), additions A1 and A2. Reason: Loop 5 adds new checks that log `[authz] WOULD REJECT ...` in warn, and T-064's read covers only `[auth]` (key validity) on v1.10.0. Flipping strict before an [authz] soak would refuse any seat (SIA's included) acting outside its own name or rooms without warning, e.g. hub-talk --session with a pasted room id. Also, the T-065 read-only auth-log greps the literal `\\[auth\\]`, which `[authz]` lines do not match, so the soak would be blind (A1: add an `authz-log` item or widen auth-log, a tcm script change in Loop 5's deploy act on Aaron's word; a 7th item needs one more exact allow rule on his word). CORRECTED ORDER (supersedes D-011's): Loop 5 build and QA -> T-064's [auth] read -> Loop 5 deploy in warn (with assignOwnerAtDeploy) -> [authz] soak, one working day -> AUTH_MODE=strict -> Loop 6 -> Funnel -> the Grok Bot test. G-001 unchanged: no public address before strict."
+    },
+    {
+      "id": "D-013",
+      "title": "Cross-account rooms are not in Loop 6; Loop 6 enrolls agents into their owner's own account only",
+      "date": "2026-09-25",
+      "note": "Relay, session 18, planner scoping ruling in docs/loops/loop-6-enrollment-brief.md (Ruling section). The record disagreed with itself: loop-5-design.md:54-55 and loop-5-ruling-1.md:35 say cross-owner rooms come 'by invitation in Loop 6'; D-011 step 4 and T-067 say Grok Bot joins Aaron's account and cross-account rooms 'come after'. RULED: after. D-011's test does not need them (Grok Bot and relay share an owner); they are a second capability, and bundling would make a Loop 6 failure harder to localise. Loop 5's createCheck keeps refusing cross-owner rooms in strict until then. Does not change D-010: Aaron's 'yes, cross-account rooms by invitation' carried no timing and stands. Corrects the two Loop 5 texts above (append-only; they are not edited)."
     }
   ],
   "handoffs": [
