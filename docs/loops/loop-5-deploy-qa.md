@@ -93,6 +93,49 @@ RO key at 01:22:45Z: container-image-id `645a6f248d82`, auth-mode warn, health o
 
 Log: `runs/deploy-pd-postswap.log`.
 
-## RL2 (after step 8)
+## RL2 and RL3: PASS against the criteria (after step 8)
 
-Pending.
+**Hashes:** Rivet's step-8 `sha256sum` line, relayed verbatim:
+- `c7728ab751cd51f094f76ec9888358aa2cc4ffb425dacd08a329a2efaef5fba7  a2a-readonly`
+- `f1de001c34355bac8fa64499176e3f928e087399169c52eb9c8403b5b9a5bfaf  a2a-k7.mjs`
+
+Both equal the full sha256 of the v1.11.0 blobs, computed here. Rivet's step 7 (the second backfill)
+reported: assigned 0, self 0, untouched 9.
+
+**Run:** 2026-09-26 ~01:25Z, `node loop-5-qa/rl2.mjs`, readonly key only. The selftest passed
+before any read. **31 checks: 30 pass and 1 fails as the harness wrote it.** Log: `runs/deploy-rl2.log`
+(menu outputs in `runs/rl2/`).
+
+- **M1-M4, AL, AS:** pass.
+  - M3 lists `a2a-hub:latest` and `:v1.11.0` = `645a6f248d82`, `:prev` = `648ac3963dd7`, and
+    `:v1.8.0` = `13aeef206f7b`. Both runners are active.
+- **RL2.M3:** container-image-id `645a6f248d82` (the new image), and the old id is still listed as `:prev`.
+- **RL2.AL:** the header reads `auth-lines=0 authz-lines=0 first=… last=… total-lines=4`, and the
+  printed counts match (0 and 0).
+  - **Limit:** this is the log of a container about 3 minutes old, so the new count ran only on zero
+    lines here. The count on real `[authz]` lines was shown on scratch (RL1). On tcm it is seen only
+    by Relay's soak read.
+- **RL3:** `PASS ownerAssigned rows-without-owner=0`, with `rows=9 K7=PASS`, and all five K7 checks pass.
+- **RL2.hash:** matches.
+- **L:** the detector's planted positive was found first. Then 0 hits over every menu output.
+- **N:**
+  - All 15 command rows give rc 2 and `refused`.
+  - `scp -O` gives `refused`.
+  - `scp` in sftp mode and `sftp` fail with `message too long 1919247989`, which is `refu` read as a
+    packet length.
+  - **`-tt` with no command gives rc 255 and `PTY allocation request failed on channel 0`.** The
+    harness row demands rc 2 and `refused`, so it prints FAIL. **The criterion allows "`PTY
+    allocation request failed` or refused"** (`t065-qa-criteria.md:83`). T-065 observed and recorded
+    exactly this (`t065-qa-report.md:57,87-89`). It is recorded as **PASS against the criterion**, the
+    same as T-065. The harness is stricter than the criterion. This is not a new ruling.
+
+**Observation (not a diagnosis):** the owner's view is not active for `aaron` on tcm.
+- `agents-summary` prints `aaron	kind=-	keyStatus=owned	…	owner=aaron`. In `a2a-k7.mjs`, `kind=-`
+  means `agentCard.kind` is absent.
+- Loop 5 gives the owner's view only to rows whose `agentCard.kind === "human"`
+  (`convex/accessLogic.ts:15-16`, through `convex/agents.ts:407` and `src/index.ts:99`).
+- So on tcm, `aaron` is not human-kind. He sees only the rooms he is a participant in, not his
+  agents' rooms.
+- His `owner=aaron` comes from the backfill's non-human default (`hubOwner`), not from being human.
+- **Not observed:** no keyed request was made, so this is read from the row, not from a response.
+- Related: Loop 6's `src/keys.ts:61` finding (a register body can self-declare `kind: human`).
