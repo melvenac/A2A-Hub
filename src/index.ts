@@ -288,10 +288,11 @@ app.get("/health", async (_req, res) => {
       convex: { status: "ok", latencyMs: Date.now() - started },
     });
   } catch (error) {
+    console.error("[health] convex probe failed:", error);
     res.status(503).json({
       status: "degraded",
       agent: hubAgentCard.name,
-      convex: { status: "unreachable", error: (error as Error).message },
+      convex: { status: "unreachable", error: "unavailable" },
     });
   } finally {
     clearTimeout(timer);

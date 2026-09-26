@@ -97,8 +97,11 @@ describe("resolveKey fails closed (§3.2, K5)", () => {
 });
 
 describe("initKey (--init-key)", () => {
-  it("without --register: writes a 43-char key file, returns only its prefix", async () => {
-    const r = await initKey({ hub: HUB, name: "alice", env });
+  it("without --register: writes a 43-char key file, returns only its prefix, and does not call the hub", async () => {
+    const fetchImpl = () => {
+      throw new Error("hub was called");
+    };
+    const r = await initKey({ hub: HUB, name: "alice", env, fetchImpl });
     const key = readFileSync(r.path, "utf8").trim();
     expect(key).toHaveLength(43);
     expect(r.prefix).toBe(keyPrefix(key));

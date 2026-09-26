@@ -4,7 +4,17 @@
 
 Run the hash on the workstation that holds the key file. It prints the sha256 hex and nothing else. Then run the Convex command on tcm. The admin key stays in the environment.
 
-## 1. Hash the key file
+## 1. Make the key file, without registering
+
+This writes the key and does not call the hub. Do not pass `--register`. Do not run `hub-talk --as` for a human name: that re-registers the row as an ide-session and is the wrong tool for a human.
+
+```
+node scripts/hub-key.mjs init --as NAME
+```
+
+Run it from a checkout of the hub, with `HUB_URL` set to `http://100.124.212.87:4000` if the file should sit under that spelling. The command prints the path and a prefix. It does not print the key.
+
+## 2. Hash the key file
 
 The file is `~/.a2a-hub/keys/100.124.212.87-4000/<name>.key` when `HUB_URL` is `http://100.124.212.87:4000`. Trim is required: the file ends in a newline, and the hub hashes the trimmed key.
 
@@ -22,7 +32,7 @@ node -e "const fs=require('fs');const c=require('crypto');const k=fs.readFileSyn
 
 Replace `NAME` with the new human's name. Copy the one line of hex. Do not print the key file.
 
-## 2. Insert the row on tcm
+## 3. Insert the row on tcm
 
 ```
 ssh melvenac@100.124.212.87

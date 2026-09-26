@@ -29,6 +29,16 @@ describe("cardForStore", () => {
     expect(cardForStore({ name: "n", kind: "human" }, true)).toEqual({ name: "n", kind: "human" });
     expect(cardForStore({ name: "n", kind: "agent" }, false)).toEqual({ name: "n", kind: "agent" });
   });
+
+  it("keeps kind human for the three callers that re-register a human", () => {
+    const hubTalk = { name: "aaron", description: "Coding-session peer aaron", kind: "ide-session" };
+    const daemon = { name: "aaron", description: "persona" };
+    const hubKey = { name: "aaron", description: "Agent aaron" };
+    for (const card of [hubTalk, daemon, hubKey]) {
+      expect(cardForStore(card, true)).toMatchObject({ name: "aaron", kind: "human" });
+    }
+    expect(cardForStore(hubTalk, true)).not.toMatchObject({ kind: "ide-session" });
+  });
 });
 
 describe("rate window", () => {

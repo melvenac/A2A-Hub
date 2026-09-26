@@ -19,6 +19,9 @@ Loop 6 (T-067): a new name needs a one-time enrollment code from a human owner. 
 - Rate-limit buckets are `name:<agent>` and `bucket:global`, so an agent named `global` does not share the global window.
 - Operator steps for `agents:createHuman` are in `docs/loops/loop-6-create-human.md`. The command prints a hash, not the key.
 - `Unknown peer: ...` from session create is 404 and the sentence is unchanged, so hub-talk `--peer` can still tell an unregistered name apart from an internal error.
+- A same-key re-register of a human row keeps `kind: human`, including hub-talk, the daemon, and `hub-key init`.
+- `/health` answers `convex.error: unavailable` when the probe fails, and logs the detail. The shape is unchanged.
+- `docs/loops/loop-6-create-human.md` starts with `hub-key.mjs init` (no `--register`, no hub call) and says not to run hub-talk as a human name.
 
 ### Unchanged
 - `--rotate-key`. Warn still allows a codeless new name and strips `kind: "human"`. Strict is not turned on by this build.

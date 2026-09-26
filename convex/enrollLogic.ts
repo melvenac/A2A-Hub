@@ -30,9 +30,13 @@ export function judgeCode(
   return "ok";
 }
 
-/** Drop kind human unless the stored row is already human. */
+/** Drop kind human on a new row. An already-human row stays human, whatever card was sent. */
 export function cardForStore(card: unknown, alreadyHuman: boolean): unknown {
-  if (alreadyHuman || !card || typeof card !== "object") return card;
+  if (alreadyHuman) {
+    const base = card && typeof card === "object" ? { ...(card as object) } : {};
+    return { ...base, kind: "human" };
+  }
+  if (!card || typeof card !== "object") return card;
   const rec = card as { kind?: unknown };
   if (rec.kind !== "human") return card;
   const next = { ...rec };
