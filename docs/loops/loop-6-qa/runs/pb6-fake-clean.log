@@ -1,0 +1,34 @@
+PB start 2026-09-26T01:50:17Z image=a2a-hub:v1.12.0 expect=1234abcd runner=bash docs/loops/loop-6-qa/fake-tcm.sh
+image a2a-hub:v1.12.0 = sha256:1234abcd5678ef90aaaabbbbccccddddeeeeffff0000111122223333444455
+PASS PB0: id matches Rivet's (1234abcd)
+PB1 config: ["node","dist/src/index.js"]|["docker-entrypoint.sh"]|{"4000/tcp":{}}|/app
+PASS PB1: Cmd ["node","dist/src/index.js"], ExposedPorts {"4000/tcp":{}}, WorkingDir /app, Entrypoint ["docker-entrypoint.sh"]
+PASS PB1b: Config.Env has NODE_ENV=production (2 other entries, not printed)
+PB2 listing (rc 0):
+dist
+---
+---
+assets
+index.html
+---
+client
+convex
+dist
+node_modules
+package.json
+package-lock.json
+---
+---
+END
+PASS PB2: /app/client = [dist]; node_modules/src under it: none; dist = [assets index.html]
+PASS PB2.app: /app = [client convex dist node_modules package-lock.json package.json]
+PASS PB2.no-env: no .env* under /app outside node_modules
+PASS PB2.no-container-left: docker ps -a --filter ancestor=<id>: 0 rows
+detector positive: containers from a2a-hub:prev seen by the same filter: 1 (expect >= 1)
+K selftest: SELFTEST PASS (exit 0)
+docker save streamed: exit 0, 81920 bytes
+PASS PB3.image-save: 1 files, 17 tar members, 0 gzip opened, 0 opaque, 81920 bytes, hits 0
+PASS PB3: 0 hits, no opaque layer
+PASS PB3.cleanup-local: save.tar and K scratch gone
+PASS PB3.cleanup-tcm: no QA-named file in ~ or /tmp on tcm (7 lines read)
+PB OVERALL: PASS
