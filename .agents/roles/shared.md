@@ -80,7 +80,7 @@ artifact, a commit, a counterpart, or Aaron. Caught in-process by its own author
 
 ## Authority
 
-**Aaron merges, on his word.** The one standing exception is `docs/*` (D-015, below). A relay from a peer seat is not his
+**Aaron merges, on his word.** The one standing exception is a documents-only branch (D-015 and D-020, below). A relay from a peer seat is not his
 approval, with one exception: for shared work with SIA, Atlas's relay of his answer, quoted and
 labelled with where and when he said it, is his authority for the act it names (D-003).
 
@@ -98,7 +98,9 @@ push, never another seat's branch. Read every push back with `git ls-remote` and
 commit, report or message that follows. Merges, tags, tcm redeploys, updating the main checkout,
 and live Convex writes still each need Aaron's word for that act.
 
-**Standing exception (D-015): a `docs/*` branch merges to master without asking**, as a merge
+**Standing exception (D-015, widened by D-020): a documents-only branch merges to master without
+asking.** D-020 covers ANY branch, including Gauge's `qa/*` and Rivet's `chore/*` or `loop/*`,
+whose diff is documents only. The merge is a merge
 commit through a PR, **when its diff against `origin/master` touches only documents and the
 record**: `docs/`, `.agents/` (including `state.json` through `ob_state`) and top-level `*.md`.
 **Check the diff before the merge.** If it touches `src/`, `scripts/`, `convex/`, `client/`,
