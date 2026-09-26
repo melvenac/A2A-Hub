@@ -62,7 +62,7 @@ FULL 'docker tag a2a-hub:prev a2a-hub:v1.10.0 && docker tag a2a-hub:latest a2a-h
 Gauge runs PB against `a2a-hub:v1.12.0` before any swap. Gauge's session gate may block the full-key PB. If it does, Aaron pastes Gauge's bang line in Gauge's session, not in this one. Fail → stop, no swap. This seat does not run PB.
 
 ## 4b. Pre-swap PD
-Gauge runs PD while tcm is still on the v1.11.0 image. Expected FAIL only on PD.1b, PD.3, PD.5, and PD.6 (v1.11.0's known leaks). Any other failing row: stop, no swap. This seat does not run PD.
+Gauge runs PD while tcm is still on the v1.11.0 image. Expected FAIL only on PD.3, PD.5 and PD.6 (v1.11.0's HTML error pages); PD.1b PASSES, because Loop 6 does not touch client/ and the bundle stays index-DleSmG9D.js (Relay amendment, 2026-09-26, from Gauge's stage replay of c461c65). PD.3/5/6 are the swap detector. Any other failing row: stop, no swap. This seat does not run PD.
 
 ## 6. Swap
 The swap waits for Relay's release. Relay sends Atlas message 1 just before this step (D-003, D-018). Re-read IPs with the same inspect as step 0 if the PB pause was long enough that a recreate could have happened. Then:
@@ -75,7 +75,7 @@ FULL 'docker tag a2a-hub:v1.12.0 a2a-hub:latest && cd ~/docker-compose/a2a-hub \
 Verify: RO `health` ok, RO `auth-mode` warn, RO `image` equals the v1.12.0 id, FULL `docker logs a2a-hub --since 5m 2>&1 | grep -ciE 'error|500'` (the count only).
 
 ## 7. PD after the swap
-Gauge runs PD again on the v1.12.0 image. The four rows that failed in step 4b are expected to pass. Any failure → rollback, and do not install the script.
+Gauge runs PD again on the v1.12.0 image. The three rows that failed in step 4b (PD.3, PD.5, PD.6) are expected to pass, and PD.1b still passes. Any failure → rollback, and do not install the script.
 
 ## 8. Install the widened auth-log script
 Only `scripts/tcm/a2a-readonly` changes in v1.12.0 (header `enroll-lines=`). Do not replace `a2a-k7.mjs`.
