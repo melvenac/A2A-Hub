@@ -151,3 +151,15 @@ live row was never human-kind, and the backfill sets `owner`, not `kind`. **This
 shaped differently from live data.** The scratch seed should have been taken from the live row's
 shape. Here, that means tcm's `agents-summary` read before the loop. A criterion that depends on a
 row's fields needs a row that matches the live one, or a row showing the rule holds on the live shape.
+
+## Re-check after the G-002 fix (RO key, 2026-09-26 01:34:58Z)
+
+Relay reported the fix on Aaron's word: Relay read `aaron kind=human` at 01:33:31Z (V-011). Gauge
+re-read `agents-summary` with the read-only key at 01:34:58Z (`loop-5-qa/runs/deploy-g002-recheck.txt`):
+- `aaron	kind=human	keyStatus=owned	hash=0fdda12d	owner=aaron`. The hash prefix is the same as
+  at 01:25Z, so the key did not change.
+- The other 8 rows are identical to the 01:25Z read: same names, kinds, hash prefixes and owners.
+- All five K7 checks pass: `rows=9 K7=PASS`, `PASS ownerAssigned rows-without-owner=0`.
+
+**Not observed:** a keyed request as `aaron`. This shows the row's shape, not that the owner's view
+now answers. That needs `aaron`'s key, which is Aaron's own act.

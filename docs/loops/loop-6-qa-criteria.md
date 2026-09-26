@@ -1,15 +1,26 @@
 # Loop 6: acceptance criteria (Gauge)
 
-**Date:** 2026-09-26 · **Author:** QA seat (Gauge), session 19 · **Status:** DRAFT for Relay's ruling.
-Written before a candidate is named. Nothing has been run.
+**Date:** 2026-09-26 · **Author:** QA seat (Gauge), session 19 · **Status:** objections ruled
+(ruling 2, `docs/loops/loop-6-ruling-2.md`, `c2ba4f4`). F and G5b are filled in from the design
+revision `04adf41`.
+- **One open point: F0**, the design's per-key count disagrees with the code (see F).
+- Written before a candidate is named. Nothing has been run.
+- Merging this branch needs Aaron's word.
 
-**Rows that stay OPEN until Relay rules on Rivet's revision** (Relay, 2026-09-26):
-- **F** (rate limiting): design section 10, being revised for ruling 1's required change.
-- **G5b** (an existing owner row with no `kind`, which is tcm's `aaron`): design section 5, being
-  extended.
-
-Their conditions are written below from the brief and ruling 1. Their numbers and exact texts wait
-for the revision.
+**Ruling 2 on the objections:**
+- **O1: accepted.** X1 observes and does not gate. Enrollment is enforced at the hub. The guarantee
+  against a direct Convex call rests on T-057, which is now a precondition of strict.
+- **O2: accepted.** Codes are not bound to a name. A13 records it.
+- **O3:** an expired code is made by rewriting `expiresAt` on the **scratch** database only, with
+  `convex import --replace`. There is no TTL override in the build.
+- **O4:** an unknown key in warn (caller `null`) counts in the **global** bucket (F6).
+- **O5: tightened.** D **gates in both configurations**, with `NODE_ENV=production` and with it unset.
+  PB1b still reads `NODE_ENV` from the image.
+- **Section 5 (G5b):** a `kind=-` row is not human. Loop 6 does not infer humanity or write a kind,
+  and such a row cannot issue a code in either mode.
+- **Section 10 (F):** per key, 2160 per name per 60 s. Global, `10 * N` = 90 per 60 s (N = 9 rows),
+  or `10 * F` if the image's `/ui` file count F exceeds N. The global bucket's shared-flood limit is
+  accepted for T-068 and must be written into the design at build.
 
 **Derived from:**
 - the brief `docs/loops/loop-6-enrollment-brief.md` (master `2e3de2f`): acceptance A-H and
@@ -33,7 +44,7 @@ branch, named by Relay. Every observation names it. If it moves mid-run, the run
 
 ---
 
-## Objections and questions (for the ruling, before the build is final)
+## Objections and questions (ruled in ruling 2; kept as asked)
 
 - **O1: a direct Convex call can skip the hub's enrollment check.**
   - `registerAgent` is a **public** mutation (`convex/agents.ts:210`). The design passes
@@ -79,12 +90,12 @@ branch, named by Relay. Every observation names it. If it moves mid-run, the run
   read-only `agents-summary` at the Loop 5 deploy, 2026-09-26 ~01:25Z (`loop-5-qa/runs/rl2/`): 9
   rows, each with its own key and `owner=aaron`.
   - Eight rows are `kind=ide-session`.
-  - **`aaron` has no `kind`.** Every row that depends on `aaron` being human runs twice:
-    - **"aaron-h":** `aaron` is human-kind, the shape after the pending fix;
-    - **"aaron-0":** `aaron` has no kind, the shape tcm had after the Loop 5 deploy.
-    
-    The aaron-0 results for G5b wait for the section 5 ruling. The seed script prints the rows it
-    wrote, parsed back, before any row runs.
+  - At that read, `aaron` had no `kind`. G-002 was fixed on Aaron's word. Relay read `kind=human` at
+    01:33:31Z (V-011), and Gauge re-read it at 01:34:58Z with the same hash `0fdda12d`.
+  - So the main seed is **"aaron-h"** (human-kind, tcm's shape now).
+  - **"aaron-0"** (no kind) is seeded as a separate row, `qa-owner0`, in G5b and A7. It is a shape
+    that existed live, and ruling 2 fixes what it must do.
+  - The seed script prints the rows it wrote, parsed back, before any row runs.
 - **A second human, `qa-owner2`,** is created only through the documented `createHuman` command, on
   scratch. The command is run exactly as the build documents it.
 - **Planted positives for C** are made before any scan: a fake code, its hash, a fake key and its
@@ -143,7 +154,9 @@ Codes are issued by `aaron` (aaron-h) unless a row says otherwise.
   - The new name's `whoami` answers as itself.
 - **A3. The same code again, for another new name:** 403 with the used text. There is no new row, and
   `usedAt` is unchanged.
-- **A4. An expired code** (O3): 403 with the expired text. There is no row, and the code is not
+- **A4. An expired code** (O3, as ruled: `expiresAt` rewritten on the scratch database with
+  `convex import --replace`; no TTL override exists in the build, and G's static read confirms none
+  was added): 403 with the expired text. There is no row, and the code is not
   marked used.
 - **A5. A code that never existed:** 403 with the not-valid text.
   - **Uniformity:** the body is byte-identical whether the database holds 0 codes, 1 unused code, or
@@ -153,6 +166,8 @@ Codes are issued by `aaron` (aaron-h) unless a row says otherwise.
 - **A7. An agent key cannot issue:** `POST /a2a/enroll` with an `ide-session` key gets 403 with the
   agent-issue text, **in strict and in warn** (ruling 1 Q1). No `enrollmentCodes` row is written.
   - The same holds for an unknown key in warn, whose caller is `null`.
+  - The same holds for `qa-owner0`, an owner row with **no kind** (tcm's former `aaron` shape), in
+    both modes (ruling 2, section 5).
 - **A8. A body cannot choose `owner`:** a valid-code register with `owner: "qa-x"` gets
   `owner = issuer`.
 - **A9. A body cannot create a human.**
@@ -221,8 +236,9 @@ Codes are issued by `aaron` (aaron-h) unless a row says otherwise.
 
 ### D: the error class (brief D; stage replay, Loop 4 G1)
 
-On a stage replay of the candidate's Dockerfile (`loop-4-qa/replay.sh` method), with
-`NODE_ENV=production` (required) and unset (reported, O5):
+On a stage replay of the candidate's Dockerfile (`loop-4-qa/replay.sh` method). **Every D row gates
+twice: with `NODE_ENV=production` and with it unset** (ruling 2, O5). A row that passes in only one
+configuration fails.
 
 - **D1.** For every INV1 entry, the triggered response has:
   - no filesystem path (no `/app`, no `/home`, no drive letter);
@@ -257,37 +273,68 @@ On a stage replay of the candidate's Dockerfile (`loop-4-qa/replay.sh` method), 
 - **E4.** In warn, the non-member still gets today's participant reason, and the `[authz]` note is
   still logged.
 
-### F: rate limiting (brief F, ruling 1's required change). OPEN until section 10 is ruled
+### F: rate limiting (brief F; ruling 1's required change; design section 10 at `04adf41`, ruled in ruling 2)
 
-The conditions below are fixed. The limits, windows and the global bucket size are filled in from
-the revised section 10.
+**The numbers:**
+- **Per key:** 2160 requests per name per 60 s fixed window.
+- **Global:** 90 per 60 s. It counts new-name registers, registers whose key matches no row, `/ui/*`,
+  missing-key 401s and, per O4, unknown-key requests in warn. If the image's `/ui` file count F is
+  over 9, the global limit is `10 * F`, and F is read from the candidate's built `client/dist`.
 
-- **F1.** A burst over the per-key limit gets `429` with `Retry-After`, in warn and in strict.
-  - `Retry-After` is an integer number of seconds, greater than 0 and at most the window.
+- **F0. The design's count disagrees with the code. Relay rules; nothing here waits on it.**
+  - Section 10 counts one hub-talk process as 32 requests per 60 s: 1 register, 1 heartbeat and 30
+    `--wait` reads.
+  - But each `--wait` loop also sends a heartbeat (`scripts/hub-talk.mjs:469-471`: sleep,
+    `heartbeat(ME)`, `poll()`). The start is also 4 requests, not 2: `:368-372` does a register, a
+    heartbeat, the session resolve (at least 1) and a second heartbeat. So one `--wait` process is
+    about 65: those 4, the initial poll, then 30 × (heartbeat + read).
+  - Three `--wait` processes plus a daemon (`30 * (3 + 1)` = 120, which matches the code:
+    `daemon.ts:302-323` and `sessions.ts:70-72`, active sessions only) come to about **315**, not
+    216. The corrected formula at 10x is `10 * (3 * 65 + 30 * (3 + s))`, 3150 at s = 1.
+  - **2160 still exceeds the corrected peak, by about 6.9x rather than 10x**, so F2 is still expected
+    to see no 429. The formula in the design is the part that is wrong.
+  - F2's recorder reports the measured per-name peak, which is the real number.
+- **F1. Per-key boundary, both modes.**
+  - In one window, one key's requests 1-2160 get no 429, and request 2161 gets `429 {"error":"too many
+    requests"}` with `Retry-After`.
+  - `Retry-After` is an integer number of seconds, greater than 0 and at most 60, and equal to what
+    is left in the window, ±1.
   - The body is terse (D1's rules).
   - After `Retry-After` has passed, the same key is served again.
-- **F2. Every row's hub-talk at once** (ruling 1, required change 3):
-  - Setup: all 9 seeded names, each with **at least 3** concurrent hub-talk processes (a `--wait`, a
-    `--say` and an `--inbox`), plus a daemon loop, all started within one second.
-  - It runs for at least two windows, in both modes.
-  - Result required: **0 responses with status 429** (from the recorder) and every hub-talk rc 0.
+- **F2. Every row's hub-talk at once** (ruling 1, required change 3), in both modes, for at least two
+  windows, all started within one second. Required: **0 responses with status 429** (from the
+  recorder) and every hub-talk rc 0. There are two mixes:
+  - **F2a (as ruled):** each of the 9 names runs a `--wait`, a `--say` loop and an `--inbox` loop,
+    plus one daemon loop, in a room.
+  - **F2b (the worst case the code allows at the ruled concurrency):** each of the 9 names runs
+    **3 concurrent `--wait`** processes, plus one daemon loop.
+
+  The report gives the measured requests per name per 60 s, the maximum over all names and windows,
+  next to 2160 (F0).
 - **F3. Existing names are never in the global bucket** (required change 1).
-  - First saturate the global unauthenticated bucket until it returns 429, using new-name registers,
-    unknown-key registers and `/ui/` requests.
-  - Then, inside the same window, start F2's pattern. It must get 0 responses with status 429.
+  - First saturate the global bucket until it returns 429, using new-name registers, unknown-key
+    registers and `/ui/` requests.
+  - Then, inside the same window, start F2a's pattern. It must get 0 responses with status 429.
   - **Both directions:** the same saturation does 429 a new-name register, which is the detector
     positive.
+  - **The accepted limit (ruling 2)** is observed and recorded, not failed: during the saturation, a
+    `/ui/` page load and an `--init-key --invite` get 429 until the window resets.
+- **F3b. Global boundary.** In a fresh window, requests 1-90 in the global class get no 429, and
+  request 91 gets 429 with `Retry-After`.
 - **F4.** An existing name's register is counted in that name's bucket. Exhausting name X's bucket
-  429s X's register and not name Y's.
+  429s X's register and not name Y's. X's own register with its key is **not** counted in the global
+  bucket: the global count is unchanged by it (probed with a boundary request after X's registers).
 - **F5. The Funnel source** (brief F).
   - Rivet's recorded test of what `req.socket.remoteAddress` shows through the proxy path is read.
   - Whether per-source or global limiting ships follows from it.
   - QA cannot produce Funnel traffic, so this is listed under "cannot see" unless the test is
     repeatable on scratch.
-- **F6 (O4). Unknown keys in warn.**
-  - A flood with an unknown key eventually gets 429; its bucket is finite.
-  - It does not consume a real name's bucket: that name's F2 pattern still gets 0 responses with
-    status 429.
+- **F6 (O4, as ruled). Unknown keys in warn count in the global bucket.**
+  - In warn, 90 unknown-key requests in one window are served, and the 91st gets 429.
+  - In that same window, a new-name register also gets 429, which shows it is the one shared bucket.
+  - An existing name's F2a pattern still gets 0 responses with status 429.
+  - In strict, an unknown key gets the guard's 403 before any bucket is consulted. The report records
+    whether that 403 counts in the global bucket.
 
 ### G: preserve (brief preserve 1-6; Loop 5's rows re-run)
 
@@ -316,8 +363,17 @@ the revised section 10.
 - **G5. Aaron's chat page** (Preserve 5).
   - **G5a (aaron-h):** Loop 4's page rows B1-B3 and Loop 5's E rows. The page lists `aaron`'s agents'
     rooms.
-  - **G5b (aaron-0): OPEN.** The same rows with `aaron` as tcm had him. What must hold is set by the
-    section 5 revision.
+  - **G5b (no-kind owner row, as ruled: design section 5 at `04adf41`, ruling 2).** `qa-owner0`, a
+    row with `owner` set and no `agentCard.kind`, in both modes:
+    - it re-registers with its own key and no code, and its stored row is unchanged (including
+      `agentCard`, which still has no kind);
+    - a register body with `kind: "human"` on it gets 403 in strict. In warn it succeeds with kind
+      stripped, and it is still not human afterwards (row reader);
+    - its `POST /a2a/enroll` gets 403 agent-issue (A7), and `hub-enroll.mjs --as qa-owner0` exits 1
+      with no code;
+    - it has no owner's view: `GET /a2a/sessions` lists only rooms it is in, not its agents' rooms;
+    - **Loop 6 writes no kind onto it.** After the whole run, the row reader shows it still has no
+      kind.
 - **G6. Warn refuses nothing new** (Preserve 6). The route comparator runs old vs candidate in warn,
   over every route, as a seat acting as itself.
   - Result required: identical, except `POST /a2a/enroll` (new) and D's body texts.
@@ -339,8 +395,10 @@ the revised section 10.
 - **X1.** A direct call to scratch Convex's public `registerAgent`, bypassing the hub, is made for a
   new name with no `enrollmentCodeHash`. Then another is made with `agentCard.kind: "human"` on an
   existing non-human row.
-  - The report records whether each inserts or persists.
-  - It gates only if Relay rules O1 that way.
+  - The report records whether each inserts or persists, and whether a direct call can pass
+    `strict: false` (`src/keys.ts:57`).
+  - **It does not gate** (ruling 2, O1). The guarantee rests on T-057, a precondition of strict. The
+    report says so next to the result.
 
 ### OP: the operator commands (brief scope 1-2)
 
@@ -368,7 +426,8 @@ the revised section 10.
 | M4 `kind: "human"` persisted in warn | B3 |
 | M5 an agent key may issue | A7 |
 | M6 one catch block returns `error.message` again | D1 |
-| M7 the Dockerfile's `NODE_ENV` line is removed | D5, and D1 in the unset run shows what it guarded |
+| M7 the Dockerfile's `NODE_ENV` line is removed | D5 (D1 must still pass in the unset run) |
+| M7b the catch-all error handler is removed | D1 or D4 in the unset run |
 | M8 strict `/read` returns the participant reason to a non-member | E1 |
 | M9 a `same` register is counted in the global bucket | F3 |
 | M10 the `[enroll]` line includes the code's hash prefix | C1 / C2 |

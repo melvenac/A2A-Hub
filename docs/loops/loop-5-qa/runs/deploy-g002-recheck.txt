@@ -1,0 +1,21 @@
+read 2026-09-26T01:34:58Z: ssh -i ~/.ssh/tcm-readonly -o IdentitiesOnly=yes melvenac@100.124.212.87 agents-summary (rc 0)
+a2a-grok	kind=ide-session	keyStatus=owned	hash=fce98d78	owner=aaron
+aaron	kind=human	keyStatus=owned	hash=0fdda12d	owner=aaron
+atlas	kind=ide-session	keyStatus=owned	hash=556f9dba	owner=aaron
+cursor-grok	kind=ide-session	keyStatus=owned	hash=a77570d1	owner=aaron
+grok	kind=ide-session	keyStatus=owned	hash=016ebdcd	owner=aaron
+grok-probe	kind=ide-session	keyStatus=owned	hash=4eecd5fd	owner=aaron
+grokbot	kind=ide-session	keyStatus=owned	hash=21a8586c	owner=aaron
+melve-76	kind=ide-session	keyStatus=owned	hash=c2934a48	owner=aaron
+relay	kind=ide-session	keyStatus=owned	hash=71b67c96	owner=aaron
+PASS oneRowPerName
+PASS oneNamePerHash
+PASS allOwned
+PASS devKeyHeldByNone
+PASS unparsableZero
+rows=9 K7=PASS
+PASS ownerAssigned rows-without-owner=0
+
+note: a second, identical agents-summary read (RO key, output discarded) was made by mistake at about
+01:40Z, from a stray command line while writing this record. It was read-only, on the menu, and changed
+nothing. Its output is not evidence here.
