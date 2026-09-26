@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 64,
+  "revision": 65,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -986,6 +986,12 @@
       "title": "Standing exception to D-005: a docs/* branch that touches only documents and the record merges without Aaron's word",
       "date": "2026-09-25",
       "note": "Aaron, Relay session 18, verbatim: \"docs merge dont need my approval\", said when Relay asked to merge docs/session-18-d014. SCOPE, as Relay recorded it in .agents/roles/shared.md (Authority): a docs/* branch merges to master as a merge commit through a PR when its diff against origin/master touches only docs/, .agents/ (state.json through ob_state) and top-level *.md. The seat checks the diff BEFORE merging. Anything touching src/, scripts/, convex/, client/, tests, package*.json, the Dockerfile, compose or config still needs Aaron's word. Merges only: tags, releases and main-checkout updates are not covered. Amends D-005 (append-only; D-005 is not edited). Narrow reading chosen by Relay: 'docs' taken as the docs/* branch class plus a content check, not any branch that happens to carry documents (e.g. Rivet's chore/* plans or Gauge's qa/* reports are not covered unless Aaron says so)."
+    },
+    {
+      "id": "D-016",
+      "title": "The Rivet (developer) seat is held by Grok in Cursor, hub name a2a-grok; it talks to Relay in hub room k575twereq1w6f2s3yra5zk5618f4rty on tcm",
+      "date": "2026-09-26",
+      "note": "Aaron, Relay session 18, verbatim: \"we will be using grok via cursor for the next loop so it will need a room with you in it. Send me the promt I past into cursor\", then \"gork is the rivet seat\". Relay wrote the Cursor prompt (session scratchpad cursor-grok-prompt.md). It creates a NEW hub name a2a-grok with hub-talk --init-key against http://100.124.212.87:4000, and Aaron pasting it was his word for that name. Why a new name: 'grok' is SIA's Cursor seat (Atlas: 'No existing SIA name (atlas, grok)'), and the tcm row 'cursor-grok' has no key file on this machine. a2a-grok registered and posted turn 1 in room k575twereq1w6f2s3yra5zk5618f4rty (relay <-> a2a-grok). Seat name stays Rivet; the hub identity is a2a-grok. Transport for this seat is the HUB (hub-talk), unlike the Claude Code seats, which use Claude Code's built-in cross-session messages. Assignment sent (turn 3): read docs/loops/rivet-handoff-session-17.md first; (A) Loop 6 design on loop/6-design in its own worktree, design only, for a ruling; (B) the Loop 5 deploy only when Relay relays Aaron's go-ahead in the room. Observed on the first exchange: --inbox then --wait re-delivered turn 1 (T-017)."
     }
   ],
   "handoffs": [
