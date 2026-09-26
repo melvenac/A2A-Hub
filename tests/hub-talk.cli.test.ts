@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
+import express from "express";
 import { createServer, type Server } from "node:http";
 import { execFile } from "node:child_process";
+import { respondInternal } from "../src/httpError.js";
 import { rmSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -156,5 +158,55 @@ describe("hub-talk cli", { timeout: 20_000 }, () => {
     ]);
     expect(result.code).toBe(2);
     expect(result.stderr).toContain("wait timeout");
+  });
+});
+
+describe("hub-talk --peer against an unregistered name", () => {
+  it("exits 1 and prints the fix-it line", async () => {
+    const app = express();
+    app.use(express.json());
+    app.post("/a2a/register", (_req, res) => {
+      res.json({ ok: true });
+    });
+    app.get("/a2a/peer/:name/sessions", (_req, res) => {
+      res.json({ sessions: [] });
+    });
+    app.post("/a2a/session", (_req, res) => {
+      respondInternal(
+        res,
+        new Error(
+          "Unknown peer: UNREGISTERED (not registered on this hub; if its register was refused, create it with hub-talk --init-key)"
+        )
+      );
+    });
+    const server = await new Promise<Server>((resolve) => {
+      const s = app.listen(0, "127.0.0.1", () => resolve(s));
+    });
+    const { port } = server.address() as { port: number };
+    try {
+      const result = await new Promise<{ code: number; stderr: string }>((resolve) => {
+        execFile(
+          process.execPath,
+          [SCRIPT, "--as", ME, "--peer", "UNREGISTERED", "--say", "hi"],
+          {
+            env: {
+              ...process.env,
+              HUB_URL: `http://127.0.0.1:${port}`,
+              AGENT_KEY: TEST_KEY,
+            },
+            timeout: 20_000,
+          },
+          (error: any, _stdout, stderr) => {
+            resolve({ code: error?.code ?? 0, stderr });
+          }
+        );
+      });
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain(
+        "peer UNREGISTERED is not registered on this hub — it must run hub-talk --as UNREGISTERED once"
+      );
+    } finally {
+      await new Promise<void>((r) => server.close(() => r()));
+    }
   });
 });

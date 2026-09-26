@@ -18,6 +18,7 @@ Loop 6 (T-067): a new name needs a one-time enrollment code from a human owner. 
 - An unmatched path, including `GET /`, returns 404 `{ "error": "not found" }`.
 - Rate-limit buckets are `name:<agent>` and `bucket:global`, so an agent named `global` does not share the global window.
 - Operator steps for `agents:createHuman` are in `docs/loops/loop-6-create-human.md`. The command prints a hash, not the key.
+- `Unknown peer: ...` from session create is 404 and the sentence is unchanged, so hub-talk `--peer` can still tell an unregistered name apart from an internal error.
 
 ### Unchanged
 - `--rotate-key`. Warn still allows a codeless new name and strips `kind: "human"`. Strict is not turned on by this build.

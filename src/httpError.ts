@@ -4,6 +4,10 @@ import type { Response } from "express";
 
 export function clientError(error: unknown): { status: number; error: string } {
   const msg = error instanceof Error ? error.message : String(error ?? "");
+  // hub-talk matches this sentence (scripts/hub-talk.mjs createLobby). It names
+  // only the participant the caller sent. 404, not a hidden 500.
+  const unknownPeer = msg.match(/Unknown peer: [^"\r\n]+/);
+  if (unknownPeer) return { status: 404, error: unknownPeer[0].trim() };
   if (/ArgumentValidationError|does not match validator|ValidatorError/i.test(msg)) {
     return { status: 400, error: "bad request" };
   }

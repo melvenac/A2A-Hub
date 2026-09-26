@@ -107,6 +107,13 @@ describe("terse errors", () => {
       error: "internal error",
     });
   });
+
+  it("passes an Unknown peer sentence through as 404", () => {
+    const sentence =
+      "Unknown peer: UNREGISTERED (not registered on this hub; if its register was refused, create it with hub-talk --init-key)";
+    const wrapped = new Error(`[CONVEX M(sessions:create)] Server Error\nUncaught Error: ${sentence}\n    at handler`);
+    expect(clientError(wrapped)).toEqual({ status: 404, error: sentence });
+  });
 });
 
 describe("enroll line", () => {
