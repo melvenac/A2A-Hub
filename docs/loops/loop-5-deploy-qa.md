@@ -78,6 +78,21 @@ Results:
 
 So the detector sees the old bundle on the real tcm. Log: `runs/deploy-pd-preswap.log`.
 
-## PD (step 10) and RL2 (after step 8)
+## PD: PASS (step 10, after the swap)
+
+**Background:** Rivet reported the swap at ~01:22:11Z (COMPOSE_EXIT 0). Relay confirmed it with the
+RO key at 01:22:45Z: container-image-id `645a6f248d82`, auth-mode warn, health ok.
+
+**Run:** 01:23:05Z, the same 4 keyless GETs. Results:
+- PD.1 `/ui/`: 200, `no-cache`.
+- **PD.1b: PASS.** Tcm serves `index-DleSmG9D.js`. The pre-swap run two minutes earlier showed
+  `index-BDybZYJ0.js`, so the change is the swap.
+- PD.2: the asset returns 200, `immutable`, **56,201 bytes, the same size as the local v1.11.0 build**.
+- PD.3: `/` returns 404.
+- PD.4: `/health` returns 200 with `{agent,convex,status}`, and both statuses are ok.
+
+Log: `runs/deploy-pd-postswap.log`.
+
+## RL2 (after step 8)
 
 Pending.
