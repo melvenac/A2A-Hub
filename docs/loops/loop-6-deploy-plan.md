@@ -5,7 +5,7 @@ Aaron, relayed verbatim: "deploy loop6 when ready" (D-021). The merge, the v1.12
 
 Not covered: AUTH_MODE=strict, Tailscale Funnel, runner pause or resume (D-018).
 
-Frozen build: `loop/6-build` `1c3b08cdde4d11c2e122bd2607ae6938ae95b302`. Archive that SHA. A task-id ruling arrived after that push (malformed task ids on claim and respond). It is not in this SHA. If Relay lifts the freeze, the archive SHA in step 1 changes and this plan is revised before GO.
+Frozen build: `loop/6-build` `74200972305e7ff2f5d8bf148321036390c94f98`. That commit supersedes `1c3b08c`. Archive this SHA. It is frozen again: no further pushes to `loop/6-build`.
 
 Ref: Loop 5 plan `docs/loops/loop-5-deploy-plan.md`. Runbook shape: Convex first, tag `:prev` before the build, PB, swap, PD. NOT `scripts/deploy.sh`.
 FULL = `ssh melvenac@100.124.212.87` (full key, writes, on Aaron's word for THIS deploy only).
@@ -26,9 +26,12 @@ D-017 reads, before any write:
 
 If `env_file` is still the relative `.env` beside the compose dir, step 1 does not copy a project `.env`. Step 6's AUTH_MODE grep stays in `~/docker-compose/a2a-hub`.
 
+## Merge and tag (Relay, after Gauge acceptance PASS, before step 1)
+Relay tags `v1.12.0` on `74200972305e7ff2f5d8bf148321036390c94f98` and merges `loop/6-build` to master by PR (D-021). This seat does not merge and does not tag. Step 1 archives that frozen SHA. Step 10 fast-forwards the main checkout to `origin/master` only after that merge is on master.
+
 ## 1. Ship source (workstation → tcm)
 ```
-git -c core.autocrlf=false -c core.eol=lf archive -o $SCRATCH/a2a-hub-v1.12.0.tar 1c3b08cdde4d11c2e122bd2607ae6938ae95b302
+git -c core.autocrlf=false -c core.eol=lf archive -o $SCRATCH/a2a-hub-v1.12.0.tar 74200972305e7ff2f5d8bf148321036390c94f98
 ```
 CR check on the extract of `src` and `convex`: expect 0. `package.json` version in the tar is 1.12.0.
 ```
@@ -56,23 +59,23 @@ FULL 'docker tag a2a-hub:prev a2a-hub:v1.10.0 && docker tag a2a-hub:latest a2a-h
 `:latest` is unchanged by the tag (it still points at the running v1.11.0 image). The new id is `a2a-hub:v1.12.0` only. Stop here for Gauge PB. Fail means stop, no swap.
 
 ## 4. PB — Gauge on the built image
-Gauge runs PB against `a2a-hub:v1.12.0` before any swap. Aaron may need to paste its bang line, the same way Loop 5 PB ran as his own act (`docs/loops/loop-5-deploy-qa.md` records that paste). Fail → stop, no swap. This seat does not run PB.
+Gauge runs PB against `a2a-hub:v1.12.0` before any swap. Gauge's session gate may block the full-key PB. If it does, Aaron pastes Gauge's bang line in Gauge's session, not in this one. Fail → stop, no swap. This seat does not run PB.
 
-## 5. Pre-swap PD
-Gauge runs PD while tcm is still on the v1.11.0 image. Relay's sequence: this run is expected to FAIL only PD.1b, PD.3, PD.5, and PD.6. Any other failure stops the deploy. This seat does not run PD.
+## 4b. Pre-swap PD
+Gauge runs PD while tcm is still on the v1.11.0 image. Expected FAIL only on PD.1b, PD.3, PD.5, and PD.6 (v1.11.0's known leaks). Any other failing row: stop, no swap. This seat does not run PD.
 
 ## 6. Swap
-Re-read IPs with the same inspect as step 0 if the PB pause was long enough that a recreate could have happened. Then:
+The swap waits for Relay's release. Relay sends Atlas message 1 just before this step (D-003, D-018). Re-read IPs with the same inspect as step 0 if the PB pause was long enough that a recreate could have happened. Then:
 ```
 FULL 'docker tag a2a-hub:v1.12.0 a2a-hub:latest && cd ~/docker-compose/a2a-hub \
       && grep ^AUTH_MODE .env && docker compose up -d --force-recreate a2a-hub'
 ```
-`grep` must print `AUTH_MODE=warn`. If it does not, stop before `compose`. After recreate, the same IP inspect again. Send both IP pairs to Atlas. They are expected to stay `a2a-hub` `172.20.0.3` and `convex` `172.20.0.2` only if step 0 still showed those; record whatever step 0 and step 6 actually print.
+`grep` must print `AUTH_MODE=warn`. If it does not, stop before `compose`. After recreate, the same IP inspect again. Relay sends Atlas message 2 with both IP pairs (the step 0 pair and this pair). They are expected to stay `a2a-hub` `172.20.0.3` and `convex` `172.20.0.2` only if step 0 still showed those; record whatever step 0 and step 6 actually print.
 
 Verify: RO `health` ok, RO `auth-mode` warn, RO `image` equals the v1.12.0 id, FULL `docker logs a2a-hub --since 5m 2>&1 | grep -ciE 'error|500'` (the count only).
 
 ## 7. PD after the swap
-Gauge runs PD again on the v1.12.0 image. The four rows that failed in step 5 are expected to pass. Any failure → rollback, and do not install the script.
+Gauge runs PD again on the v1.12.0 image. The four rows that failed in step 4b are expected to pass. Any failure → rollback, and do not install the script.
 
 ## 8. Install the widened auth-log script
 Only `scripts/tcm/a2a-readonly` changes in v1.12.0 (header `enroll-lines=`). Do not replace `a2a-k7.mjs`.
