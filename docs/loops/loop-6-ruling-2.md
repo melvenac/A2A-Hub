@@ -74,3 +74,18 @@ PB1b on the deploy still reads it from the image's `Config.Env`.
 - **Relay records:** T-057 as a precondition of strict (O1).
 - **Build waits for the `[authz]` soak (D-012).** That soak's clock starts when aaron's row is
   human-kind (G-002), because aaron browsing his agents' rooms would otherwise log `[authz]`.
+
+## Addendum: F0, the per-key count (Gauge, criteria `5775e63`)
+
+**Gauge is right, and Relay checked it in the code.** Each `--wait` loop is a sleep, then
+`heartbeat(ME)`, then `poll()` (`scripts/hub-talk.mjs:469-471`), so every poll sends two requests.
+Start-up is four: register, heartbeat, `resolveSession`, heartbeat (`:367-371`). One `--wait`
+process is therefore about 65 requests per 60 s, not 32.
+
+**Ruled: the corrected formula at the promised 10x headroom.** The limit is
+`10 * (3 * 65 + 30 * (3 + session_count))`, which is **3150 per name per 60 s** at
+`session_count` 1. 2160 would still cover the corrected peak, but only at about 6.9x, and the
+design promised 10x. The build derives its constant from this formula and writes it next to the
+code it counts. If `resolveSession` with `--peer` turns out to send more calls, the build counts
+them the same way. F1's boundary moves to 3150/3151. F2a and F2b report the measured per-name peak
+against this formula.
