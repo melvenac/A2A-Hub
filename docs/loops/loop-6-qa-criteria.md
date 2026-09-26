@@ -248,7 +248,7 @@ configuration fails.
   Each triggering request is named. The body matches the design section 9 text, or the build's
   documented one.
 - **D2.** Malformed ids on every route that takes one answer 4xx, never 500 and never 2xx. This
-  includes a real id of the wrong table (T-055): a session id used as a task id, and a task id used as
+  includes a real id of the wrong table (T-055): a task id used as a session id, and a session id used as
   a session id, both taken from the scratch stack.
   - The route list is re-derived from the candidate (`inv.mjs`). The request bodies are **valid**, so
     the id is the only thing wrong (`d-scan.mjs`).
@@ -257,8 +257,9 @@ configuration fails.
   and `POST /a2a/task/:taskId/respond`:
   - a malformed id, or a real id of the wrong table, gets **400** with a terse body. On v1.11.0 both
     routes answer 200.
-  - a **well-formed task id with no task** (a tasks-table id whose row was deleted on the scratch
-    database) gets **404** with a terse body on `respond`.
+  - **Task ids are UUID strings** (`src/escalation.ts:30`), not Convex ids (Relay, 2026-09-26). So
+    "malformed" means a non-UUID string. **A well-formed task id with no task** is a random UUID that
+    was never issued, and it gets **404** with a terse body on `respond`.
   - the same id on `claim` keeps its answer. That row is G4b, a preserve row, not a D row.
 - **D3.**
   - `GET /ui/does-not-exist` gives 404 with a terse body. This is the O1 disclosure observed on tcm
@@ -352,6 +353,16 @@ configuration fails.
   - In strict, an unknown key gets the guard's 403 before any bucket is consulted. The report records
     whether that 403 counts in the global bucket.
 
+- **F7 (Relay's ruling, 2026-09-26, on Gauge's white-box finding at `1c3b08c`).** The bucket names do
+  not collide.
+  - At `1c3b08c`, per-name buckets and the global bucket share one map, and the global key is the literal
+    `"global"` (`src/rateLimit.ts`, `auth.ts:113`, `keys.ts:52`).
+  - On the fixed candidate, with a name `global` enrolled on scratch, the name's own traffic up to its
+    per-key limit does not 429 a `/ui/` load or a missing-key request.
+  - The converse also holds: saturating the global bucket does not 429 the name `global`'s hub-talk.
+  - A name that equals the prefix form (for example `name:x`, if the build prefixes with `name:`) is
+    tried as well.
+
 ### G: preserve (brief preserve 1-6; Loop 5's rows re-run)
 
 - **G1. hub-talk for an existing name, both modes, old vs candidate** (Preserve 1).
@@ -418,6 +429,14 @@ configuration fails.
     `strict: false` (`src/keys.ts:57`).
   - **It does not gate** (ruling 2, O1). The guarantee rests on T-057, a precondition of strict. The
     report says so next to the result.
+
+- **X2 (Relay's ruling, 2026-09-26, on Rivet's declared deviation).** `issueEnrollmentCode` is a
+  **public** Convex mutation (the design said internal), because the hub has no admin key.
+  - A direct call to scratch Convex's `issueEnrollmentCode`, bypassing the hub, mints a code hash for an
+    `issuer` the caller chooses.
+  - The report records whether the matching plaintext code then enrolls a new name through the hub, and
+    which issuers it can claim: an existing human, an agent name, or a name that does not exist.
+  - **It does not gate.** Like X1, the guarantee rests on T-057, a precondition of strict.
 
 ### OP: the operator commands (brief scope 1-2)
 

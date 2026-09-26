@@ -36,15 +36,33 @@ const ID_ROUTES = [
   ["POST", "/a2a/session/:id/extend", { addTurns: 1 }], ["GET", "/a2a/session/:id/messages", null],
   ["POST", "/a2a/session/:id/read", { reader: NAME, throughTurn: 1, via: "inbox" }], ["GET", "/a2a/session/:id/reads", null],
 ];
-for (const [m, p, b] of ID_ROUTES) for (const [kind, id] of [["malformed id", "not-an-id"], ["wrong-table id", "jd7aaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]])
-  T.push([`${m} ${p} ${kind} (keyed)`, p.replace(":id", id), { method: m, headers: b ? { ...J, ...K } : K, ...(b ? { body: JSON.stringify(b) } : {}) }]);
+// Task ids are UUID strings (src/escalation.ts:30): malformed = not a UUID; a random UUID is well-formed
+// and missing (D2b: respond 404; claim keeps 200 {claimed:false,reason:"not-found"}, G4b). Session ids
+// are Convex ids: malformed = not an id; D_WRONG_TABLE_ID (a real id of another table on the stack, e.g.
+// an agents row) is the wrong-table case.
+import { randomUUID } from "node:crypto";
+const WRONG = process.env.D_WRONG_TABLE_ID ?? "jd7aaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const EXPECT = {}; // label -> required status (and body for G4b)
+for (const [m, p, b] of ID_ROUTES) {
+  const isTask = p.startsWith("/a2a/task/");
+  const cases = isTask ? [["malformed id", "not-a-uuid"], ["missing uuid", randomUUID()]] : [["malformed id", "not-an-id"], ["wrong-table id", WRONG]];
+  for (const [kind, id] of cases) {
+    const label = `${m} ${p} ${kind} (keyed)`;
+    T.push([label, p.replace(":id", id), { method: m, headers: b ? { ...J, ...K } : K, ...(b ? { body: JSON.stringify(b) } : {}) }]);
+    if (isTask && kind === "malformed id") EXPECT[label] = { status: 400 };
+    if (isTask && kind === "missing uuid") EXPECT[label] = p.endsWith("/respond") ? { status: 404 } : { status: 200, body: '{"claimed":false,"reason":"not-found"}', row: "G4b" };
+  }
+}
 let leaks = 0, fivexx = 0;
 for (const [label, path, opt] of T) {
   let r, body;
   try { r = await fetch(HUB + path, opt); body = await r.text(); } catch (e) { console.log(`ERROR ${label}: ${e.cause?.code ?? e.message}`); leaks++; continue; }
   const c = classify(body);
   // D2: a malformed or wrong-table id must be answered 4xx (brief D), not 2xx and not 5xx.
-  if (/ id \(keyed\)$/.test(label) && !(r.status >= 400 && r.status < 500)) c.push(`not-4xx`);
+  // D2b/G4b: the task routes' exact statuses (and claim's exact body) as ruled.
+  const ex = EXPECT[label];
+  if (ex) { if (r.status !== ex.status) c.push(`want-${ex.status}`); if (ex.body !== undefined && body !== ex.body) c.push(`${ex.row}-body-changed`); }
+  else if (/ id \(keyed\)$/.test(label) && !(r.status >= 400 && r.status < 500)) c.push(`not-4xx`);
   if (c.length) leaks++; if (r.status >= 500) fivexx++;
   const shown = body.replace(KEY, "<key>").replace(/\s+/g, " ").slice(0, 140);
   console.log(`${c.length ? "LEAK" : "ok  "} ${r.status} ${label}: [${c.join(",")}] ${JSON.stringify(shown)}`);
