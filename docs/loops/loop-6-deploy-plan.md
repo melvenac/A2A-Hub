@@ -5,7 +5,7 @@ Aaron, relayed verbatim: "deploy loop6 when ready" (D-021). The merge, the v1.12
 
 Not covered: AUTH_MODE=strict, Tailscale Funnel, runner pause or resume (D-018).
 
-Frozen build: `loop/6-build` `c461c65aebb8b4a485db6bb051787e3a04abbd42`. That commit supersedes `7420097`. Archive this SHA. It is frozen again: no further pushes to `loop/6-build`.
+Frozen build: `loop/6-build` `dadc8efb8ceb403efbf2247da2ea7fd72bc73085`. That commit supersedes `c461c65` (which superseded `7420097`). Archive this SHA. It is frozen again: no further pushes to `loop/6-build`.
 
 Ref: Loop 5 plan `docs/loops/loop-5-deploy-plan.md`. Runbook shape: Convex first, tag `:prev` before the build, PB, swap, PD. NOT `scripts/deploy.sh`.
 FULL = `ssh melvenac@100.124.212.87` (full key, writes, on Aaron's word for THIS deploy only).
@@ -27,11 +27,11 @@ D-017 reads, before any write:
 If `env_file` is still the relative `.env` beside the compose dir, step 1 does not copy a project `.env`. Step 6's AUTH_MODE grep stays in `~/docker-compose/a2a-hub`.
 
 ## Merge and tag (Relay, after Gauge acceptance PASS, before step 1)
-Relay tags `v1.12.0` on `c461c65aebb8b4a485db6bb051787e3a04abbd42` and merges `loop/6-build` to master by PR (D-021). This seat does not merge and does not tag. Step 1 archives that frozen SHA. Step 10 fast-forwards the main checkout to `origin/master` only after that merge is on master.
+Relay tags `v1.12.0` on `dadc8efb8ceb403efbf2247da2ea7fd72bc73085` and merges `loop/6-build` to master by PR (D-021). This seat does not merge and does not tag. Step 1 archives that frozen SHA. Step 10 fast-forwards the main checkout to `origin/master` only after that merge is on master.
 
 ## 1. Ship source (workstation → tcm)
 ```
-git -c core.autocrlf=false -c core.eol=lf archive -o $SCRATCH/a2a-hub-v1.12.0.tar c461c65aebb8b4a485db6bb051787e3a04abbd42
+git -c core.autocrlf=false -c core.eol=lf archive -o $SCRATCH/a2a-hub-v1.12.0.tar dadc8efb8ceb403efbf2247da2ea7fd72bc73085
 ```
 CR check on the extract of `src` and `convex`: expect 0. `package.json` version in the tar is 1.12.0.
 ```
