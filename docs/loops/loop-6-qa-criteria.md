@@ -3,7 +3,7 @@
 **Date:** 2026-09-26 · **Author:** QA seat (Gauge), session 19 · **Status:** objections ruled
 (ruling 2, `docs/loops/loop-6-ruling-2.md`, `c2ba4f4`). F and G5b are filled in from the design
 revision `04adf41`.
-- **One open point: F0**, the design's per-key count disagrees with the code (see F).
+- **F0 ruled** (ruling 2 addendum): the per-key limit is the corrected formula, 3150 per name per 60 s.
 - Written before a candidate is named. Nothing has been run.
 - Merging this branch needs Aaron's word.
 
@@ -18,7 +18,7 @@ revision `04adf41`.
   PB1b still reads `NODE_ENV` from the image.
 - **Section 5 (G5b):** a `kind=-` row is not human. Loop 6 does not infer humanity or write a kind,
   and such a row cannot issue a code in either mode.
-- **Section 10 (F):** per key, 2160 per name per 60 s. Global, `10 * N` = 90 per 60 s (N = 9 rows),
+- **Section 10 (F):** per key, 3150 per name per 60 s (F0, ruling 2 addendum; the design said 2160). Global, `10 * N` = 90 per 60 s (N = 9 rows),
   or `10 * F` if the image's `/ui` file count F exceeds N. The global bucket's shared-flood limit is
   accepted for T-068 and must be written into the design at build.
 
@@ -276,12 +276,13 @@ configuration fails.
 ### F: rate limiting (brief F; ruling 1's required change; design section 10 at `04adf41`, ruled in ruling 2)
 
 **The numbers:**
-- **Per key:** 2160 requests per name per 60 s fixed window.
+- **Per key:** 3150 requests per name per 60 s fixed window, `10 * (3 * 65 + 30 * (3 + s))` at s = 1
+  (F0, as ruled).
 - **Global:** 90 per 60 s. It counts new-name registers, registers whose key matches no row, `/ui/*`,
   missing-key 401s and, per O4, unknown-key requests in warn. If the image's `/ui` file count F is
   over 9, the global limit is `10 * F`, and F is read from the candidate's built `client/dist`.
 
-- **F0. The design's count disagrees with the code. Relay rules; nothing here waits on it.**
+- **F0. The design's count disagreed with the code. RULED (ruling 2 addendum): the corrected formula.**
   - Section 10 counts one hub-talk process as 32 requests per 60 s: 1 register, 1 heartbeat and 30
     `--wait` reads.
   - But each `--wait` loop also sends a heartbeat (`scripts/hub-talk.mjs:469-471`: sleep,
@@ -291,11 +292,11 @@ configuration fails.
   - Three `--wait` processes plus a daemon (`30 * (3 + 1)` = 120, which matches the code:
     `daemon.ts:302-323` and `sessions.ts:70-72`, active sessions only) come to about **315**, not
     216. The corrected formula at 10x is `10 * (3 * 65 + 30 * (3 + s))`, 3150 at s = 1.
-  - **2160 still exceeds the corrected peak, by about 6.9x rather than 10x**, so F2 is still expected
-    to see no 429. The formula in the design is the part that is wrong.
+  - 2160 would have covered the corrected peak by only about 6.9x. Relay ruled the corrected formula,
+    3150, which restores 10x.
   - F2's recorder reports the measured per-name peak, which is the real number.
 - **F1. Per-key boundary, both modes.**
-  - In one window, one key's requests 1-2160 get no 429, and request 2161 gets `429 {"error":"too many
+  - In one window, one key's requests 1-3150 get no 429, and request 3151 gets `429 {"error":"too many
     requests"}` with `Retry-After`.
   - `Retry-After` is an integer number of seconds, greater than 0 and at most 60, and equal to what
     is left in the window, ±1.
@@ -310,7 +311,7 @@ configuration fails.
     **3 concurrent `--wait`** processes, plus one daemon loop.
 
   The report gives the measured requests per name per 60 s, the maximum over all names and windows,
-  next to 2160 (F0).
+  next to the formula's peak (~315) and the limit (3150).
 - **F3. Existing names are never in the global bucket** (required change 1).
   - First saturate the global bucket until it returns 429, using new-name registers, unknown-key
     registers and `/ui/` requests.
