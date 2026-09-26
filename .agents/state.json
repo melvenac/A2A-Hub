@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 66,
+  "revision": 67,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -593,11 +593,11 @@
       "id": "T-066",
       "title": "Loop 5: a key acts only as itself, and only in its own rooms (identity + membership + owner's view)",
       "priority": "P0",
-      "status": "open",
+      "status": "done",
       "opened_session": 17,
-      "closed_session": null,
+      "closed_session": 18,
       "supersedes": null,
-      "note": "Brief docs/loops/loop-5-identity-and-membership-brief.md; design docs/loops/loop-5-design.md; rulings loop-5-ruling-1.md and loop-5-ruling-2.md. BUILT (Rivet) and ACCEPTED (V-008) on ebe7747. MERGED (PRs #21-#23, master f52f6d6) and TAGGED v1.11.0 (45c168e). DEPLOY PLAN: docs/loops/loop-5-deploy-plan.md (Rivet, chore/loop-5-deploy-plan 936fda8; accepted by Relay with rulings at its top): step 0.5 full-key read of tcm's live compose env_file (copy .env into the new dir if it points into ~/projects/a2a-hub); `docker tag a2a-hub:prev a2a-hub:v1.8.0` before step 4; assignOwnerAtDeploy twice; PB; PD; RL2 with a2a-readonly c7728ab751cd and a2a-k7.mjs f1de001c3435; rows-without-owner=0; stays warn; step 12 main checkout ff to master; step 13 GitNexus reindex (--skip-agents-md). Until 13 the GitNexus index describes the PRE-Loop-5 hub. TIMING: only after T-064's read (>= ~04:30Z 2026-09-26), on Aaron's word. Then the one-day [authz] soak (D-012), then strict. Close T-066 at the deploy's PD+RL2 pass. Follow-ups: T-070, T-071."
+      "note": "DEPLOYED to tcm, session 18 (2026-09-26), on Aaron's word ('Loop 5 deploy'), run by Rivet (a2a-grok, D-016) from docs/loops/loop-5-deploy-plan.md with steps 0/11 dropped (D-018). Swap at 01:22:11Z on image 645a6f248d82 (v1.11.0), AUTH_MODE=warn; rollback image :prev 648ac3963dd7 (v1.10.0). QA by Gauge: PB PASS (Aaron ran it himself after Gauge's permission gate blocked it), pre-swap PD known negative, PD PASS, RL2/RL3 PASS (PR #34, qa/loop-5-deploy). Main checkout at 2e3de2f, reindexed. V-010. Open finding: G-002 (aaron's row has no kind, so his owner's view is off)."
     },
     {
       "id": "T-067",
@@ -807,6 +807,19 @@
       ],
       "since_session": 18,
       "status": "verified"
+    },
+    {
+      "id": "V-010",
+      "claim": "tcm runs A2A-Hub v1.11.0 (Loop 5) in AUTH_MODE=warn: container on image 645a6f248d82 since 2026-09-26 01:22:11Z, health ok, every agent row owned and assigned an owner, and the read-only auth-log reports authz-lines",
+      "evidence": [
+        {
+          "type": "deploy",
+          "path": "docs/loops/loop-5-deploy-plan.md; Gauge's report docs/loops/loop-5-deploy-qa.md (qa/loop-5-deploy a7b456f, PR #34)",
+          "observation": "Relay, read-only key, 01:22:45Z: image container-image-id=645a6f248d82 running, auth-mode warn, health ok with convex ok; a real send through the new hub (relay turn 24, 01:22:59Z) stored, with receipts. Relay, step 9: agents-summary rows=9 K7=PASS, PASS ownerAssigned rows-without-owner=0; auth-log header authz-lines=0. Rivet: docker logs error count 0; container IPs unchanged (a2a-hub 172.20.0.3, convex 172.20.0.2); T-065 scripts' sha256 match v1.11.0. Gauge: PB PASS, PD PASS (serves index-DleSmG9D.js, 56,201 bytes, same as a local v1.11.0 build), RL2/RL3 PASS."
+        }
+      ],
+      "since_session": 18,
+      "status": "verified"
     }
   ],
   "gaps": [
@@ -816,6 +829,13 @@
       "evidence": "src/auth.ts:95-116 at c4d2d1c (read by Relay, session 17): an unrecognised X-Agent-Key logs `[auth] WOULD REJECT unknown ...` and continues with req.agentName = null (:103); tcm's startup line reads 'Auth: WARN - unknown X-Agent-Key is logged and allowed' (t-003-cutover-log.md step 2).",
       "recommended_update": "Never give the hub a public address (Funnel, the public hostname, a port forward) while AUTH_MODE=warn. Turn strict on after T-064's read, on Aaron's word, before D-011 step 5. Close this gap when tcm reads strict via the read-only key's auth-mode.",
       "opened_session": 17
+    },
+    {
+      "id": "G-002",
+      "what": "aaron's tcm row has no agentCard.kind, so Loop 5's owner's view is off for him: his chat page lists only rooms he is in (Preserve 3 regression)",
+      "evidence": "Found by Gauge after the Loop 5 deploy (docs/loops/loop-5-deploy-qa.md, PR #34); confirmed by Relay in code: convex/accessLogic.ts:47 gives ownerView only to isHumanRow (agentCard.kind === 'human'), and GET /a2a/sessions uses listVisibleTo for a known caller in BOTH modes (src/index.ts:609-611). tcm agents-summary 2026-09-26: 'aaron kind=- owner=aaron' (owner from the backfill, not from being human). V-008's acceptance E passed because the scratch aaron was human-kind: acceptance data shaped differently from live data.",
+      "recommended_update": "On Aaron's word (a live write): Rivet re-registers aaron with aaron's own key and agentCard.kind 'human' (the v1.11.0 'same' path patches agentCard only, convex/agents.ts:183-186), using a script that reads aaron.key without printing it; Gauge re-checks with the RO agents-summary. Start the [authz] soak clock after the fix, because aaron reading his agents' rooms in warn logs [authz]. Never run `hub-talk --as aaron`: it would re-register aaron as ide-session.",
+      "opened_session": 18
     }
   ],
   "decisions": [
