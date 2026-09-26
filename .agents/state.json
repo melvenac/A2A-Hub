@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 68,
+  "revision": 69,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -1030,6 +1030,12 @@
       "title": "tcm deploys no longer pause the GitHub runners; tell Atlas instead, and check the container IPs before and after a swap",
       "date": "2026-09-26",
       "note": "Aaron, Relay session 18: 'ht runner are low priority, why manual pause?'. Relay found the only recorded reason was that a SIA seat may send CI to tcm's runners (docs/loops/t-003-cutover-log.md:22-23), and dropped steps 0 and 11 of docs/loops/loop-5-deploy-plan.md. Aaron then said 'Ask atlas about the runner pause'. Atlas (SIA planner, record 109), reading SIA's code rather than recalling: SIA's CI on tcm (.github/workflows/ci.yml) runs only npm ci, tsc and vitest, and its first step REQUIRES the hub and Convex to be unreachable, so a deploy cannot corrupt a job. The only effect is load (vitest 5 s timeouts, a wrong-reason red), which SIA re-runs. The pause can stay dropped. INSTEAD, for every tcm deploy: (1) tell Atlas when it starts; (2) record the a2a-hub and convex container IPs on their docker network before and after the swap, and tell Atlas. SIA's egress self-check lists fixed IPs (172.20.0.2, 172.20.0.3), and a changed address would be a silent gap in it, not a failure."
+    },
+    {
+      "id": "D-019",
+      "title": "Correction to D-012's order: the Loop 6 build starts now, and the [authz] check was run at once, not after a day",
+      "date": "2026-09-26",
+      "note": "Aaron, Relay session 18, verbatim: \"go-ahead loop 6, run the check now, dont waite\". CHECK RUN by Relay with the RO key: tcm on v1.11.0 since 01:22:11Z had 0 [authz] lines from 01:22 to 01:39Z. Known positive: Relay's one probe (relay key, GET /a2a/peer/aaron/sessions, 200) was logged at 01:39:40Z as '[authz] WOULD REJECT peerName=aaron on GET /a2a/peer/:peerName/sessions caller=relay', with no key or hash. LIMIT: 17 minutes, not a working day, so agents that act rarely (grokbot's watcher) may not appear. A re-read before strict is still worthwhile. BUILD: Rivet (a2a-grok) builds Loop 6 (v1.12.0) now on scratch stacks, never tcm or the main checkout. UNCHANGED: AUTH_MODE=strict is its own act on Aaron's word; T-057 is a precondition of strict (Loop 6 ruling 2, O1); G-001 holds (no public address before strict). Corrects D-012 (append-only)."
     }
   ],
   "handoffs": [
