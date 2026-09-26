@@ -377,6 +377,25 @@ configuration fails.
   - `--init-key --invite <code>` enrolls a new name, as in A2.
   - **Static:** the candidate's diff to `scripts/hub-talk.mjs` and `scripts/hub-key.mjs` touches only
     the `--invite` parse and `hub-key.mjs:185-187`'s body (D-014). Any other hunk is a finding.
+- **G1d (Relay, 2026-09-26, on a regression Relay found in `7420097`).** `hub-talk --as <name> --peer
+  <unregistered>` on the candidate exits with **rc 1** and prints the "is not registered on this hub"
+  fix-it message, the same as on v1.11.0, in both modes. The message comes from `hub-talk.mjs:272`
+  matching `/Unknown peer/`.
+- **G1e. The error text that clients match on is unchanged, old vs candidate, in both modes.** The
+  list of matching sites was swept from the v1.11.0 client code (`scripts/`, `src/wrapper/`,
+  `client/src`) by Gauge on 2026-09-26. Rivet's own sweep must be checked against it.
+  - `scripts/hub-talk.mjs:272`: `POST /a2a/session` naming an unregistered participant. The body's
+    `error` must match `/Unknown peer/`, and the status class must be the same as on v1.11.0.
+  - `src/wrapper/daemon.ts:317`: a rejected key in strict. 403, and the text must match
+    `/Invalid X-Agent-Key/`, so the daemon exits instead of retrying.
+  - `src/wrapper/daemon.ts:130,286` and `scripts/hub-key.mjs:209-213`: branch on the status CLASS of a
+    register or key-call refusal (4xx means "refused"; 5xx means "failed, keep `.next`"). Every
+    register refusal must stay 4xx. The cases are: a taken name (409), a key under 32 characters, a
+    key held by another name, an owned name with a new key, and the new enrollment refusals.
+  - `scripts/hub-talk.mjs:305` and `client/src/App.svelte` only **display** `body.error`. A changed
+    display text is recorded but does not fail the row, unless the new text is one of D's leaks.
+  - Method: each triggering request is sent to the old hub and to the candidate. Status class and
+    regex match are compared; the report lists both bodies.
 - **G2. Every existing row keeps its key and owner** (Preserve 2).
   - The live-shaped seed is read before and after the candidate's functions are deployed onto it,
     and after the whole run.
