@@ -1,4 +1,4 @@
-<!-- generated from .agents/state.json rev 65 by open-brain v1.11.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 67 by open-brain v1.11.0 — do not edit; change state via ob_state -->
 
 # Current Focus
 
@@ -8,8 +8,8 @@ Prove a truly remote agent can join the hub over the public internet with its ow
 
 ## Top tasks
 
-- [ ] **T-066** [P0] Loop 5: a key acts only as itself, and only in its own rooms (identity + membership + owner's view)
 - [ ] **T-002** [P1] Onboard a truly remote agent
 - [ ] **T-004** [P1] askPolicy is not enforced on the JSON-RPC path
 - [ ] **T-005** [P1] Rate limiting and abuse protection
 - [ ] **T-006** [P1] On-demand spawn
+- [ ] **T-007** [P1] Two cheap repo-peer measurements
