@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 70,
+  "revision": 71,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -1042,6 +1042,12 @@
       "title": "D-015 widened: ANY branch whose diff is documents only merges without asking, not only docs/*",
       "date": "2026-09-26",
       "note": "Aaron, Relay session 18, verbatim: \"You don't need permission to merge docs, merge without asking please\", said when Relay asked to merge PR #38 (qa/loop-6-criteria, 3 docs files). Covers Gauge's qa/*, Rivet's chore/* and loop/* and Relay's docs/* alike, when the diff against origin/master touches only docs/, .agents/ and top-level *.md. Everything else in D-015 stands: check the diff before merging, merge commit through a PR, merges only (no tags, releases or main-checkout updates), and any code, script, Convex, client, test, package, Dockerfile, compose or config change still needs Aaron's word. Rule text updated in .agents/roles/shared.md. PR #38 merged under it (447a7db). Amends D-015 (append-only)."
+    },
+    {
+      "id": "D-021",
+      "title": "Aaron pre-approves the Loop 6 deploy: merge, tag v1.12.0 and deploy to tcm once ready",
+      "date": "2026-09-26",
+      "note": "Aaron, Relay session 18, verbatim: \"deploy loop6 when ready\". READY, as Relay recorded it: (1) Gauge's acceptance of the frozen loop/6-build SHA is PASS against docs/loops/loop-6-qa-criteria.md; (2) Rivet's Loop 6 deploy plan (the Loop 5 plan's shape: Convex functions first, :prev tagged, build, PB, swap, PD, RL, main checkout, reindex; no runner pause per D-018) is accepted by Relay; (3) Atlas is told before the swap and gets the container IPs before and after (D-018). COVERS: merging loop/6-build to master, the v1.12.0 tag, the tcm deploy with Gauge's PB and PD, installing the widened auth-log script, and the main-checkout update. D-017 applies (read-only full-key commands during the act). NOT COVERED: AUTH_MODE=strict (its own act; T-057 is a precondition, ruling 2 O1), Funnel or any public address (G-001), live Convex writes outside the plan, and anything a fail in (1) or (2) leaves open. A FAIL stops the deploy and goes back to Aaron."
     }
   ],
   "handoffs": [
