@@ -92,7 +92,10 @@ passthrough), T-070's oracle, and basic rate limiting (T-005).
 
 1. **hub-talk for an existing name is unchanged, in both modes** (D-003). Every SIA flow works:
    register, `--inbox`, `--say`, `--wait`, `--peer`, read receipts, `--rotate-key`. Only creating a
-   *new* name changes, and that change is the open question below.
+   *new* name changes, through `--invite` (D-014, § hub-talk: `--invite`). `--rotate-key` is not
+   enrollment: it calls only `POST /a2a/rotate` (`scripts/hub-key.mjs:217-227`), which is proven by
+   the current key and stays unchanged and codeless. An `--init-key` on an existing owned name stays
+   refused with a 409 in both modes (`convex/keyLogic.ts:80-83`). Ruled in the room, turn 5.
 2. **Every existing row keeps its key and its owner.** No name on tcm is re-enrolled.
 3. **Loop 5 holds:** identity binding, membership, the owner's view and askPolicy on JSON-RPC,
    warn logging `[authz]` and strict refusing. Loop 5's acceptance rows are re-run.
