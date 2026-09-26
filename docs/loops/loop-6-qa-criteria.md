@@ -247,8 +247,19 @@ configuration fails.
 
   Each triggering request is named. The body matches the design section 9 text, or the build's
   documented one.
-- **D2.** Malformed ids on every route that takes one answer 4xx, never 500. This includes a
-  well-formed-looking id of the wrong table (T-055).
+- **D2.** Malformed ids on every route that takes one answer 4xx, never 500 and never 2xx. This
+  includes a real id of the wrong table (T-055): a session id used as a task id, and a task id used as
+  a session id, both taken from the scratch stack.
+  - The route list is re-derived from the candidate (`inv.mjs`). The request bodies are **valid**, so
+    the id is the only thing wrong (`d-scan.mjs`).
+  - On the baseline, 16 of 20 id triggers answer 2xx or 5xx (`loop-6-qa/runs/d-scan-baseline-f52f6d6.txt`).
+- **D2b (Relay's ruling, 2026-09-26, on Gauge's baseline finding).** On `POST /a2a/task/:taskId/claim`
+  and `POST /a2a/task/:taskId/respond`:
+  - a malformed id, or a real id of the wrong table, gets **400** with a terse body. On v1.11.0 both
+    routes answer 200.
+  - a **well-formed task id with no task** (a tasks-table id whose row was deleted on the scratch
+    database) gets **404** with a terse body on `respond`.
+  - the same id on `claim` keeps its answer. That row is G4b, a preserve row, not a D row.
 - **D3.**
   - `GET /ui/does-not-exist` gives 404 with a terse body. This is the O1 disclosure observed on tcm
     in Loop 4.
@@ -295,6 +306,10 @@ configuration fails.
   - 2160 would have covered the corrected peak by only about 6.9x. Relay ruled the corrected formula,
     3150, which restores 10x.
   - F2's recorder reports the measured per-name peak, which is the real number.
+  - **Measured on v1.11.0** (2026-09-26, `loop-6-qa/runs/f0-baseline-f52f6d6.log`): one real `--wait`
+    process, counted by `proxy.mjs` (known positive: 5 sent, 5 logged), made **61 requests in its first
+    60 s**: 38 heartbeats and 36 message reads over 77 s, all 200. That confirms F0. Each loop takes a
+    little over 2 s, so 61 is under the ruled 65.
 - **F1. Per-key boundary, both modes.**
   - In one window, one key's requests 1-3150 get no 429, and request 3151 gets `429 {"error":"too many
     requests"}` with `Retry-After`.
@@ -361,6 +376,9 @@ configuration fails.
   Loop 5's.
 - **G4. Daemons** (Preserve 4) heartbeat, poll and answer one turn on the scratch stack, in both modes
   (Loop 5's D2).
+- **G4b. The claim answer the daemon reads** (Preserve 4; Relay's ruling on D2b). A well-formed task
+  id with no task still gets `200 {"claimed":false,"reason":"not-found"}` from `claim`, byte-identical
+  to v1.11.0, in both modes. The daemon reads `claim.claimed` (`src/wrapper/daemon.ts:183-187`).
 - **G5. Aaron's chat page** (Preserve 5).
   - **G5a (aaron-h):** Loop 4's page rows B1-B3 and Loop 5's E rows. The page lists `aaron`'s agents'
     rooms.
@@ -436,6 +454,8 @@ configuration fails.
 | M12 `--invite` is accepted without `--init-key` | G1c |
 | M13 the not-valid text differs when some code exists | A5 |
 | M14 the used check is skipped (a race or a reuse) | A3, A14 |
+| M15 claim on a well-formed missing task id answers 404 (the D2b rule over-applied) | G4b |
+| M16 respond on a malformed task id answers 200 again | D2b |
 
 The F mutants (M9) are run once section 10 is ruled.
 
