@@ -139,3 +139,15 @@ before any read. **31 checks: 30 pass and 1 fails as the harness wrote it.** Log
 - His `owner=aaron` comes from the backfill's non-human default (`hubOwner`), not from being human.
 - **Not observed:** no keyed request was made, so this is read from the row, not from a response.
 - Related: Loop 6's `src/keys.ts:61` finding (a register body can self-declare `kind: human`).
+
+**Relay's reading (2026-09-26): confirmed. This is a live regression of Loop 5 Preserve 3.**
+- `GET /a2a/sessions` uses `listVisibleTo` for any known caller, in both modes
+  (`src/index.ts:609-611`). So `aaron`'s chat page on tcm now lists only rooms he is in.
+- In warn mode, any read by `aaron` of his agents' rooms logs `[authz]`, which pollutes the soak.
+- Relay is taking the fix to Aaron, because it is a live write to his row.
+
+**Class note (for QA):** V-008's E rows passed on scratch, where `aaron` was seeded human-kind. The
+live row was never human-kind, and the backfill sets `owner`, not `kind`. **This is acceptance data
+shaped differently from live data.** The scratch seed should have been taken from the live row's
+shape. Here, that means tcm's `agents-summary` read before the loop. A criterion that depends on a
+row's fields needs a row that matches the live one, or a row showing the rule holds on the live shape.
