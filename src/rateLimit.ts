@@ -17,7 +17,13 @@ import type { Response } from "express";
 export const WINDOW_MS = 60_000;
 export const PER_KEY_LIMIT = 10 * (3 * 65 + 30 * (3 + 1));
 export const GLOBAL_LIMIT = 10 * 9;
-export const GLOBAL_BUCKET = "global";
+/** Not a legal agent name, so a name can never land in this bucket. */
+export const GLOBAL_BUCKET = "bucket:global";
+
+/** Per-name window. Prefixed so an agent named like the global key stays apart. */
+export function nameBucket(name: string): string {
+  return `name:${name}`;
+}
 
 type Window = { start: number; count: number };
 

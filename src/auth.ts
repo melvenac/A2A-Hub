@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { createHash } from "crypto";
 import type { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api.js";
-import { GLOBAL_BUCKET, GLOBAL_LIMIT, limited, PER_KEY_LIMIT } from "./rateLimit.js";
+import { GLOBAL_BUCKET, GLOBAL_LIMIT, limited, nameBucket, PER_KEY_LIMIT } from "./rateLimit.js";
 
 /**
  * X-Agent-Key validation.
@@ -110,7 +110,7 @@ export function requireAgentKey(convex: ConvexHttpClient) {
     }
 
     req.agentName = agent.name;
-    if (limited(res, agent.name, PER_KEY_LIMIT)) return;
+    if (limited(res, nameBucket(agent.name), PER_KEY_LIMIT)) return;
     next();
   };
 }

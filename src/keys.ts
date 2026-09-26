@@ -5,7 +5,7 @@ import { hashKey, type AuthMode } from "./auth.js";
 import { KEY_FLOOR } from "../convex/keyLogic.js";
 import { ENROLL_TEXT } from "../convex/enrollLogic.js";
 import { enrollLine } from "./authz.js";
-import { GLOBAL_BUCKET, GLOBAL_LIMIT, limited, PER_KEY_LIMIT } from "./rateLimit.js";
+import { GLOBAL_BUCKET, GLOBAL_LIMIT, limited, nameBucket, PER_KEY_LIMIT } from "./rateLimit.js";
 import { respondInternal } from "./httpError.js";
 
 /**
@@ -49,7 +49,7 @@ export function makeRegisterHandler(deps: {
       const existing = await convex.query(api.agents.getByName, { name });
       const apiKeyHash = hashKey(apiKey);
       const holder = await convex.query(api.agents.getByKeyHash, { apiKeyHash });
-      const bucket = holder?.name === name ? name : GLOBAL_BUCKET;
+      const bucket = holder?.name === name ? nameBucket(name) : GLOBAL_BUCKET;
       const cap = bucket === GLOBAL_BUCKET ? GLOBAL_LIMIT : PER_KEY_LIMIT;
       if (limited(res, bucket, cap)) return;
       const alreadyHuman = existing?.human === true;

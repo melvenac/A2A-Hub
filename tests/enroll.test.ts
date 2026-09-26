@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
+import express from "express";
 import { cardForStore, ENROLL_TEXT, judgeCode } from "../convex/enrollLogic.js";
-import { clientError } from "../src/httpError.js";
-import { charge, GLOBAL_LIMIT, PER_KEY_LIMIT, resetLimits } from "../src/rateLimit.js";
+import { clientError, mountTrailingNotFound } from "../src/httpError.js";
+import { TASK_NOT_FOUND } from "../src/authz.js";
+import { charge, GLOBAL_BUCKET, GLOBAL_LIMIT, nameBucket, PER_KEY_LIMIT, resetLimits } from "../src/rateLimit.js";
+import { isWellFormedTaskId } from "../src/taskId.js";
+import { randomUUID } from "node:crypto";
 import { enrollLine } from "../src/authz.js";
 
 describe("judgeCode", () => {
@@ -32,9 +36,9 @@ describe("rate window", () => {
     resetLimits();
     const now = 5_000_000;
     for (let i = 0; i < PER_KEY_LIMIT; i++) {
-      expect(charge("alice", PER_KEY_LIMIT, now).ok).toBe(true);
+      expect(charge(nameBucket("alice"), PER_KEY_LIMIT, now).ok).toBe(true);
     }
-    const blocked = charge("alice", PER_KEY_LIMIT, now);
+    const blocked = charge(nameBucket("alice"), PER_KEY_LIMIT, now);
     expect(blocked.ok).toBe(false);
     expect(PER_KEY_LIMIT).toBe(3150);
     expect(GLOBAL_LIMIT).toBe(90);
@@ -43,8 +47,49 @@ describe("rate window", () => {
   it("a name bucket does not spend the global bucket", () => {
     resetLimits();
     const now = 6_000_000;
-    expect(charge("alice", PER_KEY_LIMIT, now).ok).toBe(true);
-    expect(charge("global", GLOBAL_LIMIT, now).ok).toBe(true);
+    expect(charge(nameBucket("alice"), PER_KEY_LIMIT, now).ok).toBe(true);
+    expect(charge(GLOBAL_BUCKET, GLOBAL_LIMIT, now).ok).toBe(true);
+  });
+
+  it("an agent named global does not share the global bucket", () => {
+    resetLimits();
+    const now = 7_000_000;
+    for (let i = 0; i < GLOBAL_LIMIT; i++) {
+      expect(charge(GLOBAL_BUCKET, GLOBAL_LIMIT, now).ok).toBe(true);
+    }
+    expect(charge(GLOBAL_BUCKET, GLOBAL_LIMIT, now).ok).toBe(false);
+    expect(charge(nameBucket("global"), PER_KEY_LIMIT, now).ok).toBe(true);
+    expect(nameBucket("global")).not.toBe(GLOBAL_BUCKET);
+  });
+});
+
+describe("task ids", () => {
+  it("accepts a UUID v4 and refuses other strings", () => {
+    expect(isWellFormedTaskId(randomUUID())).toBe(true);
+    expect(isWellFormedTaskId("not-an-id")).toBe(false);
+    expect(isWellFormedTaskId("k575twereq1w6f2s3yra5zk5618f4rty")).toBe(false);
+  });
+
+  it("a missing UUID is the task-not-found body, which claim does not use", () => {
+    expect(TASK_NOT_FOUND).toEqual({ status: 404, error: "task not found" });
+  });
+});
+
+describe("unmatched routes", () => {
+  it("answers 404 json", async () => {
+    const app = express();
+    mountTrailingNotFound(app);
+    const server = await new Promise<import("node:http").Server>((resolve) => {
+      const s = app.listen(0, "127.0.0.1", () => resolve(s));
+    });
+    const { port } = server.address() as { port: number };
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/no-such-route`);
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ error: "not found" });
+    } finally {
+      await new Promise<void>((r) => server.close(() => r()));
+    }
   });
 });
 

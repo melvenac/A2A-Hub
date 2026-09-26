@@ -15,3 +15,10 @@ export function respondInternal(res: Response, error: unknown): void {
   const pub = clientError(error);
   res.status(pub.status).json({ error: pub.error });
 }
+
+/** After every route, including /ui. Unmatched paths are JSON, not HTML. */
+export function mountTrailingNotFound(app: { use: Function }): void {
+  app.use((_req: unknown, res: Response) => {
+    res.status(404).json({ error: "not found" });
+  });
+}

@@ -24,7 +24,8 @@ import {
 } from "./authz.js";
 import { CODE_TTL_MS, ENROLL_TEXT } from "../convex/enrollLogic.js";
 import { GLOBAL_BUCKET, GLOBAL_LIMIT, limited } from "./rateLimit.js";
-import { respondInternal } from "./httpError.js";
+import { mountTrailingNotFound, respondInternal } from "./httpError.js";
+import { isWellFormedTaskId } from "./taskId.js";
 import { INSTANCE_LIVENESS_MS } from "./identity.js";
 import { makeRegisterHandler, makeRotateHandler, whoami } from "./keys.js";
 import { askDeniedReason, evaluateAsk } from "./ask-policy.js";
@@ -356,18 +357,19 @@ app.post("/a2a/message/send", async (req, res) => {
 app.post("/a2a/task/:taskId/respond", async (req, res) => {
   try {
     const { taskId } = req.params;
+    if (!isWellFormedTaskId(taskId)) {
+      return res.status(400).json({ error: "not a task id" });
+    }
 
     const responseText = req.body?.response;
     if (!responseText) return res.status(400).json({ error: "Missing response field" });
 
     // T-066 §5 (Q8): only the agent the task is assigned to answers it, claimed
-    // or not. Strict answers another caller exactly as a task that does not
-    // exist (Q2); warn leaves a missing task to behave as today.
+    // or not. A well-formed id with no task is 404 in both modes. Strict answers
+    // another caller exactly as a task that does not exist (Q2).
     const task = await convex.query(api.tasks.getByTaskId, { taskId });
     if (!task) {
-      if (authMode === "strict") {
-        return res.status(TASK_NOT_FOUND.status).json({ error: TASK_NOT_FOUND.error });
-      }
+      return res.status(TASK_NOT_FOUND.status).json({ error: TASK_NOT_FOUND.error });
     } else if (
       !enforce(
         req,
@@ -404,6 +406,9 @@ app.post("/a2a/task/:taskId/respond", async (req, res) => {
 app.post("/a2a/task/:taskId/claim", async (req, res) => {
   try {
     const { taskId } = req.params;
+    if (!isWellFormedTaskId(taskId)) {
+      return res.status(400).json({ error: "not a task id" });
+    }
 
     const agentName = req.body?.agentName;
     if (!agentName) return res.status(400).json({ error: "Missing agentName field" });
@@ -783,6 +788,9 @@ app.use((err: any, _req: express.Request, res: express.Response, next: express.N
   if (status === 404) return res.status(404).json({ error: "not found" });
   respondInternal(res, err);
 });
+
+// Unmatched paths (GET /, GET /no-such-route) never reach the error middleware.
+mountTrailingNotFound(app);
 
 const port = parseInt(process.env.PORT || "4000");
 app.listen(port, () => {

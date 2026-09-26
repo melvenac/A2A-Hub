@@ -14,6 +14,10 @@ Loop 6 (T-067): a new name needs a one-time enrollment code from a human owner. 
 - Strict `POST /a2a/session/:id/read` for a non-participant returns `404 {"error":"session not found"}` and does not write a cursor (T-070).
 - Error responses stay terse when `NODE_ENV` is unset. The image also sets `NODE_ENV=production`.
 - `scripts/tcm/a2a-readonly` `auth-log` counts `enroll-lines`. Installing that file on tcm is a later deploy act.
+- A task id that is not a UUID v4 gets 400 `not a task id` on claim and respond, in both modes. A UUID with no task: claim stays `200` `claimed: false` `reason: not-found`; respond gets 404 `task not found`.
+- An unmatched path, including `GET /`, returns 404 `{ "error": "not found" }`.
+- Rate-limit buckets are `name:<agent>` and `bucket:global`, so an agent named `global` does not share the global window.
+- Operator steps for `agents:createHuman` are in `docs/loops/loop-6-create-human.md`. The command prints a hash, not the key.
 
 ### Unchanged
 - `--rotate-key`. Warn still allows a codeless new name and strips `kind: "human"`. Strict is not turned on by this build.
