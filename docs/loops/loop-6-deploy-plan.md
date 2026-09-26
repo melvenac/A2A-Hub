@@ -55,19 +55,26 @@ FULL 'docker tag a2a-hub:prev a2a-hub:v1.10.0 && docker tag a2a-hub:latest a2a-h
 ```
 `:latest` is unchanged by the tag (it still points at the running v1.11.0 image). The new id is `a2a-hub:v1.12.0` only. Stop here for Gauge PB. Fail means stop, no swap.
 
-## 4. PB — Gauge on the built image. Fail → stop, no swap.
+## 4. PB — Gauge on the built image
+Gauge runs PB against `a2a-hub:v1.12.0` before any swap. Aaron may need to paste its bang line, the same way Loop 5 PB ran as his own act (`docs/loops/loop-5-deploy-qa.md` records that paste). Fail → stop, no swap. This seat does not run PB.
 
-## 5. Swap
-Re-read IPs with the same inspect as step 0 if step 4 took long enough that a recreate could have happened. Then:
+## 5. Pre-swap PD
+Gauge runs PD while tcm is still on the v1.11.0 image. Relay's sequence: this run is expected to FAIL only PD.1b, PD.3, PD.5, and PD.6. Any other failure stops the deploy. This seat does not run PD.
+
+## 6. Swap
+Re-read IPs with the same inspect as step 0 if the PB pause was long enough that a recreate could have happened. Then:
 ```
 FULL 'docker tag a2a-hub:v1.12.0 a2a-hub:latest && cd ~/docker-compose/a2a-hub \
       && grep ^AUTH_MODE .env && docker compose up -d --force-recreate a2a-hub'
 ```
-`grep` must print `AUTH_MODE=warn`. If it does not, stop before `compose`. After recreate, the same IP inspect again. Send both IP pairs to Atlas. They are expected to stay `a2a-hub` `172.20.0.3` and `convex` `172.20.0.2` only if step 0 still showed those; record whatever step 0 and step 5 actually print.
+`grep` must print `AUTH_MODE=warn`. If it does not, stop before `compose`. After recreate, the same IP inspect again. Send both IP pairs to Atlas. They are expected to stay `a2a-hub` `172.20.0.3` and `convex` `172.20.0.2` only if step 0 still showed those; record whatever step 0 and step 6 actually print.
 
 Verify: RO `health` ok, RO `auth-mode` warn, RO `image` equals the v1.12.0 id, FULL `docker logs a2a-hub --since 5m 2>&1 | grep -ciE 'error|500'` (the count only).
 
-## 6. Install the widened auth-log script
+## 7. PD after the swap
+Gauge runs PD again on the v1.12.0 image. The four rows that failed in step 5 are expected to pass. Any failure → rollback, and do not install the script.
+
+## 8. Install the widened auth-log script
 Only `scripts/tcm/a2a-readonly` changes in v1.12.0 (header `enroll-lines=`). Do not replace `a2a-k7.mjs`.
 ```
 sha256sum of the archive copy, 0 CR, scp to ~/bin/a2a-readonly.new
@@ -76,16 +83,14 @@ FULL 'cd ~/bin && cp a2a-readonly a2a-readonly.bak-t067 && mv a2a-readonly.new a
 ```
 The remote sum must match the archive. Then RL: a non-menu item returns `refused` rc 2. `authorized_keys` untouched. No new menu item, no new allow rule.
 
-## 7. RO checks
-RO `auth-log` header includes `enroll-lines=`. RO `agents-summary` still reports `ownerAssigned`. RO `health` again.
+## 9. RL, then RO checks
+RL on the installed `a2a-readonly`: a non-menu item returns `refused` rc 2. Then RO `auth-log` header includes `enroll-lines=`. RO `agents-summary` still reports `ownerAssigned`. RO `health` again.
 
-## 8. PD — Gauge, keyless. Fail → rollback, no further steps.
-
-## 9. Main checkout (local), only after the merge is on origin/master
+## 10. Main checkout (local), only after the merge is on origin/master
 `cd C:/Users/melve/Projects/A2A-Hub`. Porcelain empty. `git fetch && git merge --ff-only origin/master`. Not the tag. Not `loop/6-build`. This seat does not merge.
 
-## 10. Reindex there
+## 11. Reindex there
 `gitnexus analyze --force --skip-agents-md --skip-skills` with the absolute path of the main checkout. Then `git status`. Restore any tracked CLAUDE.md or AGENTS.md churn the analyzer writes.
 
 ## Rollback
-App only: `docker tag a2a-hub:prev a2a-hub:latest && cd ~/docker-compose/a2a-hub && docker compose up -d --force-recreate a2a-hub`. That returns the v1.11.0 image that step 3 saved as `:prev`. Convex functions stay at the v1.12.0 push (additive; the v1.11.0 app ran on them from step 2 until the swap). Restore `~/bin/a2a-readonly` from `a2a-readonly.bak-t067` if step 6 already ran. Do not drop `enrollmentCodes`. Do not change AUTH_MODE.
+App only: `docker tag a2a-hub:prev a2a-hub:latest && cd ~/docker-compose/a2a-hub && docker compose up -d --force-recreate a2a-hub`. That returns the v1.11.0 image that step 3 saved as `:prev`. Convex functions stay at the v1.12.0 push (additive; the v1.11.0 app ran on them from step 2 until the swap). Restore `~/bin/a2a-readonly` from `a2a-readonly.bak-t067` if step 8 already ran. Do not drop `enrollmentCodes`. Do not change AUTH_MODE.
