@@ -1,7 +1,7 @@
 # Project Summary
 
 <!-- state:begin -->
-<!-- generated from .agents/state.json rev 67 by open-brain v1.11.0 — do not edit; change state via ob_state -->
+<!-- generated from .agents/state.json rev 68 by open-brain v1.11.0 — do not edit; change state via ob_state -->
 > **Status:** v1.11.0 — Prove a truly remote agent can join the hub over the public internet with its own key: Aaron's Grok Bot on a cloud VM registers over HTTPS and talks to relay (D-011), as the first step to a multi-tenant hub where humans own accounts, agents join by invitation, and rooms can cross accounts by invitation (D-010). Done: per-agent keys (V-006), chat UI on tcm (V-005), read-only tcm access (V-007). Next, in order: Loop 5 (T-066, identity + membership); T-064's log read; AUTH_MODE=strict; Loop 6 (T-067, enrollment codes, rate limits, error pages); Funnel; the test (T-068). NEVER a public address while tcm is in warn (gap). Also gating exposure: T-057.
 
 ## What's working
@@ -16,11 +16,11 @@
 - Loop 5 (T-066, v1.11.0) passes acceptance on loop/5-identity ebe7747: every request acts as its key's name and touches only rooms it may see; strict refuses, warn logs [authz]; JSON-RPC enforces askPolicy _(V-008, 1 evidence)_
 - No agent on tcm's hub used a legacy, shared or unknown key after the T-003 cutover finished: 20.6 h of hub log (04:14:10Z to ~00:50Z 2026-09-26) has no [auth] WOULD REJECT line after 04:20:51Z, and all 8 agent rows are owned (K7 PASS) _(V-009, 1 evidence)_
 - tcm runs A2A-Hub v1.11.0 (Loop 5) in AUTH_MODE=warn: container on image 645a6f248d82 since 2026-09-26 01:22:11Z, health ok, every agent row owned and assigned an owner, and the read-only auth-log reports authz-lines _(V-010, 1 evidence)_
+- aaron's tcm row is human-kind (G-002 fixed): the Loop 5 owner's view is available to him, with his key, owner and every other row unchanged _(V-011, 1 evidence)_
 
 ## What's broken
 
 - Gap G-001: In AUTH_MODE=warn the hub admits unknown keys as nobody; any public address before strict makes every room readable and writable without a valid key. tcm is in warn (V-006).
-- Gap G-002: aaron's tcm row has no agentCard.kind, so Loop 5's owner's view is off for him: his chat page lists only rooms he is in (Preserve 3 regression)
 
 ## What's next
 
