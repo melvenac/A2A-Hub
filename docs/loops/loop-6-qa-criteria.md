@@ -385,7 +385,11 @@ configuration fails.
   list of matching sites was swept from the v1.11.0 client code (`scripts/`, `src/wrapper/`,
   `client/src`) by Gauge on 2026-09-26. Rivet's own sweep must be checked against it.
   - `scripts/hub-talk.mjs:272`: `POST /a2a/session` naming an unregistered participant. The body's
-    `error` must match `/Unknown peer/`, and the status class must be the same as on v1.11.0.
+    `error` must match `/Unknown peer/`. **AMENDED (Relay, turn 46, 2026-09-26):** the status is
+    **404, as ruled**, not v1.11.0's class. v1.11.0 answered 500 and leaked "[Request ID …] Server
+    Error Uncaught Error: Unknown peer…". The ruled 404 is an improvement, and G1d shows hub-talk
+    behaves identically end to end. As first written ("the same status class as on v1.11.0"), this
+    site failed on `c461c65`. That result stays in the report.
   - `src/wrapper/daemon.ts:317`: a rejected key in strict. 403, and the text must match
     `/Invalid X-Agent-Key/`, so the daemon exits instead of retrying.
   - `src/wrapper/daemon.ts:130,286` and `scripts/hub-key.mjs:209-213`: branch on the status CLASS of a
@@ -401,6 +405,15 @@ configuration fails.
     and after the whole run.
   - Each seeded row's `apiKeyHash`, `owner` and `agentCard` are unchanged, except A10's
     deliberately refused attempt, which must also show no change.
+- **G2b (Gauge's finding on `c461c65`, confirmed by Relay, 2026-09-26).** A human row keeps
+  `kind: "human"`, and can still issue a code, after each ordinary register a seat makes as that name:
+  - `hub-talk --as <human> --say …`, which calls `register()` and sends `kind: "ide-session"`;
+  - a daemon's boot register, whose card has no kind;
+  - a hub-key-shaped register (`describeCard(name, "ide-session")`).
+
+  Each case runs on a fresh `createHuman` row, and one row is left untouched as the control
+  (`rows-g2b.mjs`). On `c461c65` all three demote the row: `ide-session`, no kind, and `ide-session`,
+  each then 403 on issue. The control stays human and gets 200.
 - **G3. Loop 5 holds** (Preserve 3). Loop 5's suite of A, B, C and E rows (`loop-5-qa/suite.mjs`, rows
   A1-A20, B1-B5, C1-C2, E1-E6 with E3b) is re-run on the candidate in both modes. The results must equal
   Loop 5's.

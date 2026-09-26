@@ -22,8 +22,12 @@ for (const f of files) {
     if (/\bcatch\s*(\(|\{)/.test(l) && catchDepth < 0) catchDepth = depth;
     for (const c of l) { if (c === "{") depth++; else if (c === "}") { depth--; if (catchDepth >= 0 && depth <= catchDepth) catchDepth = -1; } }
     const st = /res\s*\.\s*status\(\s*(\d{3})\s*\)/.exec(l) ?? /res\s*\.\s*sendStatus\(\s*(\d{3})\s*\)/.exec(l);
-    const passthrough = /\b(error|err|e)\.message\b|String\((error|err|e)\)/.test(l);
+    // A computed status (res.status(x.status), res.status(pub.status)) is an error site too; its body is
+    // whatever that line writes, so it is listed with the expression, never skipped.
+    const dyn = !st && /res\s*\.\s*status\(\s*([^)\d][^)]*)\)/.exec(l);
+    const passthrough = /\b(error|err|e)\.message\b|String\((error|err|e)\)|\.(reason|message)\b/.test(l) && /json\(|send\(/.test(l);
     if (st && +st[1] >= 400) rows.push({ at: `${f}:${n}`, status: +st[1], inCatch: catchDepth >= 0, passthrough });
+    else if (dyn) rows.push({ at: `${f}:${n}`, status: `computed:${dyn[1].trim()}`, inCatch: catchDepth >= 0, passthrough });
     else if (catchDepth >= 0 && /res\s*\.\s*(json|send|end)\(/.test(l)) rows.push({ at: `${f}:${n}`, status: "default", inCatch: true, passthrough });
     if (/app\.use\(\s*(async\s*)?\(\s*\w+\s*(:\s*\w+)?\s*,\s*\w+\s*(:[^,]+)?,\s*\w+\s*(:[^,]+)?,\s*\w+/.test(l)) rows.push({ at: `${f}:${n}`, status: "error-middleware", inCatch: false, passthrough });
     if (/express\.(static|json|urlencoded)\(/.test(l)) rows.push({ at: `${f}:${n}`, status: `default:${/express\.(\w+)/.exec(l)[1]}`, inCatch: false, passthrough: false });

@@ -11,6 +11,9 @@ const ONLY = (process.argv.find((a) => a.startsWith("--only=")) ?? "").slice(7).
 const want = (r) => !ONLY.length || ONLY.includes(r);
 const HUBU = MODE === "warn" ? H.nW : H.nS; const PPORT = MODE === "warn" ? 4791 : 4792; const P = `http://127.0.0.1:${PPORT}`;
 const PER_KEY = 3150, GLOBAL = 90;
+// Issuer for codes: qa-owner2 (human, never registered through hub-talk). F2 runs hub-talk AS aaron, and on
+// c461c65 any such register strips aaron's kind human (reported defect), so aaron cannot issue after F2.
+const ISSUER = "qa-owner2";
 const LIVE = ["aaron", "a2a-grok", "atlas", "cursor-grok", "grok", "grok-probe", "grokbot", "melve-76", "relay"];
 const QW = TMP; const PLOG = join(QW, `f6-proxy-${MODE}.jsonl`);
 const proxy = spawn(process.execPath, [join(import.meta.dirname, "proxy.mjs"), String(PPORT), HUBU, PLOG], { stdio: "ignore" });
@@ -30,7 +33,7 @@ async function freshGlobal() {
 // ---------------------------------------------------------------- F1: per-key boundary
 if (want("F1")) {
   setRow(`F1-${MODE}`);
-  const nm = `qa-f1-${MODE}`; const { json } = await issue(HUBU, "aaron"); await register(HUBU, nm, { code: json?.code });
+  const nm = `qa-f1-${MODE}`; const { json } = await issue(HUBU, ISSUER); await register(HUBU, nm, { code: json?.code });
   const t0 = Date.now();
   const rs = await burst(PER_KEY, () => hub(HUBU, "GET", "/a2a/whoami", { as: nm }));
   const nth = await fetch(`${HUBU}/a2a/whoami`, { headers: { "X-Agent-Key": key(nm) } }); const nb = await nth.text(); const ra = nth.headers.get("retry-after");
@@ -86,7 +89,7 @@ if (want("F3")) {
   check(`F3b ${MODE}`, "fresh global window: requests 1-90 (/ui/) served, the 91st gets 429 with Retry-After", { fresh, served: rs.filter((s) => s === 200).length, got429: rs.filter((s) => s === 429).length, n91: n91.status, retryAfter: ra },
     fresh && rs.every((s) => s === 200) && n91.status === 429 && /^\d+$/.test(ra ?? ""));
   // global is saturated now: a new-name register and an --invite are refused (the accepted limit, recorded)
-  const { json } = await issue(HUBU, "aaron");
+  const { json } = await issue(HUBU, ISSUER);
   const nn = await register(HUBU, `qa-f3-new-${MODE}`, { code: json?.code });
   const miss = await fetch(`${HUBU}/a2a/whoami`);
   // existing names' own traffic in the same window
@@ -101,7 +104,7 @@ if (want("F3")) {
 if (want("F4")) {
   setRow(`F4-${MODE}`);
   const X = `qa-f4x-${MODE}`, Y = `qa-f4y-${MODE}`;
-  for (const n of [X, Y]) { const { json } = await issue(HUBU, "aaron"); await register(HUBU, n, { code: json?.code }); }
+  for (const n of [X, Y]) { const { json } = await issue(HUBU, ISSUER); await register(HUBU, n, { code: json?.code }); }
   const fresh = await freshGlobal();
   const regs = await burst(50, () => register(HUBU, X));
   const g = await burst(GLOBAL, () => fetch(`${HUBU}/ui/`).then((r) => r.status));
@@ -119,7 +122,7 @@ if (want("F6")) {
   const U = "qa6-unknown-" + "1".repeat(40);
   const us = await burst(GLOBAL, () => fetch(`${HUBU}/a2a/whoami`, { headers: { "X-Agent-Key": U } }).then((r) => r.status));
   const u91 = await fetch(`${HUBU}/a2a/whoami`, { headers: { "X-Agent-Key": U } });
-  const { json } = await issue(HUBU, "aaron"); const nn = await register(HUBU, `qa-f6-new-${MODE}`, { code: json?.code });
+  const { json } = await issue(HUBU, ISSUER); const nn = await register(HUBU, `qa-f6-new-${MODE}`, { code: json?.code });
   const exw = await burst(40, (i) => hub(HUBU, "GET", "/a2a/whoami", { as: LIVE[i % LIVE.length] }));
   const expect1 = MODE === "warn" ? 200 : 403;
   check(`F6 ${MODE}`, `unknown key: 90 answered (${expect1}) then the 91st 429; a new-name register in that window 429 (one shared bucket); existing names 0 x 429`,
@@ -131,8 +134,8 @@ if (want("F6")) {
 if (want("F7")) {
   setRow(`F7-${MODE}`);
   const out = {};
-  for (const nm of ["global", "name:x", "key:global"]) {
-    const { json } = await issue(HUBU, "aaron"); const r = await register(HUBU, nm, { code: json?.code });
+  for (const nm of ["global", "name:x", "bucket:global", "name:global"]) {
+    const { json } = await issue(HUBU, ISSUER); const r = await register(HUBU, nm, { code: json?.code });
     out[nm] = { register: r.status, body: r.json?.error };
     if (r.status !== 200) continue;
     const fresh = await freshGlobal();
