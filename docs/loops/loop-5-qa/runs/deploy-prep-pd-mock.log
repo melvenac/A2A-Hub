@@ -1,0 +1,18 @@
+== positive: mock serving local v1.11.0 client build
+PD against http://127.0.0.1:47911 at 2026-09-26T01:07:06.587Z, expecting /ui/assets/index-DleSmG9D.js
+PASS PD.1 GET /ui/: {"status":200,"type":"text/html; charset=utf-8","cc":"no-cache","asset":"/ui/assets/index-DleSmG9D.js"}
+PASS PD.1b bundle is v1.11.0's: {"served":"/ui/assets/index-DleSmG9D.js","expected":"/ui/assets/index-DleSmG9D.js","isOldV1_10_0":false}
+PASS PD.2 GET asset: {"path":"/ui/assets/index-DleSmG9D.js","status":200,"type":"text/javascript","cc":"public, max-age=31536000, immutable","bytes":56201}
+PASS PD.3 GET /: {"status":404,"body":"Cannot GET /"}
+PASS PD.4 GET /health: {"status":200,"keys":["agent","convex","status"],"statusField":"ok","agent":"hub","convex":"ok"}
+PD PASS (5 checks over 4 reads, 0 keys sent)
+exit 0
+== negative: mock serving local v1.10.0 build (swap did not land)
+PD against http://127.0.0.1:47912 at 2026-09-26T01:07:06.816Z, expecting /ui/assets/index-DleSmG9D.js
+PASS PD.1 GET /ui/: {"status":200,"type":"text/html; charset=utf-8","cc":"no-cache","asset":"/ui/assets/index-BDybZYJ0.js"}
+FAIL PD.1b bundle is v1.11.0's: {"served":"/ui/assets/index-BDybZYJ0.js","expected":"/ui/assets/index-DleSmG9D.js","isOldV1_10_0":true}
+PASS PD.2 GET asset: {"path":"/ui/assets/index-BDybZYJ0.js","status":200,"type":"text/javascript","cc":"public, max-age=31536000, immutable","bytes":55537}
+PASS PD.3 GET /: {"status":404,"body":"Cannot GET /"}
+PASS PD.4 GET /health: {"status":200,"keys":["agent","convex","status"],"statusField":"ok","agent":"hub","convex":"ok"}
+PD FAIL (5 checks over 4 reads, 0 keys sent)
+exit 1

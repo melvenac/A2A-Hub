@@ -1,0 +1,37 @@
+PB start 2026-09-26T01:04:44Z image=a2a-hub:v1.11.0 expect=1234abcd runner=bash <scratch>/fake-tcm.sh
+image a2a-hub:v1.11.0 = sha256:1234abcd5678ef90aaaabbbbccccddddeeeeffff0000111122223333444455
+PASS PB0: id matches Rivet's (1234abcd)
+PB1 config: ["node","dist/src/index.js"]|["docker-entrypoint.sh"]|{"4000/tcp":{},"3210/tcp":{}}|/app
+FAIL PB1: Cmd ["node","dist/src/index.js"], ExposedPorts {"4000/tcp":{},"3210/tcp":{}}, WorkingDir /app, Entrypoint ["docker-entrypoint.sh"]
+PB2 listing (rc 0):
+dist
+src
+---
+/app/client/src
+---
+assets
+index.html
+---
+.env
+client
+convex
+dist
+node_modules
+package.json
+package-lock.json
+---
+/app/.env
+---
+END
+FAIL PB2: /app/client = [dist src]; node_modules/src: [/app/client/src]; dist = [assets index.html]
+FAIL PB2.app: /app = [.env client convex dist node_modules package-lock.json package.json], expected the final stage's six entries
+FAIL PB2.no-env: found [/app/.env] (sentinel [END])
+FAIL PB2.no-container-left: 1 container(s) left
+detector positive: containers from a2a-hub:prev seen by the same filter: 1 (expect >= 1)
+K selftest: SELFTEST PASS (exit 0)
+docker save streamed: exit 0, 81920 bytes
+FAIL PB3.image-save: 1 files, 21 tar members, 0 gzip opened, 0 opaque, 81920 bytes, hits 1
+FAIL PB3: save exit 0 (81920 bytes), K exit 1
+PASS PB3.cleanup-local: save.tar and K scratch gone
+FAIL PB3.cleanup-tcm: found: save.tar
+PB OVERALL: FAIL

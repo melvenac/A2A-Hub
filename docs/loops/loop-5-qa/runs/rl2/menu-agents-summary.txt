@@ -1,0 +1,20 @@
+rc 0
+--- stdout
+a2a-grok	kind=ide-session	keyStatus=owned	hash=fce98d78	owner=aaron
+aaron	kind=-	keyStatus=owned	hash=0fdda12d	owner=aaron
+atlas	kind=ide-session	keyStatus=owned	hash=556f9dba	owner=aaron
+cursor-grok	kind=ide-session	keyStatus=owned	hash=a77570d1	owner=aaron
+grok	kind=ide-session	keyStatus=owned	hash=016ebdcd	owner=aaron
+grok-probe	kind=ide-session	keyStatus=owned	hash=4eecd5fd	owner=aaron
+grokbot	kind=ide-session	keyStatus=owned	hash=21a8586c	owner=aaron
+melve-76	kind=ide-session	keyStatus=owned	hash=c2934a48	owner=aaron
+relay	kind=ide-session	keyStatus=owned	hash=71b67c96	owner=aaron
+PASS oneRowPerName
+PASS oneNamePerHash
+PASS allOwned
+PASS devKeyHeldByNone
+PASS unparsableZero
+rows=9 K7=PASS
+PASS ownerAssigned rows-without-owner=0
+
+--- stderr
