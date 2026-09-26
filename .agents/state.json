@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 65,
+  "revision": 66,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -992,6 +992,18 @@
       "title": "The Rivet (developer) seat is held by Grok in Cursor, hub name a2a-grok; it talks to Relay in hub room k575twereq1w6f2s3yra5zk5618f4rty on tcm",
       "date": "2026-09-26",
       "note": "Aaron, Relay session 18, verbatim: \"we will be using grok via cursor for the next loop so it will need a room with you in it. Send me the promt I past into cursor\", then \"gork is the rivet seat\". Relay wrote the Cursor prompt (session scratchpad cursor-grok-prompt.md). It creates a NEW hub name a2a-grok with hub-talk --init-key against http://100.124.212.87:4000, and Aaron pasting it was his word for that name. Why a new name: 'grok' is SIA's Cursor seat (Atlas: 'No existing SIA name (atlas, grok)'), and the tcm row 'cursor-grok' has no key file on this machine. a2a-grok registered and posted turn 1 in room k575twereq1w6f2s3yra5zk5618f4rty (relay <-> a2a-grok). Seat name stays Rivet; the hub identity is a2a-grok. Transport for this seat is the HUB (hub-talk), unlike the Claude Code seats, which use Claude Code's built-in cross-session messages. Assignment sent (turn 3): read docs/loops/rivet-handoff-session-17.md first; (A) Loop 6 design on loop/6-design in its own worktree, design only, for a ruling; (B) the Loop 5 deploy only when Relay relays Aaron's go-ahead in the room. Observed on the first exchange: --inbox then --wait re-delivered turn 1 (T-017)."
+    },
+    {
+      "id": "D-017",
+      "title": "Standing exception: during a tcm act Aaron approved, the seat holding the full key for it may run read-only commands without asking",
+      "date": "2026-09-26",
+      "note": "Aaron, Relay session 18, answering Relay's question 'Which rule should I update?' with the option 'Read-only on tcm (Recommended)', after he said 'update that rule'. Context: Relay had asked for one read-only `docker inspect` (container IPs, for Atlas's CI self-check) that was outside the Loop 5 deploy plan's command list. RULE, as written into .agents/roles/shared.md (Authority): while Aaron has approved a deploy or other act on tcm, a seat he authorised to use the full key for that act may also run read-only commands (docker inspect/ps/images/logs, ls, grep, sha256sum, stat, cat of non-secret files) without asking, listing each in its report. Never covered: printing secrets (.env contents, keys, admin keys, env/config sections of docker inspect), docker exec/run, sudo, or anything that writes, restarts, tags or deletes. The exception ends with the act. Amends D-005 (append-only)."
+    },
+    {
+      "id": "D-018",
+      "title": "tcm deploys no longer pause the GitHub runners; tell Atlas instead, and check the container IPs before and after a swap",
+      "date": "2026-09-26",
+      "note": "Aaron, Relay session 18: 'ht runner are low priority, why manual pause?'. Relay found the only recorded reason was that a SIA seat may send CI to tcm's runners (docs/loops/t-003-cutover-log.md:22-23), and dropped steps 0 and 11 of docs/loops/loop-5-deploy-plan.md. Aaron then said 'Ask atlas about the runner pause'. Atlas (SIA planner, record 109), reading SIA's code rather than recalling: SIA's CI on tcm (.github/workflows/ci.yml) runs only npm ci, tsc and vitest, and its first step REQUIRES the hub and Convex to be unreachable, so a deploy cannot corrupt a job. The only effect is load (vitest 5 s timeouts, a wrong-reason red), which SIA re-runs. The pause can stay dropped. INSTEAD, for every tcm deploy: (1) tell Atlas when it starts; (2) record the a2a-hub and convex container IPs on their docker network before and after the swap, and tell Atlas. SIA's egress self-check lists fixed IPs (172.20.0.2, 172.20.0.3), and a changed address would be a silent gap in it, not a failure."
     }
   ],
   "handoffs": [

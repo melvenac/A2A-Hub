@@ -106,6 +106,17 @@ tests, `package*.json`, the Dockerfile, compose or any config, it needs Aaron's 
 other merge. The exception is for merges only: tags, releases and the main checkout are not
 covered.
 
+**Standing exception (D-017): read-only full-key commands during an approved tcm act.** While Aaron
+has approved a deploy or another act on tcm, a seat he authorised to use the full key for that act
+may also run read-only commands there without asking, and lists each one in its report or turn.
+- **Read-only means it changes nothing on tcm:** `docker inspect`, `docker ps`, `docker images`,
+  `docker logs`, `ls`, `grep`, `sha256sum`, `stat`, `cat` of non-secret files, and the like.
+- **Never covered:** printing a secret (`.env` contents, keys, admin keys, env or config sections
+  of `docker inspect`), `docker exec` or `docker run`, `sudo`, and anything that writes, restarts,
+  tags or deletes.
+- **The exception ends with the act.** Outside an approved act, the full key needs Aaron's word as
+  before. The read-only key's menu needs nothing.
+
 **Live data is read-only until a report says otherwise** *(this project, Session 14 / T-001).*
 Investigate first, report, then act on Aaron's word. Do not improvise fixes against live data.
 
