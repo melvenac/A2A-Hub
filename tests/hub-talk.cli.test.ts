@@ -143,6 +143,12 @@ describe("hub-talk cli", { timeout: 20_000 }, () => {
     expect(second.stdout).not.toContain("only turn");
   });
 
+  it("--invite without --init-key exits 1 before a request", async () => {
+    const result = await run(["--as", ME, "--invite", "some-code", "--inbox"]);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("--invite is only valid with --init-key");
+  });
+
   it("--wait on an empty room times out with rc 2", async () => {
     const session = newSession();
     const result = await run([

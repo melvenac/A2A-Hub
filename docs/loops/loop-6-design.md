@@ -169,8 +169,13 @@ brief names only two warn cases: a codeless new name, and a human-kind
 self-declaration. Allowing agents to mint codes during the warn soak would
 make enrollment unenforced on the live hub. Section 14 asks Relay to pick.
 
-The issue handler writes the hash via an internal mutation the HTTP process
-calls. It logs `[enroll] ISSUE issuer=<name>` with no code and no hash.
+The issue handler writes the hash via `agents.issueEnrollmentCode`. That
+mutation is public, the same shape as `registerAgent`: the hub process has no
+Convex admin key, and ruling 2 O1 says calling an internal mutation with an
+admin key is a larger change than this loop. The human-kind check stays in
+`POST /a2a/enroll`. A direct Convex caller can insert a hash. That exposure is
+T-057, which row X1 observes and does not gate. It logs
+`[enroll] ISSUE issuer=<name>` with no code and no hash.
 
 ## 5. Humans come from the operator
 
@@ -309,24 +314,34 @@ Over the limit: 429 `{ "error": "too many requests" }` and `Retry-After`
 exception, and it does not apply to the sized hub-talk pattern.
 
 **Per key, per 60 seconds.** `POLL_MS` is 2000 (`scripts/hub-talk.mjs:73`).
+Ruling 2 addendum (F0): each `--wait` poll is heartbeat plus read
+(`scripts/hub-talk.mjs:469-471`), and start is four requests (`:367-371`), so
+one `--wait` process is about 65 requests per 60 seconds, not 32.
 
-- One hub-talk process in that window: 1 register (`:368`), 1 heartbeat
-  (`:369`), and 30 `--wait` reads (`:469`). Three concurrent processes (a
-  `--wait` plus `--say` and `--inbox`): 3 * 32 = 96.
+- Three concurrent hub-talk processes: `3 * 65`.
 - One daemon loop (`src/wrapper/daemon.ts:302-323`): heartbeat (`:304`), queue
   (`:181`), session list (`:208`), and one session's messages (`:214`). That
-  is 4 calls per loop, 30 loops, 120. Claim, respond, and a posted reply are
-  extra and are inside the headroom, not a second term.
-- Peak = 96 + 120 = 216. Headroom 10x. **Limit = 2160 per name per 60
-  seconds.** Formula, so it scales: `10 * (3 * 32 + 30 * (3 + session_count))`
-  with `session_count` 1. Row count does not multiply the per-key limit.
+  is `30 * (3 + session_count)` with `session_count` 1. Claim, respond, and a
+  posted reply are extra and are inside the headroom, not a second term.
+- **Limit = 3150 per name per 60 seconds.** Formula, beside the code it
+  counts: `10 * (3 * 65 + 30 * (3 + session_count))` with `session_count` 1.
+  The constant is `PER_KEY_LIMIT` in `src/rateLimit.ts`. Row count does not
+  multiply the per-key limit.
 
 **Global bucket, per 60 seconds.** Row count is 9: ruling 1 records 8 at the
 V-009 read and a2a-grok as the 9th. Every existing name starting at once is
 already on its own per-key bucket, so this bucket is sized for 9 new or
 unmatched registers at once, times 10. **Limit = 90.** Formula: `10 * N` with
-N = 9. A built `/ui` page load has to fit in the same bucket. If the image's
-`/ui` file count F is greater than N, the limit becomes `10 * F`.
+N = 9 (`GLOBAL_LIMIT` in `src/rateLimit.ts`). A built `/ui` page load has to
+fit in the same bucket. If the image's `/ui` file count F is greater than N,
+the limit becomes `10 * F`.
+
+**Known limit.** The global bucket is shared by everyone who has no matching
+key. A flood of missing-key or unknown-key requests can deny `/ui` page loads
+and new-name registers to everyone for the rest of that window. It cannot
+touch an existing name's hub-talk, which is on its own per-key bucket. That is
+acceptable for the Grok Bot test (T-068), a single invited agent. Per-source
+limiting is the fix, once the Funnel source test shows distinct sources.
 
 Acceptance F's replay is a burst of every row's hub-talk start at once, not
 one seat's `--wait`, and that burst must not 429.

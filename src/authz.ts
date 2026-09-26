@@ -62,6 +62,18 @@ export function authzLine(
   return v === "reject" ? base : `${base} (AUTH_MODE=warn; set AUTH_MODE=strict to enforce)`;
 }
 
+/** The one `[enroll]` line. `what` is a condition name, never a code or a hash. */
+export function enrollLine(
+  v: "warn" | "reject",
+  what: string,
+  route: string,
+  caller: string | null | undefined
+): string {
+  const who = caller ? sanitize(caller) : "unknown";
+  const base = `[enroll] ${v === "reject" ? "REJECT" : "WOULD REJECT"} ${what} on ${route} caller=${who}`;
+  return v === "reject" ? base : `${base} (AUTH_MODE=warn; set AUTH_MODE=strict to enforce)`;
+}
+
 /**
  * Logs one failed check where there is no Express response to refuse through
  * (the JSON-RPC executor and task store, and /read, whose refusal is markRead's

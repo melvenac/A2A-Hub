@@ -4,6 +4,7 @@ import type { Doc } from "./_generated/dataModel";
 import { ConvexError, v } from "convex/values";
 import { decideHeartbeat } from "./instanceLogic.js";
 import { isHumanRow, ownerOf } from "./accessLogic.js";
+import { cardForStore, ENROLL_TEXT, judgeCode, type EnrollCondition } from "./enrollLogic.js";
 import {
   classifyAtDeployStatus,
   decideRegister,
@@ -104,6 +105,8 @@ const registerArgs = {
   // New in v1.11.0 (T-066, Loop 5 §4), optional so older hubs still validate.
   // The owner a row gets if it has none yet; a register never changes an owner.
   owner: v.optional(v.string()),
+  // Loop 6. Absent on the v1.11.0 hub's call. The plaintext code stays on the hub.
+  enrollmentCodeHash: v.optional(v.string()),
 };
 
 export type RegisterEvent = "insert" | "same" | "legacy-same" | "migrate";
@@ -119,19 +122,22 @@ async function registerCore(
     keyTooShort?: boolean;
     strict?: boolean;
     owner?: string;
+    enrollmentCodeHash?: string;
   }
-): Promise<{ id: Doc<"agents">["_id"]; event: RegisterEvent }> {
+): Promise<{ id: Doc<"agents">["_id"]; event: RegisterEvent; enroll?: EnrollCondition }> {
   const now = Date.now();
   const instanceFields = args.instanceId
     ? { activeInstanceId: args.instanceId, lastHeartbeatAt: now }
     : {};
   const policyFields =
     args.askPolicy !== undefined ? { askPolicy: args.askPolicy } : {};
-  const ownerFields = args.owner ? { owner: args.owner } : {};
+  let ownerFields = args.owner ? { owner: args.owner } : {};
+  let enroll: EnrollCondition | undefined;
 
   const dupes = await rowsByName(ctx, args.name);
   const canonical = dupes.length ? canonicalOf(dupes) : null;
   const holders = await rowsByHash(ctx, args.apiKeyHash);
+  const agentCard = cardForStore(args.agentCard, canonical ? isHumanRow(canonical) : false);
 
   const decision = decideRegister({
     existing: canonical,
@@ -146,10 +152,24 @@ async function registerCore(
       return refuse(decision.status, decision.reason);
 
     case "insert": {
+      if (args.enrollmentCodeHash) {
+        const code = await ctx.db
+          .query("enrollmentCodes")
+          .withIndex("by_hash", (q) => q.eq("codeHash", args.enrollmentCodeHash!))
+          .first();
+        const judged = judgeCode(code, now);
+        if (judged === "ok" && code) {
+          await ctx.db.patch(code._id, { usedAt: now });
+          ownerFields = { owner: code.issuer };
+        } else {
+          enroll = judged === "ok" ? "not-valid" : judged;
+          if (args.strict === true) return refuse(403, ENROLL_TEXT[enroll]);
+        }
+      }
       const id = await ctx.db.insert("agents", {
         name: args.name,
         apiKeyHash: args.apiKeyHash,
-        agentCard: args.agentCard,
+        agentCard,
         lastSeen: now,
         status: "online",
         keyStatus: ownedStatusFor(args.apiKeyHash),
@@ -157,7 +177,7 @@ async function registerCore(
         ...policyFields,
         ...ownerFields,
       });
-      return { id, event: "insert" };
+      return { id, event: "insert", enroll };
     }
 
     case "migrate": {
@@ -167,7 +187,7 @@ async function registerCore(
       const id = await ctx.db.insert("agents", {
         name: args.name,
         apiKeyHash: args.apiKeyHash,
-        agentCard: args.agentCard,
+        agentCard,
         lastSeen: now,
         status: "online",
         keyStatus: ownedStatusFor(args.apiKeyHash),
@@ -183,7 +203,7 @@ async function registerCore(
     case "same": {
       const c = canonical!;
       await ctx.db.patch(c._id, {
-        agentCard: args.agentCard,
+        agentCard,
         lastSeen: now,
         status: "online",
         ...instanceFields,
@@ -210,6 +230,51 @@ export const register = mutation({
 export const registerAgent = mutation({
   args: registerArgs,
   handler: async (ctx, args) => registerCore(ctx, args),
+});
+
+/** Loop 6. The hub calls this after it has checked the caller is human. The code is already hashed. */
+export const issueEnrollmentCode = mutation({
+  args: {
+    codeHash: v.string(),
+    issuer: v.string(),
+    expiresAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("enrollmentCodes", {
+      codeHash: args.codeHash,
+      issuer: args.issuer,
+      expiresAt: args.expiresAt,
+      createdAt: Date.now(),
+    });
+    return { ok: true as const };
+  },
+});
+
+/** Operator only (admin key). Not reachable from POST /a2a/register. */
+export const createHuman = internalMutation({
+  args: { name: v.string(), apiKeyHash: v.string() },
+  handler: async (ctx, args) => {
+    const existing = await rowsByName(ctx, args.name);
+    if (existing.length) return refuse(409, "name exists");
+    const now = Date.now();
+    await ctx.db.insert("agents", {
+      name: args.name,
+      apiKeyHash: args.apiKeyHash,
+      agentCard: { name: args.name, description: "human", kind: "human" },
+      lastSeen: now,
+      status: "online",
+      keyStatus: "owned",
+      owner: args.name,
+    });
+    const peer = await ctx.db
+      .query("peers")
+      .withIndex("by_name", (q) => q.eq("name", args.name))
+      .first();
+    if (!peer) {
+      await ctx.db.insert("peers", { name: args.name, type: "human", isActive: true });
+    }
+    return { ok: true as const };
+  },
 });
 
 /** §2.2: the only way an owned name changes its key. */

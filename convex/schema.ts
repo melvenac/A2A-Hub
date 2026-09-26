@@ -77,6 +77,16 @@ export default defineSchema({
     // Auth looks agents up by key hash on every guarded request.
     .index("by_apiKeyHash", ["apiKeyHash"]),
 
+  // Loop 6 (T-067). The plaintext code never lands here. Optional fields so a
+  // v1.11.0 hub that never mentions the table still deploys against it.
+  enrollmentCodes: defineTable({
+    codeHash: v.string(),
+    issuer: v.string(),
+    expiresAt: v.number(),
+    usedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_hash", ["codeHash"]),
+
   // A2A protocol tasks (the spec's Task lifecycle), stored whole.
   //
   // Deliberately separate from the `tasks` table above, which backs the hub's

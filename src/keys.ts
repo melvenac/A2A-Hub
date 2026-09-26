@@ -3,6 +3,10 @@ import type { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api.js";
 import { hashKey, type AuthMode } from "./auth.js";
 import { KEY_FLOOR } from "../convex/keyLogic.js";
+import { ENROLL_TEXT } from "../convex/enrollLogic.js";
+import { enrollLine } from "./authz.js";
+import { GLOBAL_BUCKET, GLOBAL_LIMIT, limited, PER_KEY_LIMIT } from "./rateLimit.js";
+import { respondInternal } from "./httpError.js";
 
 /**
  * Per-agent keys (T-003, Loop 3). The rules live in the Convex mutations
@@ -42,29 +46,65 @@ export function makeRegisterHandler(deps: {
       if (!name || !apiKey || typeof name !== "string" || typeof apiKey !== "string") {
         return res.status(400).json({ error: "Missing required fields: name, apiKey" });
       }
-      const card = agentCard ?? { name, description: `Agent ${name}` };
+      const existing = await convex.query(api.agents.getByName, { name });
+      const apiKeyHash = hashKey(apiKey);
+      const holder = await convex.query(api.agents.getByKeyHash, { apiKeyHash });
+      const bucket = holder?.name === name ? name : GLOBAL_BUCKET;
+      const cap = bucket === GLOBAL_BUCKET ? GLOBAL_LIMIT : PER_KEY_LIMIT;
+      if (limited(res, bucket, cap)) return;
+      const alreadyHuman = existing?.human === true;
+      let card = agentCard ?? { name, description: `Agent ${name}` };
+      if (card && typeof card === "object" && (card as { kind?: unknown }).kind === "human" && !alreadyHuman) {
+        console.warn(enrollLine(authMode === "strict" ? "reject" : "warn", "kind=human", "POST /a2a/register", name));
+        if (authMode === "strict") {
+          return res.status(403).json({ error: ENROLL_TEXT["kind-human"] });
+        }
+        card = { ...(card as object) };
+        delete (card as { kind?: unknown }).kind;
+      }
+      const code = typeof req.body.enrollmentCode === "string" ? req.body.enrollmentCode : "";
+      const enrollmentCodeHash = code ? hashKey(code) : undefined;
+      const isNew = !existing;
+      if (isNew && !enrollmentCodeHash) {
+        console.warn(enrollLine(authMode === "strict" ? "reject" : "warn", "no-code", "POST /a2a/register", name));
+        if (authMode === "strict") {
+          return res.status(403).json({ error: ENROLL_TEXT["no-code"] });
+        }
+      }
       const instanceId =
         typeof req.body.instanceId === "string" ? req.body.instanceId : undefined;
 
-      let result: { event: string };
+      let result: { event: string; enroll?: string };
       try {
         result = await convex.mutation(api.agents.registerAgent, {
           name,
-          apiKeyHash: hashKey(apiKey),
+          apiKeyHash,
           agentCard: card,
           instanceId,
           keyTooShort: apiKey.length < KEY_FLOOR,
           strict: authMode === "strict",
-          // T-066 (Q3, O5): a human owns only itself; anything else belongs to
-          // the hub's owner. A body `owner` (top level or in agentCard) is never
-          // read, so a registrant cannot choose who can see its rooms.
-          owner: card?.kind === "human" ? name : hubOwner,
+          // A body owner is never read. A valid code's issuer wins inside the mutation.
+          owner: hubOwner,
+          enrollmentCodeHash,
         });
       } catch (error) {
         const refusal = refusalOf(error);
         if (!refusal) throw error;
-        console.warn(`[auth] REJECT register ${name}: ${refusal.reason}`);
+        const enrollWhat = (Object.keys(ENROLL_TEXT) as (keyof typeof ENROLL_TEXT)[]).find(
+          (k) => ENROLL_TEXT[k] === refusal.reason
+        );
+        if (enrollWhat) {
+          console.warn(enrollLine("reject", enrollWhat === "kind-human" ? "kind=human" : enrollWhat, "POST /a2a/register", name));
+        } else {
+          console.warn(`[auth] REJECT register ${name}: ${refusal.reason}`);
+        }
         return res.status(refusal.status).json({ error: refusal.reason });
+      }
+
+      if (result.enroll && result.enroll in ENROLL_TEXT) {
+        console.warn(
+          enrollLine("warn", result.enroll, "POST /a2a/register", name)
+        );
       }
 
       if (result.event === "legacy-same") {
@@ -77,12 +117,13 @@ export function makeRegisterHandler(deps: {
       }
 
       // §12 H1: never changes an existing peer's type.
-      const peerType = card?.kind === "human" ? "human" : "agent";
+      const peerType =
+        card && typeof card === "object" && (card as { kind?: unknown }).kind === "human" ? "human" : "agent";
       await convex.mutation(api.peers.ensure, { name, type: peerType });
       await notifyHuman(`Agent ${name} is now online`);
       res.json({ ok: true, message: `Agent ${name} registered` });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      respondInternal(res, error);
     }
   };
 }
@@ -121,7 +162,7 @@ export function makeRotateHandler(deps: { convex: Convex }) {
       console.warn(`[auth] ROTATE ${req.agentName}: key replaced`);
       res.json({ ok: true, name: req.agentName });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      respondInternal(res, error);
     }
   };
 }

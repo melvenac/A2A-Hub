@@ -82,6 +82,7 @@ function arg(flag, fallback) {
 }
 
 const ME = arg("--as");
+const INVITE = arg("--invite");
 const PEER = arg("--peer");
 const SESSION = arg("--session");
 const SAY = arg("--say");
@@ -95,13 +96,26 @@ if (!ME) {
   process.exit(1);
 }
 
+// --invite is only the one register that creates a name (D-014). Anything else
+// exits before a request, so lobby register() stays byte-identical.
+if (INVITE && !process.argv.includes("--init-key")) {
+  console.error("[hub-talk] --invite is only valid with --init-key");
+  process.exit(1);
+}
+
 // Key management runs instead of a conversation, and never prints the key.
 if (process.argv.includes("--init-key") || process.argv.includes("--rotate-key")) {
   const rotating = process.argv.includes("--rotate-key");
   try {
     const r = rotating
       ? await rotateKey({ hub: HUB, name: ME })
-      : await initKey({ hub: HUB, name: ME, kind: "ide-session", register: true });
+      : await initKey({
+          hub: HUB,
+          name: ME,
+          kind: "ide-session",
+          register: true,
+          enrollmentCode: INVITE || undefined,
+        });
     console.error(
       `[hub-talk] ${ME}@${hubId(HUB)}: key ${rotating ? "rotated" : "created and registered"}, ` +
         `stored in ${r.path} (prefix ${r.prefix})`,

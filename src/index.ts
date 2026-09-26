@@ -1,4 +1,5 @@
 import express from "express";
+import { randomBytes } from "crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { hubAgentCard } from "./agent-card.js";
 import { MemoryEngine } from "./memory.js";
@@ -9,10 +10,11 @@ import { AgentQueue } from "./queue.js";
 import { RepoFixer } from "./repo-fixer.js";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api.js";
-import { requireAgentKey, authMode } from "./auth.js";
+import { requireAgentKey, authMode, hashKey } from "./auth.js";
 import {
   bindName,
   enforce,
+  enrollLine,
   isCaller,
   note,
   sanitize,
@@ -20,6 +22,9 @@ import {
   SESSION_NOT_FOUND,
   TASK_NOT_FOUND,
 } from "./authz.js";
+import { CODE_TTL_MS, ENROLL_TEXT } from "../convex/enrollLogic.js";
+import { GLOBAL_BUCKET, GLOBAL_LIMIT, limited } from "./rateLimit.js";
+import { respondInternal } from "./httpError.js";
 import { INSTANCE_LIVENESS_MS } from "./identity.js";
 import { makeRegisterHandler, makeRotateHandler, whoami } from "./keys.js";
 import { askDeniedReason, evaluateAsk } from "./ask-policy.js";
@@ -31,6 +36,16 @@ import { mountUi } from "./ui.js";
 
 const app = express();
 app.use(express.json());
+
+// O5: a bad body is 400 even when NODE_ENV is unset. Registered here so the
+// parser's next(err) hits it before any route.
+app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const status = err?.status ?? err?.statusCode;
+  if (err?.type === "entity.parse.failed" || (err instanceof SyntaxError && status === 400)) {
+    return res.status(400).json({ error: "malformed json" });
+  }
+  next(err);
+});
 
 // CORS for the browser test client (client/ dev server). Hand-rolled to
 // avoid a dependency; the hub is not cookie-authenticated so "*" is safe.
@@ -333,7 +348,7 @@ app.post("/a2a/message/send", async (req, res) => {
       },
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    respondInternal(res, error);
   }
 });
 
@@ -381,7 +396,7 @@ app.post("/a2a/task/:taskId/respond", async (req, res) => {
 
     res.json({ ok: true });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    respondInternal(res, error);
   }
 });
 
@@ -397,7 +412,7 @@ app.post("/a2a/task/:taskId/claim", async (req, res) => {
     const result = await convex.mutation(api.tasks.claim, { taskId, agentName });
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    respondInternal(res, error);
   }
 });
 
@@ -410,7 +425,7 @@ app.get("/a2a/queue/:agentId", async (req, res) => {
     const tasks = await queue.getTasksFor(agentId);
     res.json({ tasks });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    respondInternal(res, error);
   }
 });
 
@@ -431,7 +446,7 @@ app.post("/a2a/heartbeat/:agentId", async (req, res) => {
     }
     res.json({ ok: true });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    respondInternal(res, error);
   }
 });
 
@@ -486,7 +501,7 @@ app.get("/a2a/agents/live", async (req, res) => {
     if (kindFilter) agents = agents.filter((a) => a.kind === kindFilter);
     res.json({ agents });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    respondInternal(res, error);
   }
 });
 
@@ -501,6 +516,29 @@ app.post(
 // Key rotation (Loop 3 §2): the current key in X-Agent-Key, the new one in the
 // body. Guarded by the /a2a prefix, and it fails closed in warn too.
 app.post("/a2a/rotate", makeRotateHandler({ convex }));
+
+// Loop 6. Behind the key guard. An agent is refused in both modes (ruling 1 Q1).
+// The code is printed by hub-enroll.mjs and is not logged.
+app.post("/a2a/enroll", async (req, res) => {
+  try {
+    const info = await callerInfo(req);
+    if (!info.human || !info.name) {
+      console.warn(enrollLine("reject", "agent-issue", "POST /a2a/enroll", info.name));
+      return res.status(403).json({ error: ENROLL_TEXT["agent-issue"] });
+    }
+    const code = randomBytes(32).toString("base64url");
+    const expiresAt = Date.now() + CODE_TTL_MS;
+    await convex.mutation(api.agents.issueEnrollmentCode, {
+      codeHash: hashKey(code),
+      issuer: info.name,
+      expiresAt,
+    });
+    console.warn(`[enroll] ISSUE issuer=${sanitize(info.name)}`);
+    res.json({ ok: true, code, expiresAt });
+  } catch (error) {
+    respondInternal(res, error);
+  }
+});
 
 // Which name this key authenticates as (Loop 3 §2.4). Read-only.
 app.get("/a2a/whoami", whoami);
@@ -546,7 +584,7 @@ app.post("/a2a/session", async (req, res) => {
     });
     res.json({ ok: true, sessionId });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    respondInternal(res, error);
   }
 });
 
@@ -578,7 +616,7 @@ app.post("/a2a/session/:sessionId/message", async (req, res) => {
     });
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    respondInternal(res, error);
   }
 });
 
@@ -594,7 +632,7 @@ app.get("/a2a/peer/:peerName/sessions", async (req, res) => {
     });
     res.json({ sessions });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    respondInternal(res, error);
   }
 });
 
@@ -611,7 +649,7 @@ app.get("/a2a/sessions", async (req, res) => {
       : await convex.query(api.sessions.listAll, {});
     res.json({ sessions });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    respondInternal(res, error);
   }
 });
 
@@ -628,7 +666,7 @@ app.post("/a2a/session/:sessionId/rename", async (req, res) => {
     });
     res.json({ ok: true });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    respondInternal(res, error);
   }
 });
 
@@ -648,7 +686,7 @@ app.post("/a2a/session/:sessionId/extend", async (req, res) => {
     });
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    respondInternal(res, error);
   }
 });
 
@@ -666,7 +704,7 @@ app.get("/a2a/session/:sessionId/messages", async (req, res) => {
     });
     res.json({ messages });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    respondInternal(res, error);
   }
 });
 
@@ -685,8 +723,10 @@ app.post("/a2a/session/:sessionId/read", async (req, res) => {
     }
     // Same 403 text as before; the warn line is now `[authz]` (T-066 §7).
     if (!bindName(req, res, reader, "reader")) return;
-    // A reader who is the caller but not a participant: markRead answers with
-    // its own 404, unchanged in both modes (criteria A6), so this only logs.
+    // A reader who is the caller but not a participant. Warn still calls
+    // markRead (its text is unchanged). Strict returns the missing-session
+    // body and does not write a cursor (T-070). A malformed id is exists:false
+    // here, so it still reaches markRead and stays 400.
     if (isCaller(reader, req.agentName)) {
       const access = await convex.query(api.sessions.access, {
         sessionId: String(req.params.sessionId),
@@ -694,6 +734,9 @@ app.post("/a2a/session/:sessionId/read", async (req, res) => {
       });
       if (access.exists && !access.participant) {
         note(`non-member session=${shortId(req.params.sessionId)}`, "POST /a2a/session/:sessionId/read", reader);
+        if (authMode === "strict") {
+          return res.status(SESSION_NOT_FOUND.status).json({ error: SESSION_NOT_FOUND.error });
+        }
       }
     }
     const result = await convex.mutation(api.messages.markRead, {
@@ -705,7 +748,7 @@ app.post("/a2a/session/:sessionId/read", async (req, res) => {
     if (!result.ok) return res.status(result.status).json({ error: result.reason });
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    respondInternal(res, error);
   }
 });
 
@@ -721,12 +764,25 @@ app.get("/a2a/session/:sessionId/reads", async (req, res) => {
     const { ok, ...state } = result;
     res.json(state);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    respondInternal(res, error);
   }
 });
 
 // The chat client, after every API route so it can never shadow one.
+// /ui shares the global bucket (section 10). A missing file is JSON, not HTML.
+app.use("/ui", (_req, res, next) => {
+  if (limited(res, GLOBAL_BUCKET, GLOBAL_LIMIT)) return;
+  next();
+});
 mountUi(app, process.env.UI_DIR || "client/dist");
+
+// O5: last, so a thrown error or a static miss stays terse with NODE_ENV unset.
+app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (res.headersSent) return next(err);
+  const status = err?.status ?? err?.statusCode;
+  if (status === 404) return res.status(404).json({ error: "not found" });
+  respondInternal(res, err);
+});
 
 const port = parseInt(process.env.PORT || "4000");
 app.listen(port, () => {

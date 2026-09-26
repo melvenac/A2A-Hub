@@ -2,6 +2,22 @@
 
 All notable changes to the A2A Intelligent Hub.
 
+## [v1.12.0] - 2026-09-26
+
+Loop 6 (T-067): a new name needs a one-time enrollment code from a human owner. Design `docs/loops/loop-6-design.md`, rulings 1 and 2 (per-key limit 3150).
+
+### Added
+- `enrollmentCodes` stores only the hash, the issuer, and the expiry. A code is consumed in the same mutation as the insert. Re-register of an existing name with its own key needs no code.
+- `POST /a2a/enroll` issues a code when the caller is human-kind. An agent is refused in both modes. `scripts/hub-enroll.mjs` prints the code once to stderr and never prints the key.
+- `hub-talk --invite <code>` is valid only with `--init-key`. Every other register body is unchanged.
+- In-process rate limit: 3150 per name per 60 seconds, 90 on the global bucket (missing key, unknown key, new-name register, `/ui`).
+- Strict `POST /a2a/session/:id/read` for a non-participant returns `404 {"error":"session not found"}` and does not write a cursor (T-070).
+- Error responses stay terse when `NODE_ENV` is unset. The image also sets `NODE_ENV=production`.
+- `scripts/tcm/a2a-readonly` `auth-log` counts `enroll-lines`. Installing that file on tcm is a later deploy act.
+
+### Unchanged
+- `--rotate-key`. Warn still allows a codeless new name and strips `kind: "human"`. Strict is not turned on by this build.
+
 ## [v1.11.0] - 2026-09-25
 
 Loop 5 (T-066, P0): a key acts only as itself, and only in its own rooms. Brief `docs/loops/loop-5-identity-and-membership-brief.md`, design `docs/loops/loop-5-design.md`, rulings 1 and 2, D-010, D-011, D-012 and G-001.

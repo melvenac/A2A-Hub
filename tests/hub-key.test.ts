@@ -110,7 +110,21 @@ describe("initKey (--init-key)", () => {
     const r = await initKey({ hub: HUB, name: "relay", register: true, env, fetchImpl: hub.fetchImpl });
     expect(hub.keys.get("relay")).toBe(readFileSync(r.path, "utf8").trim());
     expect(hub.calls.map((c) => c.path)).toEqual(["/a2a/register", "/a2a/whoami"]);
+    expect(hub.calls[0].body.enrollmentCode).toBeUndefined();
     expect(existsSync(`${r.path}.next`)).toBe(false);
+  });
+
+  it("passes enrollmentCode only when --invite gave one", async () => {
+    const hub = fakeHub();
+    await initKey({
+      hub: HUB,
+      name: "relay",
+      register: true,
+      enrollmentCode: "invite-code",
+      env,
+      fetchImpl: hub.fetchImpl,
+    });
+    expect(hub.calls[0].body.enrollmentCode).toBe("invite-code");
   });
 
   it("a 4xx refusal leaves no key file and no pending key", async () => {

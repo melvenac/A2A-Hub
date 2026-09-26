@@ -156,9 +156,22 @@ describe("register HTTP (src/keys.ts makeRegisterHandler)", () => {
     return Object.assign(new Error(reason), { data: { status, reason } });
   }
 
+  /** The name already has a row, so a codeless register is not a new-name enroll. */
+  function existingQuery(human = false) {
+    let seen = "alice";
+    return vi.fn(async (_fn: unknown, args: { name?: string; apiKeyHash?: string }) => {
+      if (args?.name) {
+        seen = args.name;
+        return { name: args.name, human };
+      }
+      if (args?.apiKeyHash) return { name: seen };
+      return null;
+    });
+  }
+
   it("a same-hash re-register is silent and registers the peer", async () => {
     const convex = {
-      query: vi.fn(),
+      query: existingQuery(),
       mutation: vi.fn().mockResolvedValue({ id: "id", event: "same" }),
     };
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -170,7 +183,7 @@ describe("register HTTP (src/keys.ts makeRegisterHandler)", () => {
 
   it("passes the key floor and the mode to the mutation, never the key", async () => {
     const convex = {
-      query: vi.fn(),
+      query: existingQuery(),
       mutation: vi.fn().mockResolvedValue({ id: "id", event: "insert" }),
     };
     await post(mount(convex, "strict"), { name: "alice", apiKey: "short" });
@@ -183,7 +196,7 @@ describe("register HTTP (src/keys.ts makeRegisterHandler)", () => {
   it("a mutation refusal becomes its status and registers no peer (C7, both modes)", async () => {
     for (const mode of ["warn", "strict"] as const) {
       const convex = {
-        query: vi.fn(),
+        query: existingQuery(),
         mutation: vi.fn().mockRejectedValue(refusal(409, "name holds its own key; use rotate")),
       };
       vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -208,18 +221,29 @@ describe("register HTTP (src/keys.ts makeRegisterHandler)", () => {
     }
   });
 
-  it("a human-kind card makes a human peer; anything else an agent peer (§12 H1)", async () => {
-    for (const [card, type] of [
-      [{ name: "aaron", kind: "human" }, "human"],
-      [{ name: "alice", kind: "ide-session" }, "agent"],
-    ] as const) {
-      const convex = {
-        query: vi.fn(),
-        mutation: vi.fn().mockResolvedValue({ id: "id", event: "insert" }),
-      };
-      await post(mount(convex, "warn"), { name: card.name, apiKey: K1, agentCard: card });
-      expect(convex.mutation.mock.calls[1][1]).toEqual({ name: card.name, type });
-    }
+  it("kind human is stripped unless the row is already human (Loop 6)", async () => {
+    const fresh = {
+      query: vi.fn(async () => null),
+      mutation: vi.fn().mockResolvedValue({ id: "id", event: "insert" }),
+    };
+    await post(mount(fresh, "warn"), {
+      name: "aaron",
+      apiKey: K1,
+      agentCard: { name: "aaron", kind: "human" },
+    });
+    expect(fresh.mutation.mock.calls[1][1]).toEqual({ name: "aaron", type: "agent" });
+    expect(fresh.mutation.mock.calls[0][1].agentCard.kind).toBeUndefined();
+
+    const already = {
+      query: existingQuery(true),
+      mutation: vi.fn().mockResolvedValue({ id: "id", event: "same" }),
+    };
+    await post(mount(already, "warn"), {
+      name: "aaron",
+      apiKey: K1,
+      agentCard: { name: "aaron", kind: "human" },
+    });
+    expect(already.mutation.mock.calls[1][1]).toEqual({ name: "aaron", type: "human" });
   });
 });
 

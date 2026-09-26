@@ -39,4 +39,7 @@ COPY --from=client /client/dist/ ./client/dist/
 
 EXPOSE 4000
 
+# Second layer only (O5). The handlers stay terse when this is unset.
+ENV NODE_ENV=production
+
 CMD ["node", "dist/src/index.js"]

@@ -165,6 +165,7 @@ export async function initKey({
   name,
   kind,
   register = false,
+  enrollmentCode,
   env = process.env,
   fetchImpl = fetch,
 }) {
@@ -184,7 +185,12 @@ export async function initKey({
   // have committed, and recoverPending promotes .next on the next run.
   const r = await hubCall(hub, "/a2a/register", {
     method: "POST",
-    body: { name, apiKey: key, agentCard: describeCard(name, kind) },
+    body: {
+      name,
+      apiKey: key,
+      agentCard: describeCard(name, kind),
+      ...(enrollmentCode ? { enrollmentCode } : {}),
+    },
     fetchImpl,
   });
   if (!r.ok) throw settle(next, r, "register");

@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { createHash } from "crypto";
 import type { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api.js";
+import { GLOBAL_BUCKET, GLOBAL_LIMIT, limited, PER_KEY_LIMIT } from "./rateLimit.js";
 
 /**
  * X-Agent-Key validation.
@@ -72,7 +73,10 @@ export function requireAgentKey(convex: ConvexHttpClient) {
 
     // A missing key was always a 401 and stays one in both modes — that check
     // was never the broken part.
-    if (!apiKey) return res.status(401).json({ error: "Missing X-Agent-Key" });
+    if (!apiKey) {
+      if (limited(res, GLOBAL_BUCKET, GLOBAL_LIMIT)) return;
+      return res.status(401).json({ error: "Missing X-Agent-Key" });
+    }
 
     let agent: { name: string } | null = null;
     try {
@@ -90,6 +94,7 @@ export function requireAgentKey(convex: ConvexHttpClient) {
     if (!agent) {
       const where = `${req.method} ${req.path}`;
       const what = await describeKey(convex, hashKey(apiKey));
+      if (limited(res, GLOBAL_BUCKET, GLOBAL_LIMIT)) return;
       if (authMode === "strict") {
         console.warn(`[auth] REJECT ${what} X-Agent-Key on ${where}`);
         return res.status(403).json({ error: "Invalid X-Agent-Key" });
@@ -105,6 +110,7 @@ export function requireAgentKey(convex: ConvexHttpClient) {
     }
 
     req.agentName = agent.name;
+    if (limited(res, agent.name, PER_KEY_LIMIT)) return;
     next();
   };
 }
