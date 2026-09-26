@@ -1,0 +1,28 @@
+== mock, terse (design): expect PASS
+PD against http://127.0.0.1:47921 at 2026-09-26T01:51:30.172Z, expecting /ui/assets/index-DleSmG9D.js
+PASS PD.1 GET /ui/: {"status":200,"type":"text/html; charset=utf-8","cc":"no-cache","asset":"/ui/assets/index-DleSmG9D.js"}
+PASS PD.1b bundle is the candidate's: {"served":"/ui/assets/index-DleSmG9D.js","expected":"/ui/assets/index-DleSmG9D.js","isOld":true}
+PASS PD.2 GET asset: {"path":"/ui/assets/index-DleSmG9D.js","status":200,"type":"text/javascript","cc":"public, max-age=31536000, immutable","bytes":56201}
+PASS PD.3 GET / (404, terse): {"status":404,"leaks":[],"body":"{\"error\":\"not found\"}"}
+PASS PD.4 GET /health: {"status":200,"keys":["agent","convex","status"],"statusField":"ok","agent":"hub","convex":"ok"}
+PASS PD.5 GET /ui/<missing> (D3: 404, terse): {"status":404,"type":"application/json","leaks":[],"body":"{\"error\":\"not found\"}"}
+PASS PD.6 POST /a2a/register malformed JSON (D3: 400, terse): {"status":400,"type":"application/json","leaks":[],"body":"{\"error\":\"malformed json\"}"}
+PD PASS (7 checks over 7 requests, 0 keys sent)
+exit 0
+== mock, leaky (v1.11.0 shape): expect FAIL on PD.3, PD.5, PD.6 only
+PD against http://127.0.0.1:47922 at 2026-09-26T01:51:31.123Z, expecting /ui/assets/index-DleSmG9D.js
+PASS PD.1 GET /ui/: {"status":200,"type":"text/html; charset=utf-8","cc":"no-cache","asset":"/ui/assets/index-DleSmG9D.js"}
+PASS PD.1b bundle is the candidate's: {"served":"/ui/assets/index-DleSmG9D.js","expected":"/ui/assets/index-DleSmG9D.js","isOld":true}
+PASS PD.2 GET asset: {"path":"/ui/assets/index-DleSmG9D.js","status":200,"type":"text/javascript","cc":"public, max-age=31536000, immutable","bytes":56201}
+FAIL PD.3 GET / (404, terse): {"status":404,"leaks":["express-default"],"body":"<title>Error</title><pre>Cannot GET /</pre>"}
+PASS PD.4 GET /health: {"status":200,"keys":["agent","convex","status"],"statusField":"ok","agent":"hub","convex":"ok"}
+FAIL PD.5 GET /ui/<missing> (D3: 404, terse): {"status":404,"type":"text/html","leaks":["path","internal","express-default"],"body":"<title>Error</title><pre>Error: ENOENT: no such file or directory, stat '/app/client/dist/x'</pre>"}
+FAIL PD.6 POST /a2a/register malformed JSON (D3: 400, terse): {"status":400,"type":"text/html","leaks":["path","stack","internal","express-default"],"body":"<!DOCTYPE html><title>Error</title><pre>SyntaxError: Expected property name<br> &nbsp; &nbsp;at JSON"}
+PD FAIL (7 checks over 7 requests, 0 keys sent)
+exit 1
+== real v1.11.0 scratch hub :4720 (no client build there): PD.3/5/6 must FAIL on real leaks
+PD against http://127.0.0.1:4720 at 2026-09-26T01:51:32.123Z, expecting /ui/assets/index-DleSmG9D.js
+FAIL PD.3 GET / (404, terse): {"status":404,"leaks":["express-default"],"body":"<!DOCTYPE html> <html lang=\"en\"> <head> <meta charset=\"utf-8\"> <title>Error</title> </head> <body> <"}
+FAIL PD.5 GET /ui/<missing> (D3: 404, terse): {"status":404,"type":"text/html; charset=utf-8","leaks":["path","internal","express-default"],"body":"<!DOCTYPE html> <html lang=\"en\"> <head> <meta charset=\"utf-8\"> <title>Error</title> </head> <body> <"}
+FAIL PD.6 POST /a2a/register malformed JSON (D3: 400, terse): {"status":400,"type":"text/html; charset=utf-8","leaks":["path","stack","internal","express-default"],"body":"<!DOCTYPE html> <html lang=\"en\"> <head> <meta charset=\"utf-8\"> <title>Error</title> </head> <body> <"}
+PD FAIL (7 checks over 7 requests, 0 keys sent)

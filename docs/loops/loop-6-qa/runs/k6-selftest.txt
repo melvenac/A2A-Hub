@@ -1,0 +1,2 @@
+selftest: clean 0 (0); planted key+hash+code+hash 4 (4); issue response excluded 1 (1) with hits 0 (0); non-issue response echoing a code 1 (1)
+SELFTEST PASS

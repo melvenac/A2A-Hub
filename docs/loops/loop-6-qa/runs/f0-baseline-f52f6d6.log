@@ -1,0 +1,9 @@
+proxy 4790 -> http://127.0.0.1:4720/ logging to <scratch>/l6/f0-proxy.jsonl
+proxy positive: 5 sent, 5 logged
+setup rc: init-a 0 init-b 0 say 0
+wait rc 2 (a timeout is expected: no peer turn), ran 77 s
+total requests 77 over 76.7 s; statuses [200]
+by route {"POST /a2a/register":1,"POST /a2a/heartbeat/qa-f0a":38,"GET /a2a/peer/qa-f0a/sessions":1,"GET /a2a/session/<id>/messages":36,"GET /a2a/session/<id>/reads":1}
+first 60 s window (incl. start): 61   steady 60 s window [10,70): 56
+
+tree: qa3-old at f52f6d6 (v1.11.0 hub-talk), hub ooW :4720 warn on scratch Convex :3720, 2026-09-26

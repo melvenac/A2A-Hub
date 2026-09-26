@@ -247,8 +247,20 @@ configuration fails.
 
   Each triggering request is named. The body matches the design section 9 text, or the build's
   documented one.
-- **D2.** Malformed ids on every route that takes one answer 4xx, never 500. This includes a
-  well-formed-looking id of the wrong table (T-055).
+- **D2.** Malformed ids on every route that takes one answer 4xx, never 500 and never 2xx. This
+  includes a real id of the wrong table (T-055): a task id used as a session id, and a session id used as
+  a session id, both taken from the scratch stack.
+  - The route list is re-derived from the candidate (`inv.mjs`). The request bodies are **valid**, so
+    the id is the only thing wrong (`d-scan.mjs`).
+  - On the baseline, 16 of 20 id triggers answer 2xx or 5xx (`loop-6-qa/runs/d-scan-baseline-f52f6d6.txt`).
+- **D2b (Relay's ruling, 2026-09-26, on Gauge's baseline finding).** On `POST /a2a/task/:taskId/claim`
+  and `POST /a2a/task/:taskId/respond`:
+  - a malformed id, or a real id of the wrong table, gets **400** with a terse body. On v1.11.0 both
+    routes answer 200.
+  - **Task ids are UUID strings** (`src/escalation.ts:30`), not Convex ids (Relay, 2026-09-26). So
+    "malformed" means a non-UUID string. **A well-formed task id with no task** is a random UUID that
+    was never issued, and it gets **404** with a terse body on `respond`.
+  - the same id on `claim` keeps its answer. That row is G4b, a preserve row, not a D row.
 - **D3.**
   - `GET /ui/does-not-exist` gives 404 with a terse body. This is the O1 disclosure observed on tcm
     in Loop 4.
@@ -295,6 +307,10 @@ configuration fails.
   - 2160 would have covered the corrected peak by only about 6.9x. Relay ruled the corrected formula,
     3150, which restores 10x.
   - F2's recorder reports the measured per-name peak, which is the real number.
+  - **Measured on v1.11.0** (2026-09-26, `loop-6-qa/runs/f0-baseline-f52f6d6.log`): one real `--wait`
+    process, counted by `proxy.mjs` (known positive: 5 sent, 5 logged), made **61 requests in its first
+    60 s**: 38 heartbeats and 36 message reads over 77 s, all 200. That confirms F0. Each loop takes a
+    little over 2 s, so 61 is under the ruled 65.
 - **F1. Per-key boundary, both modes.**
   - In one window, one key's requests 1-3150 get no 429, and request 3151 gets `429 {"error":"too many
     requests"}` with `Retry-After`.
@@ -337,6 +353,16 @@ configuration fails.
   - In strict, an unknown key gets the guard's 403 before any bucket is consulted. The report records
     whether that 403 counts in the global bucket.
 
+- **F7 (Relay's ruling, 2026-09-26, on Gauge's white-box finding at `1c3b08c`).** The bucket names do
+  not collide.
+  - At `1c3b08c`, per-name buckets and the global bucket share one map, and the global key is the literal
+    `"global"` (`src/rateLimit.ts`, `auth.ts:113`, `keys.ts:52`).
+  - On the fixed candidate, with a name `global` enrolled on scratch, the name's own traffic up to its
+    per-key limit does not 429 a `/ui/` load or a missing-key request.
+  - The converse also holds: saturating the global bucket does not 429 the name `global`'s hub-talk.
+  - A name that equals the prefix form (for example `name:x`, if the build prefixes with `name:`) is
+    tried as well.
+
 ### G: preserve (brief preserve 1-6; Loop 5's rows re-run)
 
 - **G1. hub-talk for an existing name, both modes, old vs candidate** (Preserve 1).
@@ -351,16 +377,51 @@ configuration fails.
   - `--init-key --invite <code>` enrolls a new name, as in A2.
   - **Static:** the candidate's diff to `scripts/hub-talk.mjs` and `scripts/hub-key.mjs` touches only
     the `--invite` parse and `hub-key.mjs:185-187`'s body (D-014). Any other hunk is a finding.
+- **G1d (Relay, 2026-09-26, on a regression Relay found in `7420097`).** `hub-talk --as <name> --peer
+  <unregistered>` on the candidate exits with **rc 1** and prints the "is not registered on this hub"
+  fix-it message, the same as on v1.11.0, in both modes. The message comes from `hub-talk.mjs:272`
+  matching `/Unknown peer/`.
+- **G1e. The error text that clients match on is unchanged, old vs candidate, in both modes.** The
+  list of matching sites was swept from the v1.11.0 client code (`scripts/`, `src/wrapper/`,
+  `client/src`) by Gauge on 2026-09-26. Rivet's own sweep must be checked against it.
+  - `scripts/hub-talk.mjs:272`: `POST /a2a/session` naming an unregistered participant. The body's
+    `error` must match `/Unknown peer/`. **AMENDED (Relay, turn 46, 2026-09-26):** the status is
+    **404, as ruled**, not v1.11.0's class. v1.11.0 answered 500 and leaked "[Request ID …] Server
+    Error Uncaught Error: Unknown peer…". The ruled 404 is an improvement, and G1d shows hub-talk
+    behaves identically end to end. As first written ("the same status class as on v1.11.0"), this
+    site failed on `c461c65`. That result stays in the report.
+  - `src/wrapper/daemon.ts:317`: a rejected key in strict. 403, and the text must match
+    `/Invalid X-Agent-Key/`, so the daemon exits instead of retrying.
+  - `src/wrapper/daemon.ts:130,286` and `scripts/hub-key.mjs:209-213`: branch on the status CLASS of a
+    register or key-call refusal (4xx means "refused"; 5xx means "failed, keep `.next`"). Every
+    register refusal must stay 4xx. The cases are: a taken name (409), a key under 32 characters, a
+    key held by another name, an owned name with a new key, and the new enrollment refusals.
+  - `scripts/hub-talk.mjs:305` and `client/src/App.svelte` only **display** `body.error`. A changed
+    display text is recorded but does not fail the row, unless the new text is one of D's leaks.
+  - Method: each triggering request is sent to the old hub and to the candidate. Status class and
+    regex match are compared; the report lists both bodies.
 - **G2. Every existing row keeps its key and owner** (Preserve 2).
   - The live-shaped seed is read before and after the candidate's functions are deployed onto it,
     and after the whole run.
   - Each seeded row's `apiKeyHash`, `owner` and `agentCard` are unchanged, except A10's
     deliberately refused attempt, which must also show no change.
+- **G2b (Gauge's finding on `c461c65`, confirmed by Relay, 2026-09-26).** A human row keeps
+  `kind: "human"`, and can still issue a code, after each ordinary register a seat makes as that name:
+  - `hub-talk --as <human> --say …`, which calls `register()` and sends `kind: "ide-session"`;
+  - a daemon's boot register, whose card has no kind;
+  - a hub-key-shaped register (`describeCard(name, "ide-session")`).
+
+  Each case runs on a fresh `createHuman` row, and one row is left untouched as the control
+  (`rows-g2b.mjs`). On `c461c65` all three demote the row: `ide-session`, no kind, and `ide-session`,
+  each then 403 on issue. The control stays human and gets 200.
 - **G3. Loop 5 holds** (Preserve 3). Loop 5's suite of A, B, C and E rows (`loop-5-qa/suite.mjs`, rows
   A1-A20, B1-B5, C1-C2, E1-E6 with E3b) is re-run on the candidate in both modes. The results must equal
   Loop 5's.
 - **G4. Daemons** (Preserve 4) heartbeat, poll and answer one turn on the scratch stack, in both modes
   (Loop 5's D2).
+- **G4b. The claim answer the daemon reads** (Preserve 4; Relay's ruling on D2b). A well-formed task
+  id with no task still gets `200 {"claimed":false,"reason":"not-found"}` from `claim`, byte-identical
+  to v1.11.0, in both modes. The daemon reads `claim.claimed` (`src/wrapper/daemon.ts:183-187`).
 - **G5. Aaron's chat page** (Preserve 5).
   - **G5a (aaron-h):** Loop 4's page rows B1-B3 and Loop 5's E rows. The page lists `aaron`'s agents'
     rooms.
@@ -401,6 +462,14 @@ configuration fails.
   - **It does not gate** (ruling 2, O1). The guarantee rests on T-057, a precondition of strict. The
     report says so next to the result.
 
+- **X2 (Relay's ruling, 2026-09-26, on Rivet's declared deviation).** `issueEnrollmentCode` is a
+  **public** Convex mutation (the design said internal), because the hub has no admin key.
+  - A direct call to scratch Convex's `issueEnrollmentCode`, bypassing the hub, mints a code hash for an
+    `issuer` the caller chooses.
+  - The report records whether the matching plaintext code then enrolls a new name through the hub, and
+    which issuers it can claim: an existing human, an agent name, or a name that does not exist.
+  - **It does not gate.** Like X1, the guarantee rests on T-057, a precondition of strict.
+
 ### OP: the operator commands (brief scope 1-2)
 
 - **OP1.** The documented issue command is run **exactly as written** (copied from the build's doc, not
@@ -436,6 +505,8 @@ configuration fails.
 | M12 `--invite` is accepted without `--init-key` | G1c |
 | M13 the not-valid text differs when some code exists | A5 |
 | M14 the used check is skipped (a race or a reuse) | A3, A14 |
+| M15 claim on a well-formed missing task id answers 404 (the D2b rule over-applied) | G4b |
+| M16 respond on a malformed task id answers 200 again | D2b |
 
 The F mutants (M9) are run once section 10 is ruled.
 

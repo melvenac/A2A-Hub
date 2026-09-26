@@ -1,0 +1,4 @@
+503 GET /health :: {"status":"degraded","agent":"Intelligent-Hub","convex":{"status":"unreachable","error":"fetch failed"}}
+500 POST /a2a/register (valid body, Convex down) :: {"error":"internal error"}
+503 GET /a2a/whoami keyed (guard, Convex down) :: {"error":"Auth backend unavailable"}
+200 GET /ui/ :: <!doctype html> <html lang="en"> <head> <meta charset="UTF-8" /> <meta name="viewport" content="width=device-width, initial-scale=1.0" /> <title>A2A Hub — Test Client</title> <script type="module" cro
