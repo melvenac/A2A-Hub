@@ -1,0 +1,6 @@
+rc 0
+--- stdout
+auth-lines=0 authz-lines=0 first=2026-09-26T01:22:12.351388802Z last=2026-09-26T01:22:12.354706431Z total-lines=4
+log-driver=json-file map[max-file:3 max-size:10m] started=2026-09-26T01:22:11.824242436Z first-line-within-60s-of-start=yes rotated=unknown(listing .1 needs root)
+
+--- stderr

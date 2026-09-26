@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "revision": 67,
+  "revision": 68,
   "project": {
     "name": "a2a-intelligent-hub"
   },
@@ -507,7 +507,7 @@
       "opened_session": 16,
       "closed_session": null,
       "supersedes": null,
-      "note": "Found by Rivet in the Loop 3 design (§9): the tracked docker-compose.yml:48-49 publishes Convex on 3210:3210 (every interface). RELAYED EVIDENCE FROM tcm (SIA record 97, read-only, via the SIA planner, 2026-09-24): Convex listens on 127.0.0.1:3210 only (`docker port convex` = 3210/tcp -> 127.0.0.1:3210); also reachable from the host at 172.20.0.2:3210/3211 over the a2a docker bridge. So: (1) tcm's Convex is NOT published to the tailnet, and tcm's live compose differs from the tracked file. A deploy from the tracked compose would widen it: FIX THE TRACKED FILE to 127.0.0.1:3210. (2) Any local process on tcm can call every PUBLIC Convex function without the hub or a key; the code-level fix is making hub-only functions internal. Loop 3 closed only the dev-key part. Loop 5 QA O-3 (1963352): agents:registerAgent is a public mutation and in v1.11.0 takes `owner`, so a local caller could set any owner directly (the hub route ignores a body owner). NEW, session 17 (Rivet, first-hand, 2026-09-25 04:14:16Z after the v1.10.0 swap): the HUB container publishes 0.0.0.0:4000->4000, every interface of tcm, not only the tailnet. With /ui/ live and keyless, anything that can reach tcm:4000 on any interface can load the page (every /a2a route still needs a key). Decide the intended binding (tailnet only?) before exposure (D-011 step 5). Relay has not verified the Convex part on tcm itself. Gates exposure."
+      "note": "Found by Rivet in the Loop 3 design (§9): the tracked docker-compose.yml:48-49 publishes Convex on 3210:3210 (every interface). RELAYED EVIDENCE FROM tcm (SIA record 97, read-only, via the SIA planner, 2026-09-24): Convex listens on 127.0.0.1:3210 only (`docker port convex` = 3210/tcp -> 127.0.0.1:3210); also reachable from the host at 172.20.0.2:3210/3211 over the a2a docker bridge. So: (1) tcm's Convex is NOT published to the tailnet, and tcm's live compose differs from the tracked file. A deploy from the tracked compose would widen it: FIX THE TRACKED FILE to 127.0.0.1:3210. (2) Any local process on tcm can call every PUBLIC Convex function without the hub or a key; the code-level fix is making hub-only functions internal. Loop 3 closed only the dev-key part. Loop 5 QA O-3 (1963352): agents:registerAgent is a public mutation and in v1.11.0 takes `owner`, so a local caller could set any owner directly (the hub route ignores a body owner). NEW, session 17 (Rivet, first-hand, 2026-09-25 04:14:16Z after the v1.10.0 swap): the HUB container publishes 0.0.0.0:4000->4000, every interface of tcm, not only the tailnet. With /ui/ live and keyless, anything that can reach tcm:4000 on any interface can load the page (every /a2a route still needs a key). Decide the intended binding (tailnet only?) before exposure (D-011 step 5). Relay has not verified the Convex part on tcm itself. Gates exposure. SESSION 18 (Loop 6 ruling 2, O1): Loop 6 enforces enrollment codes at the HUB; registerAgent stays a public mutation whose `strict` is caller-asserted (src/keys.ts:57; convex/agents.ts:210), so a direct Convex caller can create a codeless name in any mode. That guarantee rests on this task: T-057 is now a precondition of AUTH_MODE=strict, not only of Funnel."
     },
     {
       "id": "T-058",
@@ -820,6 +820,19 @@
       ],
       "since_session": 18,
       "status": "verified"
+    },
+    {
+      "id": "V-011",
+      "claim": "aaron's tcm row is human-kind (G-002 fixed): the Loop 5 owner's view is available to him, with his key, owner and every other row unchanged",
+      "evidence": [
+        {
+          "type": "live-write",
+          "path": "docs/loops/loop-6-ruling-2.md; G-002 (closed, session 18)",
+          "observation": "On Aaron's word ('1 yes', session 18), Rivet (a2a-grok) re-registered aaron with aaron's own key and agentCard.kind 'human' via a throwaway script (key never printed): 200 {ok:true, message:'Agent aaron registered'}. Relay, RO key, 2026-09-26 01:33:31Z: 'aaron kind=human keyStatus=owned hash=0fdda12d owner=aaron' (hash unchanged), rows=9 K7=PASS, ownerAssigned rows-without-owner=0; auth-log authz-lines=0, so the [authz] soak clock starts here. G-002's cause: acceptance data (a human-kind scratch aaron) was shaped differently from live data (kind=-). Never run `hub-talk --as aaron`."
+        }
+      ],
+      "since_session": 18,
+      "status": "verified"
     }
   ],
   "gaps": [
@@ -829,13 +842,6 @@
       "evidence": "src/auth.ts:95-116 at c4d2d1c (read by Relay, session 17): an unrecognised X-Agent-Key logs `[auth] WOULD REJECT unknown ...` and continues with req.agentName = null (:103); tcm's startup line reads 'Auth: WARN - unknown X-Agent-Key is logged and allowed' (t-003-cutover-log.md step 2).",
       "recommended_update": "Never give the hub a public address (Funnel, the public hostname, a port forward) while AUTH_MODE=warn. Turn strict on after T-064's read, on Aaron's word, before D-011 step 5. Close this gap when tcm reads strict via the read-only key's auth-mode.",
       "opened_session": 17
-    },
-    {
-      "id": "G-002",
-      "what": "aaron's tcm row has no agentCard.kind, so Loop 5's owner's view is off for him: his chat page lists only rooms he is in (Preserve 3 regression)",
-      "evidence": "Found by Gauge after the Loop 5 deploy (docs/loops/loop-5-deploy-qa.md, PR #34); confirmed by Relay in code: convex/accessLogic.ts:47 gives ownerView only to isHumanRow (agentCard.kind === 'human'), and GET /a2a/sessions uses listVisibleTo for a known caller in BOTH modes (src/index.ts:609-611). tcm agents-summary 2026-09-26: 'aaron kind=- owner=aaron' (owner from the backfill, not from being human). V-008's acceptance E passed because the scratch aaron was human-kind: acceptance data shaped differently from live data.",
-      "recommended_update": "On Aaron's word (a live write): Rivet re-registers aaron with aaron's own key and agentCard.kind 'human' (the v1.11.0 'same' path patches agentCard only, convex/agents.ts:183-186), using a script that reads aaron.key without printing it; Gauge re-checks with the RO agents-summary. Start the [authz] soak clock after the fix, because aaron reading his agents' rooms in warn logs [authz]. Never run `hub-talk --as aaron`: it would re-register aaron as ide-session.",
-      "opened_session": 18
     }
   ],
   "decisions": [

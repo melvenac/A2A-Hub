@@ -1,0 +1,10 @@
+ok  M3 pos: got true, want true
+ok  M3 neg: got false, want false
+ok  AL pos: got true, want true
+ok  AL neg (no authz header): got false, want false
+ok  AL neg (miscount): got false, want false
+ok  RL3 pos: got true, want true
+ok  RL3 neg (no line): got false, want false
+ok  RL3 neg (FAIL 1): got false, want false
+SELFTEST PASS
+exit 0
