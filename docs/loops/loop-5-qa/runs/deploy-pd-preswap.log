@@ -1,0 +1,7 @@
+PD against http://100.124.212.87:4000 at 2026-09-26T01:21:05.730Z, expecting /ui/assets/index-DleSmG9D.js
+PASS PD.1 GET /ui/: {"status":200,"type":"text/html; charset=utf-8","cc":"no-cache","asset":"/ui/assets/index-BDybZYJ0.js"}
+FAIL PD.1b bundle is v1.11.0's: {"served":"/ui/assets/index-BDybZYJ0.js","expected":"/ui/assets/index-DleSmG9D.js","isOldV1_10_0":true}
+PASS PD.2 GET asset: {"path":"/ui/assets/index-BDybZYJ0.js","status":200,"type":"text/javascript; charset=utf-8","cc":"public, max-age=31536000, immutable","bytes":55537}
+PASS PD.3 GET /: {"status":404,"body":"<!DOCTYPE html> <html lang=\"en\"> <head> <meta charset=\"utf-8\"> <title>Error</tit"}
+PASS PD.4 GET /health: {"status":200,"keys":["agent","convex","status"],"statusField":"ok","agent":"Intelligent-Hub","convex":"ok"}
+PD FAIL (5 checks over 4 reads, 0 keys sent)
