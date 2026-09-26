@@ -182,8 +182,20 @@ A register body with `kind: "human"` does not create an owner.
   the mutation when the stored row is not already human, and logs `[enroll]`.
   The mutation also drops `kind: "human"` on any write whose stored row is not
   already human, so a direct `registerAgent` call cannot persist it either.
-- A row that is already human (aaron) re-registers unchanged, including its
+- A row that is already `kind: "human"` re-registers unchanged, including its
   card. That is Preserve 2, not a new human.
+
+**An existing row with no kind is not human.** `isHumanRow` is only
+`agentCard.kind === "human"` (`convex/accessLogic.ts:15-16`). A missing kind
+prints as `kind=-` (`scripts/tcm/a2a-k7.mjs:15`). Relay reports that the tcm
+`aaron` row is `kind=-`, so the sentence "a row that is already human (aaron)"
+is false on tcm, and the owner view stays off (`accessLogic.ts:47`). Loop 6
+does not infer human from the name or from `owner`. That row re-registers
+with its own key and no code. A body `kind: "human"` on it is the strip/refuse
+above, and Loop 6 does not write a kind onto it. It cannot issue a code,
+because issue requires human kind and that refusal is both modes (ruling 1,
+Q1). Setting kind on the live row is not this loop. It waits on Aaron's word.
+Until that act, `hub-enroll.mjs --as aaron` fails closed on tcm.
 
 Second human, operator only, not the HTTP API. New internal mutation
 `agents:createHuman`, admin key, same channel as `assignOwnerAtDeploy`
@@ -270,33 +282,54 @@ Malformed session and task ids that the handlers already map to 400 stay 400.
 
 ## 10. Rate limiting (T-005)
 
-In-process fixed window, because a Convex write per poll would put the limiter
-on the hot path, and compose runs one `a2a-hub` container
-(`docker-compose.yml:26`). The build confirms that replica count again before
-relying on it.
+Revised for ruling 1 (`docs/loops/loop-6-ruling-1.md`). No tcm log read. The
+numbers come from the code and the row count. In-process fixed window of 60
+seconds, because a Convex write per poll would sit on the hot path. The
+tracked compose file has one `a2a-hub` service (`docker-compose.yml:24-26`).
+The live compose is not that file. The build re-reads the live compose, on
+Aaron's word, before treating the limiter as single-process.
 
-- Authenticated routes: one bucket per `req.agentName`. A request that got
-  past the key guard counts here, including whoami.
-- Unauthenticated: `POST /a2a/register`, `/ui/*`, and a missing-key 401.
-- Over the limit: 429 `{ "error": "too many requests" }` and `Retry-After`
-  (seconds until the window resets). This refuses in warn and in strict.
-  Preserve 6's exception.
+**Rule: no hub-talk pattern of an existing name, at the concurrency sized
+below, receives a 429.** hub-talk treats any 4xx on register as fatal
+(`scripts/hub-talk.mjs:232-234`) and registers on every run (`:346`, `:368`).
+A 429 there would exit the seat. Teaching hub-talk to back off on 429 is not
+proposed (ruling 1: that would be a D-003 question).
 
-I did not read tcm, so this draft has no measured peak and no numeric limit.
-`src/index.ts` does not log each request, so `docker logs` will not contain
-the poll rate by itself. The build, when Aaron authorizes that read, counts
-live seats from the log (heartbeat / hub-talk lines) and applies the intervals
-already in the repo:
+Buckets:
 
-- hub-talk `--wait` sleeps `POLL_MS` of 2000 (`scripts/hub-talk.mjs:73`, `:469`):
-  about one read per 2 seconds per seat, plus one register and one heartbeat
-  per process start (`:367-372`).
-- A daemon loops every `POLL_MS` of 2000 (`src/wrapper/daemon.ts:96`, `:323`)
-  and does a heartbeat plus a session poll per loop.
+- Authenticated routes: one bucket per `req.agentName`, including whoami.
+- `POST /a2a/register` whose `apiKey` hashes to an existing row (the `same`
+  case) counts in **that name's per-key bucket**, never the global one. The
+  handler already hashes the key (`src/keys.ts:51-53`). No new trust.
+- The global bucket counts only what is left: a new-name register, a register
+  whose key matches no row, `/ui/*`, and a missing-key 401.
 
-Headroom is 10 times that peak per key, sustained for a minute. The constant
-is written down in the build commit next to the seat count it came from.
-A replay of that pattern must not 429 (Acceptance F).
+Over the limit: 429 `{ "error": "too many requests" }` and `Retry-After`
+(seconds left in the window). This refuses in warn and in strict. Preserve 6's
+exception, and it does not apply to the sized hub-talk pattern.
+
+**Per key, per 60 seconds.** `POLL_MS` is 2000 (`scripts/hub-talk.mjs:73`).
+
+- One hub-talk process in that window: 1 register (`:368`), 1 heartbeat
+  (`:369`), and 30 `--wait` reads (`:469`). Three concurrent processes (a
+  `--wait` plus `--say` and `--inbox`): 3 * 32 = 96.
+- One daemon loop (`src/wrapper/daemon.ts:302-323`): heartbeat (`:304`), queue
+  (`:181`), session list (`:208`), and one session's messages (`:214`). That
+  is 4 calls per loop, 30 loops, 120. Claim, respond, and a posted reply are
+  extra and are inside the headroom, not a second term.
+- Peak = 96 + 120 = 216. Headroom 10x. **Limit = 2160 per name per 60
+  seconds.** Formula, so it scales: `10 * (3 * 32 + 30 * (3 + session_count))`
+  with `session_count` 1. Row count does not multiply the per-key limit.
+
+**Global bucket, per 60 seconds.** Row count is 9: ruling 1 records 8 at the
+V-009 read and a2a-grok as the 9th. Every existing name starting at once is
+already on its own per-key bucket, so this bucket is sized for 9 new or
+unmatched registers at once, times 10. **Limit = 90.** Formula: `10 * N` with
+N = 9. A built `/ui` page load has to fit in the same bucket. If the image's
+`/ui` file count F is greater than N, the limit becomes `10 * F`.
+
+Acceptance F's replay is a burst of every row's hub-talk start at once, not
+one seat's `--wait`, and that burst must not 429.
 
 **Funnel source.** Not assumed. The build runs one request through the same
 proxy path the hub uses and records `req.socket.remoteAddress`. It does not
@@ -304,13 +337,13 @@ trust `X-Forwarded-For` unless that test shows Traefik overwrites it and
 Express is configured to use it.
 
 If the address is loopback or a single docker bridge address, per-source
-limiting is one bucket for every caller. In that case the design's
-alternative, which is what we ship until a test shows distinct sources:
+limiting is one bucket for every caller. What we ship until a test shows
+distinct sources:
 
-- Authenticated per-key limits stay (they do not need the source address).
-- Unauthenticated traffic uses one global bucket, sized from the measured
-  register and `/ui` rate with the same 10x headroom, and the doc says it is
-  not a per-client control.
+- Per-key limits stay, including the existing-name register. They do not use
+  the source address.
+- The leftover unauthenticated traffic stays on the one global bucket above.
+  That bucket is not a per-client control.
 - G-001 is unchanged: no public address before strict, and not before that
   source test has been recorded.
 
@@ -357,6 +390,10 @@ on `AUTH_MODE=strict`. The Loop 5 deploy. Any hub-talk flag other than
 `--invite`.
 
 ## 14. Questions for a ruling
+
+Q1, Q2, and Q3 were answered in `docs/loops/loop-6-ruling-1.md`. They are kept
+here as the questions that ruling answered. Section 10 is revised to match.
+No new question in this revision.
 
 1. **Agent issue in warn.** I refuse it in both modes (section 4). Acceptance B
    can be read as "an agent key's issue succeeds in warn." I looked for an
